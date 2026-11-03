@@ -75,12 +75,10 @@ button:focus-visible{outline:2px solid var(--khaki);outline-offset:2px}
 .screen{position:fixed;inset:0;z-index:10;display:grid;place-items:center;overflow:auto;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:
   radial-gradient(ellipse at 30% 20%,rgba(205,180,106,.08),transparent 60%),
   linear-gradient(90deg,rgba(6,8,6,.9) 0%,rgba(6,8,6,.72) 45%,rgba(6,8,6,.35) 100%)}
-#menu .card{text-shadow:0 1px 12px rgba(0,0,0,.6);position:relative}
+#menu .card{text-shadow:0 1px 3px rgba(0,0,0,.7);position:relative}
 /* rubber stamp: worn red ink, slightly rotated, thumps down on load */
 .stamp{position:absolute;top:34px;right:0;transform:rotate(-9deg);color:#e8483a;pointer-events:none;text-shadow:none;
-  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.75'/%3E%3C/filter%3E%3Crect width='220' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.75'/%3E%3C/filter%3E%3Crect width='220' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
-  mix-blend-mode:screen;opacity:.92}
+  opacity:.92;will-change:transform}
 .stamp .st-in{border:3px solid currentColor;outline:1.5px solid currentColor;outline-offset:3px;border-radius:5px;padding:7px 12px 8px;display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(210,58,44,.06)}
 .stamp .st-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
 .stamp b{font-family:"Saira Condensed",sans-serif;font-size:30px;line-height:1;font-weight:800;letter-spacing:.02em}
@@ -131,6 +129,38 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
 @keyframes blink{50%{background:rgba(205,180,106,.18)}}
 @media (prefers-reduced-motion:reduce){.slot.cur .ch{animation:none}}
 .arcade-row{display:flex;gap:6px}
+.howto h3{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--khaki);margin:0 0 6px}
+.howto section{border-top:1px solid var(--line);padding-top:12px}
+.howto p,.howto li{font-size:15.5px;line-height:1.45;color:var(--ink);margin:0}
+.howto ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.howto b{color:var(--khaki)}
+.tut{position:fixed;inset:0;z-index:8;pointer-events:none}
+.tut-card{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));width:min(420px,calc(100vw - 24px));pointer-events:auto;background:rgba(10,13,9,.94);border:1px solid var(--khaki);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 40px rgba(0,0,0,.6);transition:border-color .2s}
+.tut-card.done{border-color:#9fe07a}
+.tut-card.done .tut-t::after{content:"  ✓";color:#9fe07a}
+.tut-top{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--ink-dim)}
+.tut-top button,.tut-step{background:none;border:0;color:var(--ink-dim);font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-decoration:underline;padding:4px 0}
+.tut-t{font-family:"Saira Condensed",sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;line-height:1.1}
+.tut-b{font-size:15px;line-height:1.4;color:var(--ink)}
+.tut-row{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:2px}
+.tut-row .tut-step{margin-right:auto}
+.tut-go{background:var(--khaki);color:#1a1a12;border:0;border-radius:4px;padding:8px 16px;font-weight:800;font-size:15px;text-transform:uppercase}
+.tut-go.ghosty{background:none;color:var(--ink);border:1px solid var(--line)}
+.tut-ring{position:fixed;border:2px solid var(--khaki);border-radius:8px;box-shadow:0 0 0 4000px rgba(0,0,0,.0),0 0 18px rgba(232,192,90,.7);animation:tring 1.1s ease-in-out infinite;transition:all .15s}
+@keyframes tring{50%{box-shadow:0 0 0 4000px rgba(0,0,0,0),0 0 28px rgba(232,192,90,1);border-color:#fff3c4}}
+.tut-hand{position:fixed;width:0;height:0}
+.tut-hand i{position:absolute;left:-13px;top:-13px;width:26px;height:26px;border-radius:50%;background:rgba(255,243,196,.85);box-shadow:0 0 0 3px rgba(26,26,18,.5),0 0 16px rgba(255,243,196,.8);opacity:0}
+.tut-hand.tap i:first-child{animation:htap 1.3s ease-out infinite}
+.tut-hand.hold i:first-child{animation:hhold 1.8s ease-in-out infinite}
+.tut-hand.drag i:first-child{animation:hdrag 1.8s ease-in-out infinite}
+.tut-hand.pinch i:first-child{animation:hpin1 1.8s ease-in-out infinite}
+.tut-hand.pinch i:last-child{animation:hpin2 1.8s ease-in-out infinite}
+@keyframes htap{0%{transform:scale(1.6);opacity:0}30%{transform:scale(1);opacity:1}55%{transform:scale(.8);opacity:1}100%{transform:scale(2.2);opacity:0}}
+@keyframes hhold{0%{transform:scale(1.5);opacity:0}20%{transform:scale(.8);opacity:1}75%{transform:scale(.8);opacity:1;box-shadow:0 0 0 14px rgba(255,243,196,.35)}100%{opacity:0}}
+@keyframes hdrag{0%{transform:translate(70px,30px);opacity:0}15%{opacity:1}70%{transform:translate(-70px,-30px);opacity:1}100%{transform:translate(-70px,-30px);opacity:0}}
+@keyframes hpin1{0%{transform:translate(-14px,14px);opacity:0}15%{opacity:1}70%{transform:translate(-60px,60px);opacity:1}100%{opacity:0}}
+@keyframes hpin2{0%{transform:translate(14px,-14px);opacity:0}15%{opacity:1}70%{transform:translate(60px,-60px);opacity:1}100%{opacity:0}}
+
 .sndrow{display:flex;gap:8px}.sndrow .go{flex:1;font-size:12px}.sndrow .go.off{opacity:.45;text-decoration:line-through}
 #sndBtn.off{opacity:.4}
 .ab{flex:0 0 auto;height:40px;border-radius:4px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-weight:800;font-size:15px;padding:0 14px;letter-spacing:.04em}
@@ -216,19 +246,10 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
       </div>
       <div class="best" id="bestLine"></div></div>
     <button class="go" id="startBtn">Deploy</button>
+    <div class="sndrow"><button class="go ghost" id="howBtn">How to play</button><button class="go ghost" id="tutBtn">Tutorial</button></div>
     <button class="go ghost" id="boardBtn">Leaderboard</button>
     <button class="go ghost" id="statsBtn">Service record</button>
     <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button></div>
-    <dl class="brief">
-      <dt>ARMY</dt><dd>30 infantry in squads A, B and C, plus one general. Fallen infantry respawn at your base.</dd>
-      <dt>GENERAL</dt><dd>Sees and shoots further than infantry, moves a little faster and has ten times the health. Infantry near the general hit 30% harder.</dd>
-      <dt>POINTS</dt><dd>One point per kill. Each upgrade adds 15% health and firepower to the whole army.</dd>
-      <dt>ORDERS</dt><dd>Pick a squad, then tap where to go. Run &amp; gun shoots on the move. Engage chases anything it sees.</dd>
-      <dt>GROUPS</dt><dd>Tap SELECT and drag a box, or tap units, then hold A, B, C or D to save them as a group. IDLE picks everyone standing around.</dd>
-      <dt>KILL</dt><dd>Destroy the selected units yourself (tap KILL twice). Nobody gets points, and they respawn at base. Use it when a squad is trapped.</dd>
-      <dt>MAP</dt><dd>Drag to move the map and pinch to zoom. Tap the minimap to jump anywhere. Tap a squad button twice to find that squad.</dd>
-    </dl>
-    <div class="keys">Mouse works like touch: drag to move the map, wheel to zoom, click to order. Optional: shift-drag to box-select, right-click to order, keys 1 to 4, G, Q and I to pick groups, Ctrl+number to save a group, E to switch mode, X twice to kill selected.</div>
   </div>
 </div>
 
@@ -249,7 +270,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <div class="tiles" id="statTiles"></div>
     <div class="opt"><label>Best wins by skill</label><div class="bests" id="statBests"></div></div>
     <div class="opt"><label>Recent games</label><div class="logwrap"><table class="log" id="statLog"></table></div></div>
-    <p class="fine">Score = (kills × 5, plus 1,000 for a win and up to 900 for speed) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (number of enemies × their army size ÷ your army size).</p>
+    <p class="fine">Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (number of enemies × their army size ÷ your army size).</p>
     <button class="go" id="statsBack">Back</button>
     <button class="go ghost" id="clearLog">Clear record</button>
   </div>
@@ -263,6 +284,36 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <div class="logwrap tall"><table class="log arcade-t" id="boardTable"></table></div>
     <p class="fine" id="boardNote"></p>
     <button class="go" id="boardBack">Back</button>
+  </div>
+</div>
+
+<div class="screen" id="howto" hidden>
+  <div class="card wide howto">
+    <div class="eyebrow">Field manual</div>
+    <h2>How to play</h2>
+    <button class="go" id="howTut">Play the 3-minute tutorial</button>
+    <section><h3>The mission</h3><p>Every army starts in its own corner of a map covered in fog. Find the enemy, shoot first, keep your general alive, and destroy every enemy base. Lose your own base and it's over.</p></section>
+    <section><h3>Your army</h3><p>Your soldiers come in squads A, B and C, plus one general (the star). Fallen soldiers respawn at your base after a few seconds, and the general takes longer. Out of combat, everyone slowly patches up.</p></section>
+    <section><h3>The general</h3><p>He sees and shoots much further than infantry, is a little faster, and has ten times the health. Soldiers near him hit 30% harder. Use him for sneaky long-range shots, and don't lose him.</p></section>
+    <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
+    <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li><b>RUN &amp; GUN</b> moves and shoots on the way. <b>ENGAGE</b> stops to chase anything it sees. Tap the button to switch.</li></ul></section>
+    <section><h3>Picking exactly who you want</h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
+    <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b> twice to remove the selected soldiers yourself. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
+    <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
+    <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
+    <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
+    <button class="go ghost" id="howBack">Back</button>
+  </div>
+</div>
+
+<div class="tut" id="tut" hidden>
+  <div class="tut-ring" id="tutRing" hidden></div>
+  <div class="tut-hand" id="tutHand" hidden><i></i><i></i></div>
+  <div class="tut-card" id="tutCard">
+    <div class="tut-top"><span id="tutN"></span><button id="tutSkip">Skip tutorial</button></div>
+    <div class="tut-t" id="tutT"></div>
+    <div class="tut-b" id="tutB"></div>
+    <div class="tut-row"><button class="tut-step" id="tutStep">Skip this step</button><button class="tut-go ghosty" id="tutMore" hidden>Keep playing</button><button class="tut-go" id="tutNext">Next</button></div>
   </div>
 </div>
 
@@ -883,6 +934,7 @@ let W = 0, H = 0, DPR = 1;
 const cam = { x: 0, y: 0, z: 1 };
 // quality: 2 = full, 1 = reduced, 0 = minimal. Drops automatically if frames get slow.
 const Q = { level: 2, ema: 16, slowT: 0, fastT: 0 };
+const qLevel = () => (G && G.attract) ? Math.min(Q.level, 1) : Q.level;
 const QP = [
   { dpr: 1, parts: 140, clouds: false, shadows: false, decals: true },
   { dpr: 1.5, parts: 320, clouds: true, shadows: false, decals: true },
@@ -896,7 +948,7 @@ let parts = [];
 const SPR = {};
 
 function resize() {
-  DPR = Math.min(QP[Q.level].dpr, window.devicePixelRatio || 1);
+  DPR = Math.min(QP[qLevel()].dpr, (G && G.attract) ? 1.25 : 9, window.devicePixelRatio || 1);
   W = window.innerWidth; H = window.innerHeight;
   cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
   cvs.style.width = W + "px"; cvs.style.height = H + "px";
@@ -1170,10 +1222,10 @@ function drawFogTexture() {
 }
 
 // ---------- particles ----------
-function addPart(p) { if (parts.length < QP[Q.level].parts) parts.push(p); }
+function addPart(p) { if (parts.length < QP[qLevel()].parts) parts.push(p); }
 const rnd = Math.random;
 function burst(x, y, kind, color, big) {
-  const P = QP[Q.level];
+  const P = QP[qLevel()];
   if (kind === "hit") {
     for (let i = 0; i < 3; i++) { const a = rnd() * 7, s = 40 + rnd() * 90; addPart({ k: "spark", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.25, max: 0.25, s: 1.4, c: "255,210,120" }); }
     addPart({ k: "smoke", x, y, vx: 0, vy: -6, life: 0.5, max: 0.5, s: 7, g: 10 });
@@ -1242,7 +1294,7 @@ function render(dtReal) {
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.fillStyle = "#07090a"; c.fillRect(0, 0, cvs.width, cvs.height);
   if (!G || !groundCvs) return;
-  const now = performance.now() / 1000, P = QP[Q.level];
+  const now = performance.now() / 1000, P = QP[qLevel()];
   consumeFx(); stepParts(dtReal || 0.016);
   shake.a *= 0.88; const sx = (rnd() - 0.5) * shake.a, sy = (rnd() - 0.5) * shake.a;
   const z = cam.z, ox = -(cam.x) * z + W / 2 + sx, oy = -(cam.y) * z + H / 2 + sy;
@@ -1566,7 +1618,7 @@ function orderTo(wx, wy, forceMode) {
   if (!ids.length) { toast("Pick a squad first"); return; }
   const mode = forceMode || UI.mode;
   issue({ p: G.human, ids, x: wx, y: wy, mode });
-  UI.pings.push({ x: wx, y: wy, t: 0.7, mode }); SND.order(mode);
+  UI.pings.push({ x: wx, y: wy, t: 0.7, mode }); SND.order(mode); UI.orderN = (UI.orderN || 0) + 1;
 }
 
 function handleTap(sx, sy, additive) {
@@ -1739,6 +1791,7 @@ function initGame(g) {
 }
 // a live AI battle plays behind the menu
 function startAttract() {
+  setTimeout(resize, 0);
   initGame(newGame(4, 50, (Math.random() * 1e9) >>> 0, 3, 30));
   G.attract = true; G.players[0].ai = true; G.players[0].smart = true; G.players[0].mult = 1.3;
   document.body.classList.add("attract");
@@ -1757,6 +1810,7 @@ function attractCam(dt) {
 }
 
 function start() {
+  TUT.stop(); setTimeout(resize, 0);
   document.body.classList.remove("attract");
   initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me));
   const b = G.players[G.human].base, p = G.players[G.human];
@@ -1923,12 +1977,15 @@ const SND = (() => {
     function schedule() {
       if (!ac) return;
       // tension follows battle heat: rises fast, falls slowly
-      const target = clamp(heat / 20, 0, 1) * (G && G.attract ? 0.55 : 1);
-      tension += (target - tension) * (target > tension ? 0.18 : 0.009);
-      heat *= 0.86;
+      // enemies in sight put the music on edge even before shots fly
+      let seen = 0;
+      if (G && !G.attract && !G.over && G.units) for (const u of G.units) if (u.alive && u.owner !== G.human && isVis(u.x, u.y)) seen++;
+      const target = Math.max(clamp(heat / 7, 0, 1), seen ? clamp(0.3 + seen * 0.04, 0, 0.6) : 0) * (G && G.attract ? 0.55 : 1);
+      tension += (target - tension) * (target > tension ? 0.25 : 0.01);
+      heat *= 0.9;
       if (G && !G.attract && !G.over) {
         const hp = G.players[G.human].base.hp;
-        if (lastHp !== null && hp < lastHp - 1) heat += 4; // our base is being hit
+        if (lastHp !== null && hp < lastHp - 1) heat += 6; // our base is being hit
         lastHp = hp;
       }
       const dTarget = (UI.paused && G && !G.attract && !G.over) ? 0.35 : 1;
@@ -1939,21 +1996,21 @@ const SND = (() => {
         if (idx % 32 === 0) pad(t, chords[cI], beat * 8);
         const root = roots[cI];
         // calm layer: sparse plucked arpeggio, fades out as tension rises
-        if (T < 0.75 && st % 2 === 0 && Math.random() < 0.45 - T * 0.3) {
+        if (T < 0.5 && st % 2 === 0 && Math.random() < 0.45 - T * 0.8) {
           const ch = chords[cI], s = ch[Math.floor(Math.random() * 3)] + 12 * (Math.random() < 0.5 ? 1 : 2);
           tone(t, "triangle", hz(s), hz(s), 0.9, 0.07 * (1 - T), 0.005, (Math.random() - 0.5) * 0.6, 0.6, musBus);
         }
         // tension layers
-        if (T > 0.12) { // bass ostinato
+        if (T > 0.06) { // bass ostinato
           const pat = [0, 0, 12, 0, 0, 7, 0, 12, 0, 0, 12, 0, 3, 0, 7, 12];
-          if (st % (T > 0.45 ? 1 : 2) === 0) tone(t, "sawtooth", hz(root - 12 + pat[st]), hz(root - 12 + pat[st]), six * 0.9, 0.11 * Math.min(1, T * 1.6), 0.004, 0, 0, musBus, 300 + T * 900);
+          if (st % (T > 0.3 ? 1 : 2) === 0) tone(t, "sawtooth", hz(root - 12 + pat[st]), hz(root - 12 + pat[st]), six * 0.9, 0.16 * Math.min(1, T * 2), 0.004, 0, 0, musBus, 300 + T * 900);
         }
-        if (T > 0.2 && st % 2 === 1) hat(t, Math.min(1, T * 1.4));
-        if (T > 0.28 && (st === 0 || st === 8 || (T > 0.6 && (st === 6 || st === 11)))) kick(t, Math.min(1, T * 1.3));
-        if (T > 0.45 && (st === 4 || st === 12)) snare(t, Math.min(1, T * 1.2));
-        if (T > 0.65 && bar % 2 === 1 && st >= 12) tom(t, T, [180, 160, 140, 120][st - 12]);
-        if (T > 0.7 && (st === 0 || st === 3 || st === 6 || st === 10)) { // string stabs
-          for (const s of chords[cI]) tone(t, "sawtooth", hz(s + 12), hz(s + 12), six * 1.6, 0.035 * T, 0.006, 0, 0.4, musBus, 2400);
+        if (T > 0.12 && (st % 2 === 1 || T > 0.6)) hat(t, Math.min(1.3, T * 1.8));
+        if (T > 0.18 && (st === 0 || st === 8 || (T > 0.45 && (st === 6 || st === 10 || st === 11)))) kick(t, Math.min(1.3, T * 1.8));
+        if (T > 0.3 && (st === 4 || st === 12)) snare(t, Math.min(1.3, T * 1.7));
+        if (T > 0.5 && bar % 2 === 1 && st >= 12) tom(t, T * 1.2, [180, 160, 140, 120][st - 12]);
+        if (T > 0.55 && (st === 0 || st === 3 || st === 6 || st === 10)) { // string stabs
+          for (const s of chords[cI]) tone(t, "sawtooth", hz(s + 12), hz(s + 12), six * 1.6, 0.05 * T, 0.006, 0, 0.4, musBus, 2400);
         }
         next += six; idx++;
       }
@@ -1968,12 +2025,125 @@ const SND = (() => {
   S.reset = () => { heat = 0; lastHp = null; };
   return S;
 })();
+// ======================================================================
+// TUTORIAL: a guided practice battle; each step waits until you actually do it
+// ======================================================================
+const TUT = (() => {
+  let on = false, i = 0, timer = null, base0 = null, flags = {}, doneT = 0;
+  const w2s = (x, y) => ({ x: (x - cam.x) * cam.z + W / 2, y: (y - cam.y) * cam.z + H / 2 });
+  const red = () => G.players[1];
+  const myAlive = () => G.units.filter(u => u.owner === G.human && u.alive);
+  const front = d => { const b = G.players[G.human].base, f = G.players[G.human].fwd; return { x: b.x + f.x * d, y: b.y + f.y * d }; };
+  function spawnRed(n, x, y, hp) {
+    const list = G.units.filter(u => u.owner === 1 && u.kind === "inf" && !u.alive).slice(0, n);
+    list.forEach((u, k) => {
+      const a = k / Math.max(1, n) * Math.PI * 2;
+      u.x = u.tx = x + Math.cos(a) * 22 * (n > 1); u.y = u.ty = y + Math.sin(a) * 22 * (n > 1);
+      u.alive = true; u.hp = hp; u.respawn = Infinity; u.mode = "move"; u.seen = u.tgt = null; u.cd = 1.5;
+    });
+    return list;
+  }
+  let scouts = [], lone = null;
+  const S = [
+    { t: "Welcome, commander", b: "This is your base. Your soldiers are split into squads A, B and C, and the star is your general. Let's learn the controls.", next: true, at: () => G.players[G.human].base },
+    { t: "Look around", b: "Drag anywhere on the map to move the camera.", hand: "drag", enter() { base0 = { x: cam.x, y: cam.y }; }, ok: () => Math.hypot(cam.x - base0.x, cam.y - base0.y) > 140 },
+    { t: "Zoom", b: "Pinch with two fingers, or use the mouse wheel, to zoom in or out.", hand: "pinch", enter() { base0 = cam.z; }, ok: () => Math.abs(cam.z - base0) > 0.12 },
+    { t: "Back to base", b: "Lost? Tap BASE to jump back home.", el: "#homeBtn", hand: "tap", ok: () => flags.home },
+    { t: "Pick a squad", b: "Tap A to select squad A. Selected soldiers get a ring.", el: '[data-sel="0"]', hand: "tap", ok: () => UI.selKey === "0" },
+    { t: "Give an order", b: "Now tap open ground where you want them to go. A tap on the same squad button twice finds them on the map.", hand: "tap", at: () => front(330), enter() { base0 = UI.orderN || 0; }, ok: () => (UI.orderN || 0) > base0 },
+    { t: "Whole army", b: "Tap ALL to select everyone, general included.", el: '[data-sel="all"]', hand: "tap", ok: () => UI.selKey === "all" },
+    { t: "Two kinds of orders", b: "RUN & GUN moves to the spot and shoots on the way. ENGAGE stops to chase and fight anything it sees. Tap it to switch to ENGAGE.", el: "#modeBtn", hand: "tap", ok: () => UI.mode === "attack" },
+    { t: "Enemy scouts!", b: "Red soldiers ahead. With your army selected, tap right on them to attack.", hand: "tap",
+      enter() { const a = myAlive().filter(u => u.kind === "inf"), f = G.players[G.human].fwd, cx = a.reduce((s, u) => s + u.x, 0) / a.length, cy = a.reduce((s, u) => s + u.y, 0) / a.length;
+        const p = pushOutOfRocks(clamp(cx + f.x * 240, 60, G.S - 60), clamp(cy + f.y * 240, 60, G.S - 60), 30); scouts = spawnRed(4, p.x, p.y, 14); },
+      at: () => { const a = scouts.filter(u => u.alive); return a.length ? { x: a.reduce((s, u) => s + u.x, 0) / a.length, y: a.reduce((s, u) => s + u.y, 0) / a.length } : null; },
+      ok: () => scouts.every(u => !u.alive) },
+    { t: "Your general", b: "Tap GEN. The general sees and shoots much further, has ten times the health, and soldiers near him hit 30% harder. Keep him alive.", el: '[data-sel="gen"]', hand: "tap", ok: () => UI.selKey === "gen" },
+    { t: "Sniper shot", b: "A lone enemy is hiding further out. Send your general toward it. He'll hit it from far away.", hand: "tap",
+      enter() { const g = G.gens[G.human], f = G.players[G.human].fwd, p = { x: clamp(g.x + f.x * 480 - f.y * 160, 60, G.S - 60), y: clamp(g.y + f.y * 480 + f.x * 160, 60, G.S - 60) }; [lone] = spawnRed(1, p.x, p.y, 12); },
+      at: () => lone && lone.alive ? lone : null, ok: () => lone && !lone.alive },
+    { t: "Pick exactly who you want", b: "Tap SELECT, then drag a box around a few soldiers. In select mode you can also tap soldiers one by one.", el: "#boxBtn", hand: "tap", ok: () => UI.selKey === null && UI.sel.size >= 2 },
+    { t: "Save a group", b: "Hold D for a moment to save the selection as group D. Tap D later to grab them again.", el: '[data-sel="3"]', hand: "hold", ok: () => G.units.some(u => u.owner === G.human && u.squad === 3) },
+    { t: "Find the slackers", b: "Tap IDLE to pick everyone who's standing around with nothing to do.", el: '[data-sel="idle"]', hand: "tap", ok: () => UI.selKey === "idle" },
+    { t: "Last resort", b: "If a squad is trapped and about to die, tap KILL twice to remove it yourself. The enemy gets no points, and they respawn at base. Pick group D, then try it.", el: "#killBtn", hand: "tap",
+      enter() { base0 = G.units.filter(u => u.owner === G.human && !u.alive).length; }, ok: () => G.units.filter(u => u.owner === G.human && !u.alive).length > base0 },
+    { t: "The minimap", b: "Tap or drag on the minimap to jump anywhere. Your fog of war clears wherever your soldiers can see.", el: "#mini", hand: "tap", ok: () => flags.mini },
+    { t: "Your mission", b: "Find and destroy every enemy base. Each kill is a point, and every upgrade makes your whole army tougher and deadlier. Bigger, tougher enemies score more on the leaderboard. Good luck!", next: true, last: true }
+  ];
+  const $t = id => document.getElementById(id);
+  function show() {
+    const s = S[i];
+    $t("tutN").textContent = (i + 1) + " / " + S.length;
+    $t("tutT").textContent = s.t; $t("tutB").textContent = s.b;
+    $t("tutNext").hidden = !s.next; $t("tutNext").textContent = s.last ? "Finish" : "Next";
+    $t("tutStep").hidden = !!s.next; $t("tutMore").hidden = !s.last;
+    $t("tutCard").classList.remove("done");
+    if (s.enter) s.enter();
+    // make sure what we point at is on screen, a little above the card
+    if (s.at) { const q = s.at(); if (q) { cam.x = q.x; cam.y = q.y + 70 / cam.z; clampCam(); } }
+    doneT = 0;
+  }
+  function advance() { if (i < S.length - 1) { i++; show(); } else finish(false); }
+  function place() {
+    const s = S[i], ring = $t("tutRing"), hand = $t("tutHand");
+    let r = null;
+    if (s.el) { const e = document.querySelector(s.el); if (e) { const b = e.getBoundingClientRect(); r = { x: b.left + b.width / 2, y: b.top + b.height / 2, w: b.width + 12, h: b.height + 12 }; } }
+    else if (s.at) { const p = s.at(); if (p) { const q = w2s(p.x, p.y); r = { x: q.x, y: q.y, w: 64, h: 64 }; } }
+    else if (s.hand) r = { x: W / 2, y: H * 0.42, w: 0, h: 0 };
+    ring.hidden = !r || !r.w; hand.hidden = !r || !s.hand || doneT;
+    if (r) {
+      ring.style.cssText = `left:${r.x - r.w / 2}px;top:${r.y - r.h / 2}px;width:${r.w}px;height:${r.h}px`;
+      hand.style.left = r.x + "px"; hand.style.top = r.y + "px"; hand.className = "tut-hand " + s.hand;
+    }
+  }
+  function loop() {
+    if (!on || !G || !G.tutorial) return stop();
+    const s = S[i];
+    if (!doneT && s.ok && s.ok()) { doneT = 1; $t("tutCard").classList.add("done"); SND.ui(); setTimeout(() => { if (on) advance(); }, 900); }
+    place();
+  }
+  function start() {
+    document.body.classList.remove("attract");
+    initGame(newGame(2, 100, 20251103, 1, 8, 12)); setTimeout(resize, 0);
+    G.tutorial = true;
+    const R = red(); R.ai = false;
+    for (const u of G.units) if (u.owner === 1) { u.alive = false; u.respawn = Infinity; }
+    const b = G.players[G.human].base, p = G.players[G.human];
+    cam.z = Math.min(W, H) < 600 ? 0.9 : 1.05;
+    cam.x = b.x + p.fwd.x * 160; cam.y = b.y + p.fwd.y * 160; clampCam();
+    UI.mode = "move"; UI.pings = []; UI.boxMode = false; UI.sel.clear(); UI.selKey = null; refreshBar();
+    ["menu", "over", "pause", "howto"].forEach(id => $(id).hidden = true);
+    $("toast").innerHTML = "";
+    UI.paused = false; acc = 0; last = performance.now(); SND.reset();
+    updateFog();
+    on = true; i = 0; flags = {}; $t("tut").hidden = false; show();
+    clearInterval(timer); timer = setInterval(loop, 60);
+  }
+  function stop() { on = false; clearInterval(timer); $t("tut").hidden = true; }
+  function finish(keepPlaying) {
+    try { localStorage.setItem("hr-tut", "1"); } catch (e) {}
+    stop();
+    if (keepPlaying) {
+      const R = red(); R.ai = true;
+      for (const u of G.units) if (u.owner === 1 && !u.alive) u.respawn = 2 + Math.random() * 6;
+      toast("Practice battle: take their base!", "gold");
+    } else toMenu();
+  }
+  $t("tutNext").addEventListener("click", () => { SND.ui(); if (S[i].last) finish(false); else advance(); });
+  $t("tutStep").addEventListener("click", () => { SND.ui(); advance(); });
+  $t("tutSkip").addEventListener("click", () => finish(false));
+  $t("tutMore").addEventListener("click", () => finish(true));
+  $("homeBtn").addEventListener("click", () => { flags.home = true; });
+  $("mini").addEventListener("pointerdown", () => { flags.mini = true; });
+  return { start, stop, get on() { return on; } };
+})();
 // ---- game log & score (kept on this device) ----
 const SKILL_F = { 1: 1, 2: 2, 3: 3, 4: 5 };
 const GAME_URL = "https://claude.ai/artifact/4x6WieAiF3e6Lyh4V1Ahd8";
 function gameScore(win, kills, secs, diff, enemies, army, mine = 30) {
   const base = kills * 5 + (win ? 1000 + Math.max(0, 900 - secs) : 0);
-  return Math.round(base * SKILL_F[diff] * (enemies * army / mine));
+  // a loss keeps only a quarter of its points
+  return Math.round(base * SKILL_F[diff] * (enemies * army / mine) * (win ? 1 : 0.25));
 }
 function loadLog() { try { return JSON.parse(localStorage.getItem("hr-log") || "[]"); } catch (e) { return []; } }
 function saveLog(l) { try { localStorage.setItem("hr-log", JSON.stringify(l.slice(-200))); } catch (e) {} }
@@ -2110,24 +2280,38 @@ function lbRpc(fn, body) {
   return fetch(LB.url + "/rest/v1/rpc/" + fn, { method: "POST", keepalive: true, headers: { ...lbHead(), "Content-Type": "application/json" }, body: JSON.stringify(body || {}) }).catch(() => {});
 }
 function reportKills() {
-  if (!G || G.attract || !G.players) return;
+  if (!G || G.attract || G.tutorial || !G.players) return;
   const k = G.players[G.human].kills - killsSent; if (k > 0) { killsSent += k; lbRpc("add_kills", { n: k }); }
 }
 async function loadCounters() {
   if (!LB.url) return;
   try {
     const r = await fetch(LB.url + "/rest/v1/counters?select=games,kills&id=eq.1", { headers: lbHead() });
-    if (!r.ok) return; const [c] = await r.json(); if (!c) return;
+    if (!r.ok) return; const [c] = await r.json(); if (!c || !Number.isFinite(+c.games) || !Number.isFinite(+c.kills)) return; c.games = +c.games; c.kills = +c.kills;
     const st = $("stamp"); if (st.hidden) { st.hidden = false; st.classList.add("thump"); }
-    tick.games.to = c.games; tick.kills.to = c.kills;
+    // first load: run up from 0 in 2 seconds; later updates roll in over 1 second
+    const now = performance.now(), dur = firstCount ? 2000 : 1000; firstCount = false;
+    for (const [k, v] of [["games", c.games], ["kills", c.kills]]) { const t = tick[k]; if (t.to !== v) { t.from = t.v; t.to = v; t.t0 = now; t.dur = dur; } }
   } catch (e) {}
 }
-// numbers roll toward the latest totals like an odometer
-const tick = { games: { v: 0, to: 0, el: "stGames" }, kills: { v: 0, to: 0, el: "stKills" } };
-(function roll() {
-  for (const k in tick) { const t = tick[k]; if (t.v !== t.to) { t.v = t.to - t.v < 3 ? t.to : t.v + Math.ceil((t.to - t.v) * 0.08); $(t.el).textContent = fmtN(t.v); } }
-  requestAnimationFrame(roll);
+// worn-ink texture: baked once to a small image (a live SVG filter over the moving map is slow)
+(function bakeInk() {
+  const c = document.createElement("canvas"); c.width = 220; c.height = 160; const x = c.getContext("2d"), d = x.createImageData(220, 160);
+  let sd = 7; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < d.data.length; i += 4) { const v = r(); d.data[i + 3] = v < 0.16 ? 0 : v < 0.3 ? 120 : 255; }
+  x.putImageData(d, 0, 0);
+  for (let k = 0; k < 14; k++) { x.globalCompositeOperation = "destination-out"; x.beginPath(); x.arc(r() * 220, r() * 160, 2 + r() * 7, 0, 7); x.fillStyle = `rgba(0,0,0,${0.3 + r() * 0.5})`; x.fill(); }
+  const u = `url(${c.toDataURL()})`, st = $("stamp").style; st.webkitMaskImage = u; st.maskImage = u; st.webkitMaskSize = st.maskSize = "220px 160px";
 })();
+// numbers roll toward the latest totals like an odometer
+const tick = { games: { v: 0, from: 0, to: 0, t0: 0, el: "stGames" }, kills: { v: 0, from: 0, to: 0, t0: 0, el: "stKills" } };
+let firstCount = true;
+setInterval(() => {
+  const now = performance.now();
+  for (const k in tick) { const t = tick[k]; if (t.v === t.to) continue;
+    const f = clamp((now - t.t0) / t.dur, 0, 1), e = 1 - Math.pow(1 - f, 3);
+    t.v = f >= 1 ? t.to : Math.round(t.from + (t.to - t.from) * e); $(t.el).textContent = fmtN(t.v); }
+}, 33);
 // refresh totals while the menu is open; report kills during long games too
 setInterval(() => { if (!document.hidden && !$("menu").hidden) loadCounters(); }, 8000);
 setInterval(reportKills, 30000);
@@ -2165,7 +2349,7 @@ async function showBoard(diff, mine) {
   $("menu").hidden = true; $("over").hidden = true; $("board").hidden = false;
   $("boardTabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.v === boardDiff));
   $("boardSrc").textContent = LB.url ? "Public leaderboard · everyone's best" : "Leaderboard · this device";
-  $("boardNote").textContent = LB.url ? "Score = (kills × 5 + win bonus) × skill × odds (enemy soldiers ÷ yours). Ties go to whoever got there first." : "Scores here stay on this device. The public leaderboard is at " + PUBLIC_URL.replace("https://", "");
+  $("boardNote").textContent = LB.url ? "Score = (kills × 5 + win bonus) × skill × odds; losses (✕) keep a quarter (enemy soldiers ÷ yours). Ties go to whoever got there first." : "Scores here stay on this device. The public leaderboard is at " + PUBLIC_URL.replace("https://", "");
   const t = $("boardTable");
   t.innerHTML = `<tbody><tr><td>LOADING…</td></tr></tbody>`;
   let rows;
@@ -2181,6 +2365,7 @@ $("boardBtn").addEventListener("click", () => showBoard(0));
 $("boardBack").addEventListener("click", () => { $("board").hidden = true; if (boardFrom === "over") $("over").hidden = false; else $("menu").hidden = false; });
 
 function showOver() {
+  if (G.tutorial) { toMenu(); return; }
   UI.paused = true;
   const me = G.players[G.human];
   $("overTitle").textContent = G.over.win ? "Victory" : "Defeated";
@@ -2192,7 +2377,7 @@ function showOver() {
   const log = loadLog(), prevHi = log.reduce((m, g) => Math.max(m, g.score), 0);
   log.push({ at: Date.now(), win, diff: G.diff, enemies, army: G.enemyArmy, me: G.myArmy, secs, kills: me.kills, losses: me.losses, level: me.level + 1, score });
   saveLog(log);
-  const newHi = score > prevHi && score > 0;
+  const newHi = win && score > prevHi && score > 0;
   $("overScore").innerHTML = `<small>${newHi ? "New high score" : "Score · best " + fmtN(prevHi)}</small>${fmtN(score)}`;
   lastShareShort = win ? `I beat ${DIFF_NAME[G.diff]} in Hit and Run with a score of ${fmtN(score)}. Beat that!` : `I scored ${fmtN(score)} in Hit and Run. Your turn!`;
   lastShare = win
@@ -2220,19 +2405,24 @@ document.querySelectorAll("[data-snd]").forEach(b => b.addEventListener("click",
 $("sndBtn").addEventListener("click", () => { const on = !(SND.pref.m || SND.pref.s); SND.setPref("m", on); SND.setPref("s", on); refreshSnd(); });
 refreshSnd();
 $("resumeBtn").addEventListener("click", togglePause);
-const toMenu = () => { reportKills(); loadCounters(); $("pause").hidden = true; $("over").hidden = true; $("menu").hidden = false; showBest(); startAttract(); };
+$("howBtn").addEventListener("click", () => { $("menu").hidden = true; $("howto").hidden = false; $("howto").scrollTop = 0; });
+$("howBack").addEventListener("click", () => { $("howto").hidden = true; $("menu").hidden = false; });
+$("tutBtn").addEventListener("click", () => TUT.start());
+$("howTut").addEventListener("click", () => TUT.start());
+const toMenu = () => { TUT.stop(); reportKills(); loadCounters(); $("pause").hidden = true; $("over").hidden = true; $("menu").hidden = false; showBest(); startAttract(); };
 $("quitBtn").addEventListener("click", toMenu);
 $("menuBtn").addEventListener("click", toMenu);
 document.addEventListener("visibilitychange", () => { if (document.hidden && G && !UI.paused && !G.over) togglePause(); });
 
 
-let last = performance.now(), acc = 0, miniT = 0, hudT = 0;
+let last = performance.now(), acc = 0, miniT = 0, hudT = 0, lastAttractDraw = 0;
 function frame(now) {
   const dtReal = Math.min(0.1, (now - last) / 1000); last = now;
-  trackQuality(dtReal);
+  if (!(G && G.attract)) trackQuality(dtReal);
   if (G && G.attract) {
     acc += dtReal; let steps = 0;
-    while (acc >= CFG.dt && steps < 3) { step(); acc -= CFG.dt; steps++; }
+    while (acc >= CFG.dt && steps < 2) { step(); acc -= CFG.dt; steps++; }
+    if (acc > CFG.dt * 2) acc = 0; // never try to catch up behind the menu
     attractCam(dtReal);
   } else if (G && !UI.paused) {
     const ps = 700 / cam.z * dtReal;
@@ -2250,10 +2440,13 @@ function frame(now) {
     hudT -= dtReal; if (hudT <= 0) { hudT = 0.2; renderScore(); refreshBar(); }
     if (G.over) { updateFog(); renderScore(); setTimeout(showOver, 1400); UI.paused = true; }
   }
-  if (G) {
-    render(G.attract || !UI.paused ? dtReal : 0);
+  // the menu backdrop draws at a steady ~30fps so the menu itself stays smooth
+  const skip = G && G.attract && now - lastAttractDraw < 28;
+  if (G && !skip) {
+    if (G.attract) { render(Math.min(0.1, (now - lastAttractDraw) / 1000)); lastAttractDraw = now; } else
+    render(!UI.paused ? dtReal : 0);
     miniT -= dtReal; if (miniT <= 0) { miniT = 0.1; renderMini(); }
-  } else { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#07090a"; ctx.fillRect(0, 0, cvs.width, cvs.height); }
+  } else if (!G) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#07090a"; ctx.fillRect(0, 0, cvs.width, cvs.height); }
   requestAnimationFrame(frame);
 }
 startAttract();
