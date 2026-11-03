@@ -75,7 +75,19 @@ button:focus-visible{outline:2px solid var(--khaki);outline-offset:2px}
 .screen{position:fixed;inset:0;z-index:10;display:grid;place-items:center;overflow:auto;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:
   radial-gradient(ellipse at 30% 20%,rgba(205,180,106,.08),transparent 60%),
   linear-gradient(90deg,rgba(6,8,6,.9) 0%,rgba(6,8,6,.72) 45%,rgba(6,8,6,.35) 100%)}
-#menu .card{text-shadow:0 1px 12px rgba(0,0,0,.6)}
+#menu .card{text-shadow:0 1px 12px rgba(0,0,0,.6);position:relative}
+/* rubber stamp: worn red ink, slightly rotated, thumps down on load */
+.stamp{position:absolute;top:34px;right:0;transform:rotate(-9deg);color:#e8483a;pointer-events:none;text-shadow:none;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.75'/%3E%3C/filter%3E%3Crect width='220' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.75'/%3E%3C/filter%3E%3Crect width='220' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode:screen;opacity:.92}
+.stamp .st-in{border:3px solid currentColor;outline:1.5px solid currentColor;outline-offset:3px;border-radius:5px;padding:7px 12px 8px;display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(210,58,44,.06)}
+.stamp .st-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+.stamp b{font-family:"Saira Condensed",sans-serif;font-size:30px;line-height:1;font-weight:800;letter-spacing:.02em}
+.stamp .st-rule{width:100%;height:2px;background:currentColor;margin:4px 0 3px}
+.stamp.thump{animation:thump .42s cubic-bezier(.2,.9,.3,1.25) both}
+@keyframes thump{0%{transform:rotate(-14deg) scale(2.3);opacity:0}60%{transform:rotate(-8deg) scale(.94);opacity:.95}100%{transform:rotate(-9deg) scale(1);opacity:.92}}
+@media (max-width:420px){.stamp{top:30px;right:2px}.stamp b{font-size:25px}}
 .armyset{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:4px;padding:8px 10px;background:rgba(6,8,6,.45)}
 .arow{display:grid;grid-template-columns:78px 36px 1fr 36px 40px;align-items:center;gap:8px}
 .arow .an{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-dim);text-transform:uppercase}
@@ -189,6 +201,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
   <div class="card">
     <div class="eyebrow">Field operations · prototype</div>
     <h1>Hit<br>and <span>Run</span></h1>
+    <div class="stamp" id="stamp" hidden aria-live="polite"><div class="st-in"><span class="st-k">Battles fought</span><b id="stGames">0</b><span class="st-rule"></span><span class="st-k">Enemies killed</span><b id="stKills">0</b></div></div>
     <p class="lede">Find the enemy in the fog, shoot first, keep your general alive, and take their base.</p>
     <div class="opt"><label>Enemy armies (AI)</label>
       <div class="seg" id="optPlayers"><button data-v="2" class="on">1</button><button data-v="3">2</button><button data-v="4">3</button></div></div>
@@ -1754,6 +1767,7 @@ function start() {
   $("menu").hidden = true; $("over").hidden = true; $("pause").hidden = true;
   $("toast").innerHTML = "";
   UI.paused = false; acc = 0; last = performance.now(); SND.reset();
+  killsSent = 0; lbRpc("game_started");
   updateFog();
   toast("Drag to look around. Pick a squad, then tap where to go.");
   if (UI.opts.diff === 4) toast("Invincible: enemy armies of " + UI.opts.army + " vs your " + UI.opts.me, "bad");
@@ -2089,6 +2103,38 @@ $("nameOk").addEventListener("click", async () => {
   }
 });
 
+// ---- global counters (games started, enemies killed by players) ----
+let killsSent = 0;
+function lbRpc(fn, body) {
+  if (!LB.url) return Promise.resolve();
+  return fetch(LB.url + "/rest/v1/rpc/" + fn, { method: "POST", keepalive: true, headers: { ...lbHead(), "Content-Type": "application/json" }, body: JSON.stringify(body || {}) }).catch(() => {});
+}
+function reportKills() {
+  if (!G || G.attract || !G.players) return;
+  const k = G.players[G.human].kills - killsSent; if (k > 0) { killsSent += k; lbRpc("add_kills", { n: k }); }
+}
+async function loadCounters() {
+  if (!LB.url) return;
+  try {
+    const r = await fetch(LB.url + "/rest/v1/counters?select=games,kills&id=eq.1", { headers: lbHead() });
+    if (!r.ok) return; const [c] = await r.json(); if (!c) return;
+    const st = $("stamp"); if (st.hidden) { st.hidden = false; st.classList.add("thump"); }
+    tick.games.to = c.games; tick.kills.to = c.kills;
+  } catch (e) {}
+}
+// numbers roll toward the latest totals like an odometer
+const tick = { games: { v: 0, to: 0, el: "stGames" }, kills: { v: 0, to: 0, el: "stKills" } };
+(function roll() {
+  for (const k in tick) { const t = tick[k]; if (t.v !== t.to) { t.v = t.to - t.v < 3 ? t.to : t.v + Math.ceil((t.to - t.v) * 0.08); $(t.el).textContent = fmtN(t.v); } }
+  requestAnimationFrame(roll);
+})();
+// refresh totals while the menu is open; report kills during long games too
+setInterval(() => { if (!document.hidden && !$("menu").hidden) loadCounters(); }, 8000);
+setInterval(reportKills, 30000);
+loadCounters();
+window.addEventListener("pagehide", reportKills);
+document.addEventListener("visibilitychange", () => { if (document.hidden) reportKills(); });
+
 // ---- leaderboard data ----
 function localBoard() { try { return JSON.parse(localStorage.getItem("hr-board") || "[]"); } catch (e) { return []; } }
 async function lbSubmit(row) {
@@ -2153,7 +2199,7 @@ function showOver() {
     ? `I just beat ${DIFF_NAME[G.diff]} in Hit and Run: ${enemies > 1 ? enemies + " enemy armies" : "an enemy army"} of ${G.enemyArmy} with ${G.myArmy} soldiers, ${me.kills} kills in ${fmtT(secs)}. Score ${fmtN(score)}${newHi ? " (new personal best)" : ""}. Beat that 👉 ${SHARE_URL}`
     : `${DIFF_NAME[G.diff]} got me in Hit and Run, but not before ${me.kills} kills in ${fmtT(secs)}. Score ${fmtN(score)}. Your turn 👉 ${SHARE_URL}`;
   setShareLinks();
-  SND.sting(win);
+  SND.sting(win); reportKills();
   startNameEntry({ score, diff: G.diff, enemies, army: G.enemyArmy, my_army: G.myArmy, secs, kills: me.kills, win });
   const rec = $("overRecord"); rec.hidden = true;
   if (G.over.win) {
@@ -2174,7 +2220,7 @@ document.querySelectorAll("[data-snd]").forEach(b => b.addEventListener("click",
 $("sndBtn").addEventListener("click", () => { const on = !(SND.pref.m || SND.pref.s); SND.setPref("m", on); SND.setPref("s", on); refreshSnd(); });
 refreshSnd();
 $("resumeBtn").addEventListener("click", togglePause);
-const toMenu = () => { $("pause").hidden = true; $("over").hidden = true; $("menu").hidden = false; showBest(); startAttract(); };
+const toMenu = () => { reportKills(); loadCounters(); $("pause").hidden = true; $("over").hidden = true; $("menu").hidden = false; showBest(); startAttract(); };
 $("quitBtn").addEventListener("click", toMenu);
 $("menuBtn").addEventListener("click", toMenu);
 document.addEventListener("visibilitychange", () => { if (document.hidden && G && !UI.paused && !G.over) togglePause(); });
