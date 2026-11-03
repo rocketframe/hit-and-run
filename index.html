@@ -173,6 +173,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
 @keyframes hpin1{0%{transform:translate(-14px,14px);opacity:0}15%{opacity:1}70%{transform:translate(-60px,60px);opacity:1}100%{opacity:0}}
 @keyframes hpin2{0%{transform:translate(14px,-14px);opacity:0}15%{opacity:1}70%{transform:translate(60px,-60px);opacity:1}100%{opacity:0}}
 
+.sndhint{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.75;margin:-4px 0 10px;animation:hintp 1.6s ease-in-out infinite}@keyframes hintp{50%{opacity:.35}}
 .sndrow{display:flex;gap:8px}.sndrow .go{flex:1;font-size:12px}.sndrow .go.off{opacity:.45;text-decoration:line-through}
 #sndBtn.off{opacity:.4}
 .ab{flex:0 0 auto;height:40px;border-radius:4px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-weight:800;font-size:15px;padding:0 14px;letter-spacing:.04em}
@@ -247,6 +248,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <div class="eyebrow">Field operations · prototype</div>
     <h1>Hit<br>and <span>Run</span></h1>
     <div class="stamp" id="stamp" hidden aria-live="polite"><div class="st-in"><span class="st-k">Battles fought</span><b id="stGames">0</b><span class="st-rule"></span><span class="st-k">Enemies killed</span><b id="stKills">0</b></div></div>
+    <div class="sndhint" id="sndHint">Tap anywhere for sound</div>
     <p class="lede">Find the enemy in the fog, shoot first, keep your general alive, and take their base.</p>
     <div class="opt"><label>Enemy armies (AI)</label>
       <div class="seg" id="optPlayers"><button data-v="2" class="on">1</button><button data-v="3">2</button><button data-v="4">3</button></div></div>
@@ -1903,12 +1905,13 @@ function togglePause() {
 const SND = (() => {
   let ac = null, master, sfxBus, musBus, comp, noise, verb, verbIn;
   let pref = { m: 1, s: 1, v: 1 };
+  const urlStyle = (location.search.match(/[?&]music=(\w+)/) || [])[1];
   try { Object.assign(pref, JSON.parse(localStorage.getItem("hr-sound") || "{}")); } catch (e) {}
   const save = () => { try { localStorage.setItem("hr-sound", JSON.stringify(pref)); } catch (e) {} };
   const dbgEl = /[?&]musdebug\b/.test(location.search) ? Object.assign(document.createElement("div"), { style: "position:fixed;left:8px;bottom:8px;z-index:99;background:#000;color:#9fe07a;font:12px monospace;padding:4px 6px" }) : null;
   if (dbgEl) setTimeout(() => document.body.appendChild(dbgEl), 0);
   let tension = 0, heat = 0, lastShot = -1e9, lastSting = -1e9, lastHp = null, duck = 1, voices = 0, voiceT = 0;
-  const S = { get on() { return !!ac; }, get pref() { return pref; } };
+  const S = { get on() { return !!ac; }, get pref() { return pref; }, style: urlStyle || "march", force: null };
 
   function init() {
     if (ac) { if (ac.state === "suspended") ac.resume(); return; }
@@ -1928,7 +1931,10 @@ const SND = (() => {
     verbIn = verb;
     music.start();
   }
-  ["pointerdown", "keydown", "touchend"].forEach(ev => window.addEventListener(ev, init, { passive: true }));
+  // browsers only allow sound after the first tap or key press, so start on any gesture anywhere
+  const UNLOCK = ["pointerdown", "pointerup", "mousedown", "touchstart", "touchend", "click", "keydown"];
+  const unlock = () => { init(); if (ac && ac.state === "running") { UNLOCK.forEach(ev => window.removeEventListener(ev, unlock, true)); const h = document.getElementById("sndHint"); if (h) h.hidden = true; } };
+  UNLOCK.forEach(ev => window.addEventListener(ev, unlock, { capture: true, passive: true }));
   document.addEventListener("visibilitychange", () => { if (!ac) return; if (document.hidden) ac.suspend(); else ac.resume(); });
 
   // ---- helpers ----
@@ -1970,8 +1976,8 @@ const SND = (() => {
   S.shot = (x, y, w, mine) => {
     if (!ac) return;
     const P = place(x, y); heat += (P.d < 1.2 ? 1 : 0.5) * (mine ? 1.2 : 1); lastShot = performance.now();
-    if (!pref.s || !budget()) return;
-    const t = now() + Math.random() * 0.012, v = P.v * (G && G.attract ? 0.25 : 1);
+    if (!pref.s || (G && G.attract) || !budget()) return;
+    const t = now() + Math.random() * 0.012, v = P.v;
     if (w > 2.3) { // base turret: heavy thump
       nz(t, 0.25, "lowpass", 900, 0.7, 0.5 * v, 0.003, P.pan, 0.25);
       tone(t, "sine", 110, 42, 0.28, 0.6 * v, 0.004, P.pan, 0.1);
@@ -1979,12 +1985,15 @@ const SND = (() => {
       nz(t, 0.18, "bandpass", 2600, 0.9, 0.55 * v, 0.002, P.pan, 0.35, sfxBus, 700);
       tone(t, "triangle", 220, 70, 0.16, 0.35 * v, 0.003, P.pan, 0.2);
     } else { // rifle
-      nz(t, 0.07, "bandpass", 1500 + Math.random() * 900, 1.1, 0.26 * v, 0.0015, P.pan, 0.18);
+      nz(t, 0.06, "bandpass", 1700 + Math.random() * 900, 0.9, 0.6 * v, 0.001, P.pan, 0.22);
+      nz(t, 0.09, "lowpass", 900, 0.8, 0.45 * v, 0.001, P.pan, 0.12, sfxBus, 250);
+      tone(t, "triangle", 260, 90, 0.05, 0.22 * v, 0.001, P.pan, 0);
     }
   };
   S.fx = e => {
     if (!ac || !pref.s) return;
-    const P = place(e.x, e.y), t = now(), v = P.v * (G && G.attract ? 0.25 : 1);
+    if (G && G.attract) { if (e.k === "death") heat += 1.5; else if (e.k === "boom") heat += 12; return; } // menu backdrop: music only
+    const P = place(e.x, e.y), t = now(), v = P.v;
     if (e.k === "death") {
       heat += 1.5;
       if (e.big) { // general down: impact + low boom
@@ -2015,13 +2024,14 @@ const SND = (() => {
   };
   // ---- radio voices: soldiers answer your orders ----
   const LINES = {
-    move: ["Moving out.", "On my way.", "Acknowledged.", "Copy that.", "Roger. Moving.", "Understood. Relocating.", "Affirmative.", "Heading out."],
-    attack: ["Attack!", "Engaging!", "Weapons free!", "Let's go! Let's go!", "Charge!", "Go, go, go!", "Light them up!", "Hit them hard!"],
-    select: ["Ready.", "Standing by.", "Yes, commander.", "Awaiting orders.", "Squad ready."],
-    gen: ["General here.", "At your command.", "I'll handle it.", "Proceeding."],
-    alert: ["We're under attack!", "Contact! We're under attack!", "Taking fire!", "Enemy contact!"],
-    base: ["Our base is under attack!", "Base under attack! Defend the base!"]
+    move: ["Move! Move!", "Moving out!", "On it!", "Copy! Moving!", "Roger that!", "Go! Go!", "Hustle up!", "Double time!"],
+    attack: ["Attack!", "Kill them all!", "Open fire!", "Charge!", "Go, go, go!", "Light them up!", "Hit them hard!", "No mercy!", "Take them down!"],
+    select: ["Ready!", "Sir!", "Yes, sir!", "Orders!", "Locked and loaded!"],
+    gen: ["Follow me!", "On my command!", "I'll crush them!", "Forward!"],
+    alert: ["We're under attack!", "Contact! Contact!", "Taking fire!", "Enemy! Return fire!"],
+    base: ["Base under attack!", "Defend the base! Now!"]
   };
+
   // pick the deepest-sounding English voice the device offers
   const MALE = /(daniel|alex|fred|ralph|aaron|arthur|gordon|rocko|reed|eddy|grandpa|guy|david|mark|george|james|ryan|thomas|oliver|male)/i;
   let lastSay = 0, voice = null;
@@ -2029,7 +2039,7 @@ const SND = (() => {
     voice = vs.find(v => /google uk english male/i.test(v.name)) || vs.find(v => MALE.test(v.name) && !/female/i.test(v.name)) || vs[0] || null; };
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
   // move: low and steady; attack: shouted and fast; alerts: urgent
-  const STYLE = { move: [0.95, 0.35], select: [1, 0.4], gen: [0.9, 0.2], attack: [1.3, 0.6], alert: [1.25, 0.55], base: [1.2, 0.5] };
+  const STYLE = { move: [1.25, 0.45], select: [1.25, 0.5], gen: [1.1, 0.3], attack: [1.5, 0.7], alert: [1.45, 0.65], base: [1.4, 0.6] };
   S.say = (kind, gen) => {
     if (!pref.v || !window.speechSynthesis || (G && (G.attract || G.over))) return;
     const t = performance.now(), urgent = kind === "alert" || kind === "base";
@@ -2039,7 +2049,7 @@ const SND = (() => {
     if (voice) u.voice = voice;
     const [rate, pitch] = STYLE[k] || STYLE.move; u.rate = rate; u.pitch = pitch; u.volume = 1;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
-    if (ac && pref.s) { const n = now(); nz(n, 0.06, "bandpass", 2200, 2, 0.06, 0.002, 0, 0); } // radio click
+    if (ac && pref.s) { const n = now(); nz(n, 0.06, "bandpass", 2200, 2, 0.1, 0.002, 0, 0); nz(n + 0.02, 0.35, "bandpass", 1800, 0.7, 0.03, 0.01, 0, 0); } // radio click + static
   };
   // the general returns: brass fanfare in D major
   S.fanfare = () => {
@@ -2074,106 +2084,210 @@ const SND = (() => {
   }
   let lastUgh = 0;
   S.ugh = (x, y, mine) => {
-    if (!ac || !pref.s) return; const tp = performance.now(); if (tp - lastUgh < 140) return; lastUgh = tp;
+    if (!ac || !pref.s || (G && G.attract)) return; const tp = performance.now(); if (tp - lastUgh < 220) return; lastUgh = tp;
     const P = place(x, y), f = (mine ? 125 : 140) * (0.85 + Math.random() * 0.35);
-    vox(now() + 0.01, 0.28 + Math.random() * 0.12, f, f * 0.7, "u", Math.random() < 0.5 ? "a" : "o", 0.22 * P.v * (mine ? 1.2 : 0.8), P.pan, 0);
+    vox(now() + 0.01, 0.28 + Math.random() * 0.12, f, f * 0.7, "u", Math.random() < 0.5 ? "a" : "o", 0.1 * P.v * (mine ? 1.1 : 0.8), P.pan, 0);
   };
   // the whole squad goes down together: a long "uaaaahhh"
   S.scream = n => {
-    if (!ac || !pref.s) return; const t = now() + 0.02;
-    for (let i = 0; i < Math.min(4, Math.max(1, Math.ceil(n / 3))); i++) { const f = 150 * (0.8 + Math.random() * 0.45); vox(t + i * 0.09, 1.3 + Math.random() * 0.4, f, f * 0.62, "u", "a", 0.2, (Math.random() - 0.5) * 0.8, 0.035); }
+    if (!ac || !pref.s || (G && G.attract)) return; const t = now() + 0.02;
+    for (let i = 0; i < Math.min(3, Math.max(1, Math.ceil(n / 3))); i++) { const f = 150 * (0.8 + Math.random() * 0.45); vox(t + i * 0.09, 1.3 + Math.random() * 0.4, f, f * 0.62, "u", "a", 0.075, (Math.random() - 0.5) * 0.8, 0.035); }
   };
   S.ui = () => { if (ac && pref.s) tone(now(), "triangle", 880, 660, 0.05, 0.06, 0.002, 0, 0); };
-  S.sting = win => {
-    if (!ac) return; const t = now() + 0.05;
-    const notes = win ? [0, 7, 12, 16, 19] : [0, -2, -5, -9];
-    notes.forEach((s, i) => { const f = 293.66 * Math.pow(2, s / 12); tone(t + i * 0.16, "sawtooth", f, f, 1.4 - i * 0.1, 0.12, 0.02, 0, 0.6, musBus, 1600); tone(t + i * 0.16, "triangle", f / 2, f / 2, 1.6, 0.14, 0.02, 0, 0.4, musBus); });
-  };
+  S.sting = win => music.end(win);
+
 
   // ---- adaptive music ----
-  // D minor; calm = slow pad + sparse plucks; tension = driving bass ostinato, drums, string stabs
+  // four styles share one tension engine; calm when quiet, driving in a firefight, peaking in a full battle.
+  // a win or loss cuts straight to a victory or defeat theme.
   const music = (() => {
-    const BPM = 100, beat = 60 / BPM; let six = beat / 4;
-    const chords = [[0, 3, 7], [-4, 0, 3], [-7, -4, 0], [-2, 2, 5]]; // Dm  Bb  F/A  C
-    const roots = [0, -4, -9, -2];
-    let next = 0, idx = 0, timer = null, padNodes = [];
+    const beat0 = 60 / 100; let six = beat0 / 4, beat = beat0;
+    let next = 0, idx = 0, timer = null, padNodes = [], endMode = null, endIdx = 0;
     const hz = s => 146.83 * Math.pow(2, s / 12); // D3
-    function pad(t, ch, len) {
-      for (const g of padNodes) { try { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, 0.6); } catch (e) {} }
-      padNodes = [];
-      const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 500 + tension * 1800; lp.Q.value = 0.5;
-      const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.035 * (1 - 0.8 * tension) + 0.003, t + 1.2); g.gain.setTargetAtTime(0.0001, t + len, 0.8);
-      lp.connect(g); g.connect(musBus); g.connect(wetSend(0.7));
-      for (const s of ch) for (const det of [-6, 6]) {
-        const o = ac.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz(s); o.detune.value = det;
-        o.connect(lp); o.start(t); o.stop(t + len + 4);
+    const rnd = () => Math.random();
+    function fadePads(t, tc = 0.6) { for (const g of padNodes) { try { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, tc); } catch (e) {} } padNodes = []; }
+    function pad(t, ch, len, o = {}) {
+      fadePads(t);
+      const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = o.cut || (500 + tension * 1800); lp.Q.value = o.q || 0.5;
+      const g = ac.createGain(), lv = o.lv != null ? o.lv : 0.035 * (1 - 0.8 * tension) + 0.003;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(lv, t + (o.att || 1.2)); g.gain.setTargetAtTime(0.0001, t + len, 0.8);
+      lp.connect(g); g.connect(musBus); g.connect(wetSend(o.wet != null ? o.wet : 0.7));
+      if (o.lfo) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = o.lfo; lg.gain.value = (o.cut || 800) * 0.6; l.connect(lg); lg.connect(lp.frequency); l.start(t); l.stop(t + len + 4); }
+      for (const s of ch) for (const det of (o.det || [-6, 6])) {
+        const os = ac.createOscillator(); os.type = o.type || "sawtooth"; os.frequency.value = hz(s + (o.oct || 0)); os.detune.value = det;
+        os.connect(lp); os.start(t); os.stop(t + len + 4);
       }
       padNodes.push(g);
     }
     function kick(t, v) { tone(t, "sine", 150, 45, 0.22, 0.35 * v, 0.003, 0, 0, musBus); tone(t, "triangle", 900, 200, 0.03, 0.18 * v, 0.001, 0, 0, musBus); nz(t, 0.025, "bandpass", 2500, 0.8, 0.14 * v, 0.001, 0, 0, musBus); }
     function snare(t, v) { nz(t, 0.18, "bandpass", 2000, 0.5, 0.65 * v, 0.002, 0, 0.35, musBus); tone(t, "triangle", 210, 160, 0.08, 0.12 * v, 0.002, 0, 0, musBus); }
-    function hat(t, v) { nz(t, 0.035, "highpass", 7000, 0.7, 0.07 * v, 0.001, (Math.random() - 0.5) * 0.4, 0, musBus); }
+    function hat(t, v) { nz(t, 0.035, "highpass", 7000, 0.7, 0.07 * v, 0.001, (rnd() - 0.5) * 0.4, 0, musBus); }
     function tom(t, v, f) { tone(t, "sine", f, f * 0.55, 0.35, 0.4 * v, 0.003, 0, 0.3, musBus); nz(t, 0.08, "lowpass", 900, 0.6, 0.1 * v, 0.002, 0, 0.2, musBus); }
+    function taiko(t, v, f) { v *= 0.7; tone(t, "sine", f, f * 0.6, 0.6, 0.55 * v, 0.004, 0, 0.45, musBus); tone(t, "triangle", f * 2.1, f * 1.2, 0.12, 0.2 * v, 0.002, 0, 0.3, musBus); nz(t, 0.12, "lowpass", 700, 0.7, 0.25 * v, 0.002, 0, 0.4, musBus, 200); }
+    function clap(t, v) { for (let k = 0; k < 3; k++) nz(t + k * 0.011, 0.05 + k * 0.04, "bandpass", 1300, 1.2, 0.3 * v, 0.001, 0, 0.3, musBus); }
+    function timp(t, v, f) { tone(t, "sine", f * 1.04, f, 0.9, 0.5 * v, 0.005, 0, 0.45, musBus); nz(t, 0.06, "lowpass", 500, 0.7, 0.15 * v, 0.002, 0, 0.3, musBus); }
+    function cymbal(t, v, dur) { nz(t, dur, "highpass", 5500, 0.6, 0.12 * v, dur * 0.7, (rnd() - 0.5) * 0.3, 0.5, musBus); }
+    function brass(t, notes, dur, lv, cut0 = 600, cut1 = 2600) {
+      for (const s of notes) for (const det of [-8, 8]) { const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+        o.type = "sawtooth"; o.frequency.value = hz(s); o.detune.value = det; f.type = "lowpass"; f.frequency.setValueAtTime(cut0, t); f.frequency.linearRampToValueAtTime(cut1, t + Math.min(0.5, dur * 0.4));
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(lv, t + Math.min(0.08, dur * 0.3)); g.gain.setValueAtTime(lv, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(f); f.connect(g); g.connect(musBus); g.connect(wetSend(0.4)); o.start(t); o.stop(t + dur + 0.1); }
+    }
+    // wordless choir: buzzy voices through "ah" formants
+    function choir(t, notes, dur, lv) {
+      for (const s of notes) for (const det of [-9, 0, 9]) {
+        const o = ac.createOscillator(), g = ac.createGain(); o.type = "sawtooth"; o.frequency.value = hz(s); o.detune.value = det + (rnd() - 0.5) * 6;
+        const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 4.5 + rnd(); lg.gain.value = hz(s) * 0.006; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + 0.2);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(lv, t + dur * 0.3); g.gain.setValueAtTime(lv, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        VOW.a.forEach((fa, i) => { const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = fa; f.Q.value = [5, 8, 10][i]; const fg = ac.createGain(); fg.gain.value = [1, 0.5, 0.2][i] * 2.5; o.connect(f); f.connect(fg); fg.connect(g); });
+        g.connect(musBus); g.connect(wetSend(0.8)); o.start(t); o.stop(t + dur + 0.1);
+      }
+    }
+    const pluck = (t, s, lv, pan = (rnd() - 0.5) * 0.6, type = "triangle", len = 0.9, wet = 0.6, cut) => tone(t, type, hz(s), hz(s), len, lv, 0.004, pan, wet, musBus, cut);
+
+    // ---- the styles: each sets its chords and tempo and plays one 16th step ----
+    const STY = {
+      march: { // the original: driving bass ostinato, kit drums, string stabs, brass at the top
+        name: "Battle march", chords: [[0, 3, 7], [-4, 0, 3], [-7, -4, 0], [-2, 2, 5]], roots: [0, -4, -9, -2], bpm: [100, 50],
+        step(t, st, bar, T, ch, root) {
+          if (st === 0 && bar % 2 === 0) pad(t, ch, beat * 8);
+          if (T < 0.5 && st % 2 === 0 && rnd() < 0.45 - T * 0.8) pluck(t, ch[Math.floor(rnd() * 3)] + 12 * (rnd() < 0.5 ? 1 : 2), 0.07 * (1 - T));
+          if (T > 0.06) {
+            const pat = [0, 0, 12, 0, 0, 7, 0, 12, 0, 0, 12, 0, 3, 0, 7, 12];
+            if (st % (T > 0.25 ? 1 : 2) === 0) { const n = root + pat[st], v = Math.min(1, T * 2.2);
+              tone(t, "sawtooth", hz(n - 12), hz(n - 12), six * 0.85, 0.06 * v, 0.004, 0, 0, musBus, 400 + T * 900);
+              tone(t, "sawtooth", hz(n + 12), hz(n + 12), six * 0.7, 0.32 * v, 0.003, (st % 4 - 1.5) * 0.25, 0.15, musBus, 1400 + T * 2600); }
+          }
+          if (T > 0.1 && (st % 2 === 1 || T > 0.5)) hat(t, Math.min(2.2, T * 3));
+          if (T > 0.15 && (st === 0 || st === 8 || (T > 0.45 && (st === 6 || st === 10 || st === 11)))) kick(t, Math.min(1.3, T * 1.8));
+          if (T > 0.25 && (st === 4 || st === 12 || (T > 0.8 && st === 14))) snare(t, Math.min(1.6, T * 2));
+          if (T > 0.45 && (bar % 2 === 1 || T > 0.85) && st >= 12) tom(t, T * 1.3, [300, 260, 220, 180][st - 12]);
+          if (T > 0.35 && (st === 0 || st === 3 || st === 6 || st === 10)) for (const s of ch) tone(t, "sawtooth", hz(s + 12), hz(s + 12), six * 1.6, 0.2 * T, 0.006, 0, 0.4, musBus, 3200);
+          if (T > 0.7 && st === 0 && bar % 2 === 0) brass(t, ch, beat * 4, 0.09 * T);
+        } },
+      orchestra: { // heroic film score: harp and horns when calm; strings, timpani, snare and a brass theme in battle
+        name: "Orchestral", chords: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-5, -1, 2]], roots: [0, -2, -4, -5], bpm: [92, 46],
+        step(t, st, bar, T, ch, root) {
+          if (st === 0 && bar % 2 === 0) pad(t, ch, beat * 8, { type: "triangle", cut: 900 + T * 1200, lv: 0.06 * (1 - 0.6 * T) + 0.01, det: [-4, 4], att: 1.6 });
+          if (T < 0.55 && st % 2 === 0) { const arp = [0, 1, 2, 1], s = ch[arp[(st / 2) % 4]] + 12 + (st >= 8 ? 12 : 0); if (rnd() < 0.75 - T) pluck(t, s, 0.075 * (1 - T), (st / 16 - 0.5) * 0.8, "triangle", 1.2, 0.7); }
+          if (T > 0.08) { // spiccato strings: root and fifth in 16ths
+            const pat = [0, 12, 7, 12, 0, 12, 7, 12, 0, 12, 7, 12, 0, 12, 8, 7];
+            if (st % (T > 0.3 ? 1 : 2) === 0) { const n = root + pat[st], v = Math.min(1, T * 2);
+              tone(t, "sawtooth", hz(n), hz(n), six * 0.6, 0.22 * v, 0.004, -0.3, 0.3, musBus, 1600 + T * 1600);
+              tone(t, "sawtooth", hz(n - 12), hz(n - 12), six * 0.7, 0.09 * v, 0.004, 0.3, 0.2, musBus, 700); }
+          }
+          if (T > 0.15 && (st === 0 || (T > 0.4 && st === 8))) timp(t, Math.min(1.4, T * 2), hz(root - 12));
+          if (T > 0.6 && bar % 2 === 1 && st >= 12) timp(t, T, hz(root - 12) * (st % 2 ? 1.5 : 1));
+          if (T > 0.3 && (st === 4 || st === 12)) snare(t, Math.min(1.2, T * 1.5));
+          if (T > 0.55 && (st === 13 || st === 15)) snare(t, T * 0.6);
+          if (T > 0.45) { // brass theme: one phrase per two bars
+            const mel = bar % 2 === 0 ? [[0, 7, 6], [6, 3, 2], [8, 5, 2], [10, 7, 6]] : [[0, 8, 4], [4, 7, 4], [8, 10, 4], [12, 3, 4]];
+            for (const [s0, n, len] of mel) if (st === s0) brass(t, [root + n + (n < 5 ? 12 : 0), root + n - 12 + (n < 5 ? 12 : 0)], six * len, 0.07 * T, 700, 2200 + T * 1200);
+          }
+          if (T > 0.7 && st === 0 && bar % 4 === 0) cymbal(t, T * 1.5, 2.2);
+        } },
+      synth: { // dark synth: pulsing arpeggios when calm; four-on-the-floor, pumping bass and a lead in battle
+        name: "Dark synth", chords: [[0, 3, 7], [3, 7, 10], [-2, 2, 5], [-4, 0, 3]], roots: [0, 3, -2, -4], bpm: [108, 34],
+        step(t, st, bar, T, ch, root) {
+          if (st === 0 && bar % 2 === 0) pad(t, ch, beat * 8, { type: "sawtooth", cut: 700 + T * 1500, lfo: 0.15, q: 3, lv: 0.03 * (1 - 0.5 * T) + 0.006, det: [-10, 10] });
+          if (st % 2 === 0) { const up = [0, 1, 2, 1, 0, 2, 1, 2], s = ch[up[(st / 2) % 8]] + 12 + (st % 8 === 6 ? 12 : 0);
+            const lv = T < 0.4 ? 0.06 : 0.07 + T * 0.06; tone(t, "square", hz(s), hz(s), six * 1.5, lv, 0.003, st % 4 ? 0.35 : -0.35, 0.5, musBus, 900 + T * 3000); }
+          if (T > 0.08) { // pumping bass on the offbeats, 16ths when it heats up
+            if (st % 4 !== 0 && (T > 0.35 || st % 2 === 0)) { const v = Math.min(1, T * 2); tone(t, "sawtooth", hz(root - 12), hz(root - 12), six * 0.8, (st % 4 === 2 ? 0.42 : 0.28) * v, 0.003, 0, 0, musBus, 300 + T * 1200);
+              tone(t, "square", hz(root), hz(root), six * 0.6, 0.13 * v, 0.003, 0, 0, musBus, 1400); }
+          }
+          if (T > 0.15 && (st % 4 === 0 && (T > 0.35 || st % 8 === 0))) kick(t, Math.min(1.8, T * 2.2));
+          if (T > 0.25 && (st === 4 || st === 12)) clap(t, Math.min(1.4, T * 1.8));
+          if (T > 0.12 && st % 2 === 1) hat(t, Math.min(2.4, T * 3) * (st % 4 === 2 ? 1.4 : 1));
+          if (T > 0.6) { // lead: chord tones in 8ths an octave up
+            const lead = [2, 1, 0, 1, 2, 2, 1, 0], s = ch[lead[(st >> 1) % 8]] + 24;
+            if (st % 2 === 0 && (bar % 2 === 0 || st < 8)) tone(t, "sawtooth", hz(s), hz(s), six * 1.8, 0.14 * T, 0.004, 0.15, 0.45, musBus, 2600);
+          }
+          if (T > 0.75 && st === 0 && bar % 4 === 0) nz(t, beat * 4, "bandpass", 600, 1, 0.15 * T, beat * 3.6, 0, 0.6, musBus, 6000); // riser
+        } },
+      drums: { // war drums: a low drone and distant drums when calm; taiko patterns, low strings and choir in battle
+        name: "War drums", chords: [[0, 3, 7], [1, 5, 8], [0, 3, 7], [-2, 2, 5]], roots: [0, 1, 0, -2], bpm: [88, 44],
+        step(t, st, bar, T, ch, root) {
+          if (st === 0 && bar % 2 === 0) pad(t, [root - 12, root - 5], beat * 8, { type: "sawtooth", cut: 380 + T * 600, lv: 0.05 * (1 - 0.4 * T) + 0.01, det: [-5, 5], wet: 0.8 });
+          if (T < 0.4 && (st === 0 || (st === 10 && bar % 2 === 1)) && rnd() < 0.8) taiko(t, 0.35 * (1 - T), 60);
+          if (T < 0.45 && st % 4 === 2 && rnd() < 0.25 - T * 0.4) pluck(t, [0, 3, 5, 7, 10][Math.floor(rnd() * 5)] + 12, 0.06, (rnd() - 0.5) * 0.8, "sine", 1.4, 0.8);
+          if (T > 0.1) { // taiko patterns: big drum on the pulse, mid drums fill in as it heats up
+            const big = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], mid = [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1];
+            if (big[st] && (T > 0.3 || st % 8 === 0)) taiko(t, Math.min(1.5, T * 2.2), 58);
+            if (mid[st] && T > 0.35) taiko(t, T * 0.8, 120 + (st % 3) * 18);
+            if (T > 0.75 && st >= 12) taiko(t, T, [170, 150, 130, 110][st - 12]);
+          }
+          if (T > 0.25 && (st === 4 || st === 12)) clap(t, T * 0.9);
+          if (T > 0.2 && st % 2 === 0) { const pat = [0, 0, 1, 0, 0, 0, 3, 1], n = root + pat[(st >> 1) % 8], v = Math.min(1, T * 2); // low strings
+            tone(t, "sawtooth", hz(n - 12), hz(n - 12), six * 1.5, 0.12 * v, 0.004, -0.2, 0.2, musBus, 700 + T * 700);
+            tone(t, "sawtooth", hz(n), hz(n), six * 1.3, 0.12 * v, 0.004, 0.2, 0.25, musBus, 1200 + T * 1200); }
+          if (T > 0.5 && st === 0 && bar % 2 === 0) choir(t, ch.map(s => s + 12), beat * 7.5, 0.035 * T);
+          if (T > 0.8 && st === 8 && bar % 2 === 1) brass(t, [root, root + 7], beat * 2, 0.08 * T, 400, 1800);
+        } }
+    };
+    const styleKey = () => (STY[S.style] ? S.style : "march");
+
+    // ---- victory and defeat: the battle music stops and a theme takes over until you leave the screen ----
+    const END = {
+      win: { bpm: 116, chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], // D  G  A  D
+        step(t, st, bar, ch) {
+          if (st === 0) pad(t, ch, beat * 4, { type: "triangle", cut: 1800, lv: 0.05, det: [-5, 5], att: 0.3 });
+          if (st % 2 === 0) pluck(t, ch[[0, 1, 2, 1][(st / 2) % 4]] + 24, 0.06, (st / 16 - 0.5) * 0.8, "triangle", 0.7, 0.5);
+          if (st === 0 || st === 8) timp(t, 0.7, hz(ch[0] - 12));
+          if (bar < 4) { const mel = [[0, 12, 4], [4, 16, 4], [8, 19, 6], [14, 21, 2]]; for (const [s0, n, len] of mel) if (st === s0) brass(t, [ch[0] + (bar % 2 ? n - 7 : n) - 12, ch[0] + (bar % 2 ? n - 7 : n)], six * len, 0.06, 800, 3000); }
+          if (st === 0 && bar % 4 === 0) cymbal(t, 1, 2);
+        } },
+      lose: { bpm: 64, chords: [[0, 3, 7], [-4, 0, 3], [-7, -3, 0], [-5, -1, 2]], // Dm  Bb  Gm  A
+        step(t, st, bar, ch) {
+          if (st === 0) pad(t, ch, beat * 4, { type: "sawtooth", cut: 700, lv: 0.04, det: [-7, 7], att: 0.8 });
+          if (st === 0) timp(t, 0.5, hz(ch[0] - 12));
+          const mel = [[7, 5, 3, 2], [3, 2, 0, -2], [2, 0, -2, -4], [1, 0, -1, -3]][bar % 4];
+          if (st % 4 === 0 && bar < 8) tone(t, "triangle", hz(mel[st / 4] + 12), hz(mel[st / 4] + 12), beat * 1.1, 0.09, 0.08, 0, 0.6, musBus, 2200);
+          if (st === 0 && bar % 2 === 0 && bar < 8) choir(t, ch.map(s => s + 12), beat * 3.8, 0.025);
+        } }
+    };
     function schedule() {
       if (!ac) return;
-      // tension follows battle heat: rises fast, falls slowly
-      // enemies in sight put the music on edge even before shots fly
+      if (endMode && S.force == null && (!G || !G.over || G.attract)) endMode = null; // left the result screen
+      // tension follows battle heat: rises fast, falls slowly; enemies in sight put the music on edge before shots fly
       let seen = 0;
       if (G && !G.attract && !G.over && G.units) for (const u of G.units) if (u.alive && u.owner !== G.human && isVis(u.x, u.y)) seen++;
-      // one shot = instantly on edge; a full firefight = climax
       const pn = performance.now(), recent = pn - lastShot < 5000;
-      const target = Math.max(clamp(0.15 + heat / 9, 0, 1) * (heat > 0.3 ? 1 : 0), recent ? 0.45 : 0, seen ? clamp(0.3 + seen * 0.04, 0, 0.6) : 0) * (G && G.attract ? 0.55 : 1);
+      let target = Math.max(clamp(0.15 + heat / 9, 0, 1) * (heat > 0.3 ? 1 : 0), recent ? 0.45 : 0, seen ? clamp(0.3 + seen * 0.04, 0, 0.6) : 0) * (G && G.attract ? 0.55 : 1);
+      if (S.force != null) target = S.force;
       const before = tension;
-      tension += (target - tension) * (target > tension ? 0.35 : 0.008);
-      // first contact: a big drum hit and a swell, so you hear the fight start
-      if (before < 0.25 && tension >= 0.25 && pn - lastSting > 9000 && !(G && G.attract)) { lastSting = pn; const t = now() + 0.02; tom(t, 1.6, 95); tom(t + 0.18, 1.2, 80); nz(t, 1.4, "bandpass", 1200, 0.5, 0.18, 0.9, 0, 0.6, musBus, 5000); }
+      tension += (target - tension) * (target > tension ? 0.35 : (S.force != null ? 0.2 : 0.008));
+      if (endMode) tension = 0;
+      if (!endMode && before < 0.25 && tension >= 0.25 && pn - lastSting > 9000 && !(G && G.attract)) { lastSting = pn; const t = now() + 0.02; tom(t, 1.6, 95); tom(t + 0.18, 1.2, 80); nz(t, 1.4, "bandpass", 1200, 0.5, 0.18, 0.9, 0, 0.6, musBus, 5000); }
       heat *= 0.9;
-      if (G && !G.attract && !G.over) {
-        const hp = G.players[G.human].base.hp;
-        if (lastHp !== null && hp < lastHp - 1) heat += 6; // our base is being hit
-        lastHp = hp;
-      }
+      if (G && !G.attract && !G.over) { const hp = G.players[G.human].base.hp; if (lastHp !== null && hp < lastHp - 1) heat += 6; lastHp = hp; }
       const dTarget = (UI.paused && G && !G.attract && !G.over) ? 0.35 : 1;
       duck += (dTarget - duck) * 0.2;
-      musBus.gain.setTargetAtTime(pref.m ? (0.45 + 0.6 * tension) * duck : 0, now(), 0.15);
+      musBus.gain.setTargetAtTime(pref.m ? (endMode ? 0.9 : (0.45 + 0.6 * tension) * duck) : 0, now(), 0.15);
       sfxBus.gain.setTargetAtTime(pref.s ? 0.8 - 0.25 * tension : 0, now(), 0.15);
-      if (dbgEl) dbgEl.textContent = "music intensity " + tension.toFixed(2) + " · heat " + heat.toFixed(1);
+      if (dbgEl) dbgEl.textContent = STY[styleKey()].name + " · intensity " + tension.toFixed(2) + " · heat " + heat.toFixed(1);
       while (next < now() + 0.25) {
-        const t = next, bar = Math.floor(idx / 16), st = idx % 16, cI = Math.floor(bar / 2) % 4, T = tension;
-        if (idx % 32 === 0) pad(t, chords[cI], beat * 8);
-        const root = roots[cI];
-        // calm layer: sparse plucked arpeggio, fades out as tension rises
-        if (T < 0.5 && st % 2 === 0 && Math.random() < 0.45 - T * 0.8) {
-          const ch = chords[cI], s = ch[Math.floor(Math.random() * 3)] + 12 * (Math.random() < 0.5 ? 1 : 2);
-          tone(t, "triangle", hz(s), hz(s), 0.9, 0.07 * (1 - T), 0.005, (Math.random() - 0.5) * 0.6, 0.6, musBus);
+        const t = next;
+        if (endMode) {
+          const E = END[endMode], bar = Math.floor(endIdx / 16), st = endIdx % 16;
+          beat = 60 / E.bpm; six = beat / 4;
+          E.step(t, st, bar, E.chords[bar % 4]);
+          next += six; endIdx++; idx = 0; continue;
         }
-        // tension layers, voiced in the mid range so phone and laptop speakers carry them
-        if (T > 0.06) { // driving ostinato: low octave for weight + mid octave you can hear on any speaker
-          const pat = [0, 0, 12, 0, 0, 7, 0, 12, 0, 0, 12, 0, 3, 0, 7, 12];
-          if (st % (T > 0.25 ? 1 : 2) === 0) {
-            const n = root + pat[st], v = Math.min(1, T * 2.2);
-            tone(t, "sawtooth", hz(n - 12), hz(n - 12), six * 0.85, 0.06 * v, 0.004, 0, 0, musBus, 400 + T * 900);
-            tone(t, "sawtooth", hz(n + 12), hz(n + 12), six * 0.7, 0.32 * v, 0.003, (st % 4 - 1.5) * 0.25, 0.15, musBus, 1400 + T * 2600);
-          }
-        }
-        if (T > 0.1 && (st % 2 === 1 || T > 0.5)) hat(t, Math.min(2.2, T * 3));
-        if (T > 0.15 && (st === 0 || st === 8 || (T > 0.45 && (st === 6 || st === 10 || st === 11)))) kick(t, Math.min(1.3, T * 1.8));
-        if (T > 0.25 && (st === 4 || st === 12 || (T > 0.8 && st === 14))) snare(t, Math.min(1.6, T * 2));
-        if (T > 0.45 && (bar % 2 === 1 || T > 0.85) && st >= 12) tom(t, T * 1.3, [300, 260, 220, 180][st - 12]);
-        if (T > 0.35 && (st === 0 || st === 3 || st === 6 || st === 10)) { // string stabs
-          for (const s of chords[cI]) tone(t, "sawtooth", hz(s + 12), hz(s + 12), six * 1.6, 0.2 * T, 0.006, 0, 0.4, musBus, 3200);
-        }
-        if (T > 0.7 && st === 0 && bar % 2 === 0) { // brass swell on the downbeat at the climax
-          for (const s of chords[cI]) for (const det of [-8, 8]) { const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
-            o.type = "sawtooth"; o.frequency.value = hz(s); o.detune.value = det; f.type = "lowpass"; f.frequency.setValueAtTime(600, t); f.frequency.linearRampToValueAtTime(2600, t + beat * 2);
-            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09 * T, t + beat * 1.5); g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 4);
-            o.connect(f); f.connect(g); g.connect(musBus); g.connect(wetSend(0.4)); o.start(t); o.stop(t + beat * 4.2); }
-        }
-        six = 60 / (100 + 50 * T) / 4; // tempo rises with the fight: 100 to 150 bpm
+        const Y = STY[styleKey()], bar = Math.floor(idx / 16), st = idx % 16, cI = Math.floor(bar / 2) % 4, T = tension;
+        beat = 60 / (Y.bpm[0] + Y.bpm[1] * T); six = beat / 4; // tempo rises with the fight
+        Y.step(t, st, bar, T, Y.chords[cI], Y.roots[cI]);
         next += six; idx++;
       }
     }
-    return { start() { next = now() + 0.1; idx = 0; timer = setInterval(schedule, 60); }, get tension() { return tension; }, get dbg() { return { heat, lastShot, ac: ac && ac.state }; } };
+    return {
+      start() { next = now() + 0.1; idx = 0; timer = setInterval(schedule, 60); },
+      // win or lose: silence the battle layers at once and start the theme on the next beat
+      end(win) { if (!ac) return; endMode = win ? "win" : "lose"; endIdx = 0; const t = now();
+        fadePads(t, 0.08); musBus.gain.cancelScheduledValues(t); musBus.gain.setValueAtTime(musBus.gain.value, t); musBus.gain.linearRampToValueAtTime(0.0001, t + 0.12);
+        musBus.gain.linearRampToValueAtTime(pref.m ? 0.9 : 0, t + 0.5); next = t + 0.45; },
+      styles: Object.keys(STY), get tension() { return tension; }, get dbg() { return { heat, lastShot, ac: ac && ac.state, endMode }; }
+    };
   })();
   S.music = music;
   S.setPref = (k, v) => {
@@ -2556,7 +2670,7 @@ function showOver() {
     ? `I just beat ${DIFF_NAME[G.diff]} in Hit and Run: ${enemies > 1 ? enemies + " enemy armies" : "an enemy army"} of ${G.enemyArmy} with ${G.myArmy} soldiers, ${me.kills} kills in ${fmtT(secs)}. Score ${fmtN(score)}${newHi ? " (new personal best)" : ""}. Beat that 👉 ${SHARE_URL}`
     : `${DIFF_NAME[G.diff]} got me in Hit and Run, but not before ${me.kills} kills in ${fmtT(secs)}. Score ${fmtN(score)}. Your turn 👉 ${SHARE_URL}`;
   setShareLinks();
-  SND.sting(win); reportKills();
+  reportKills();
   startNameEntry({ score, diff: G.diff, enemies, army: G.enemyArmy, my_army: G.myArmy, secs, kills: me.kills, win });
   if (G.slowmo) { $("nameEntry").hidden = true; }
   const rec = $("overRecord"); rec.hidden = true;
@@ -2633,7 +2747,7 @@ function frame(now) {
     UI.pings = UI.pings.filter(p => p.t > 0);
     updateFog();
     hudT -= dtReal; if (hudT <= 0) { hudT = 0.2; renderScore(); refreshBar(); }
-    if (G.over) { updateFog(); renderScore(); setTimeout(showOver, 1400); UI.paused = true; }
+    if (G.over) { SND.sting(G.over.win); updateFog(); renderScore(); setTimeout(showOver, 1400); UI.paused = true; }
   }
   // the menu backdrop draws at a steady ~30fps so the menu itself stays smooth
   if (G) {
