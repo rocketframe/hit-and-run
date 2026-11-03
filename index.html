@@ -256,7 +256,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <div class="sndrow"><button class="go ghost" id="howBtn">How to play</button><button class="go ghost" id="tutBtn">Tutorial</button></div>
     <button class="go ghost" id="boardBtn">Leaderboard</button>
     <button class="go ghost" id="statsBtn">Service record</button>
-    <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button></div>
+    <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button><button class="go ghost" data-snd="v">Voices</button></div>
   </div>
 </div>
 
@@ -265,7 +265,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <div class="eyebrow">Ceasefire</div>
     <h2>Paused</h2>
     <button class="go" id="resumeBtn">Resume</button>
-    <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button></div>
+    <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button><button class="go ghost" data-snd="v">Voices</button></div>
     <button class="go ghost" id="quitBtn">Back to menu</button>
   </div>
 </div>
@@ -1549,6 +1549,7 @@ function selectKey(k) {
   const list = k === "all" ? myUnits(() => true) : k === "gen" ? myUnits(u => u.kind === "gen") : k === "idle" ? myUnits(isIdle) : myUnits(u => u.squad === +k);
   for (const u of list) UI.sel.add(u.id);
   if (k === "idle" && !list.length) toast("Nobody is idle");
+  else if (list.length && G && !G.attract) SND.say("select", k === "gen");
   refreshBar();
 }
 function refreshBar() {
@@ -1604,7 +1605,7 @@ function killSelected() {
     killArm = setTimeout(disarmKill, 2500); return;
   }
   disarmKill();
-  issue({ p: G.human, t: "kill", ids });
+  issue({ p: G.human, t: "kill", ids }); SND.say("kill");
 }
 function disarmKill() { clearTimeout(killArm); killArm = null; const b = $("killBtn"); b.classList.remove("armed"); b.querySelector("small").textContent = "selected"; }
 $("killBtn").addEventListener("click", killSelected);
@@ -1627,6 +1628,7 @@ function orderTo(wx, wy, forceMode) {
   const mode = forceMode || UI.mode;
   issue({ p: G.human, ids, x: wx, y: wy, mode });
   UI.pings.push({ x: wx, y: wy, t: 0.7, mode }); SND.order(mode); UI.orderN = (UI.orderN || 0) + 1;
+  SND.say(mode === "attack" ? "attack" : "move", ids.length === 1 && G.unitById.get(ids[0]).kind === "gen");
 }
 
 function handleTap(sx, sy, additive) {
@@ -1844,9 +1846,11 @@ function togglePause() {
 // ======================================================================
 const SND = (() => {
   let ac = null, master, sfxBus, musBus, comp, noise, verb, verbIn;
-  let pref = { m: 1, s: 1 };
+  let pref = { m: 1, s: 1, v: 1 };
   try { Object.assign(pref, JSON.parse(localStorage.getItem("hr-sound") || "{}")); } catch (e) {}
   const save = () => { try { localStorage.setItem("hr-sound", JSON.stringify(pref)); } catch (e) {} };
+  const dbgEl = /[?&]musdebug\b/.test(location.search) ? Object.assign(document.createElement("div"), { style: "position:fixed;left:8px;bottom:8px;z-index:99;background:#000;color:#9fe07a;font:12px monospace;padding:4px 6px" }) : null;
+  if (dbgEl) setTimeout(() => document.body.appendChild(dbgEl), 0);
   let tension = 0, heat = 0, lastShot = -1e9, lastSting = -1e9, lastHp = null, duck = 1, voices = 0, voiceT = 0;
   const S = { get on() { return !!ac; }, get pref() { return pref; } };
 
@@ -1951,6 +1955,26 @@ const SND = (() => {
     tone(t, "square", f, f, 0.035, 0.05, 0.002, 0, 0, sfxBus, 3000);
     tone(t + 0.05, "square", f * 1.26, f * 1.26, 0.04, 0.045, 0.002, 0, 0, sfxBus, 3000);
   };
+  // ---- radio voices: soldiers answer your orders ----
+  const LINES = {
+    move: ["Moving.", "On my way.", "Acknowledged.", "Copy that.", "Let's go!", "Roger, moving out.", "Understood.", "Heading there now."],
+    attack: ["Engaging!", "Weapons free!", "Attack!", "Contact, moving in!", "Let's get 'em!", "Going in hot!"],
+    select: ["Ready.", "Awaiting orders.", "Standing by.", "Yes, commander?", "Squad ready."],
+    gen: ["General here.", "At your command.", "I'll take care of it.", "Proceeding."],
+    kill: ["Understood. Goodbye.", "For the cause.", "It's been an honor."]
+  };
+  let lastSay = 0, voice = null;
+  const pickVoice = () => { const vs = window.speechSynthesis ? speechSynthesis.getVoices() : []; voice = vs.find(v => /en[-_](US|GB)/i.test(v.lang) && /male|daniel|alex|fred|google uk english male/i.test(v.name)) || vs.find(v => /^en/i.test(v.lang)) || null; };
+  if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+  S.say = (kind, gen) => {
+    if (!pref.v || !window.speechSynthesis || (G && (G.attract || G.over))) return;
+    const t = performance.now(); if (t - lastSay < 1100 && kind !== "kill") return; lastSay = t;
+    const list = LINES[gen && kind !== "kill" ? "gen" : kind] || LINES.move, u = new SpeechSynthesisUtterance(list[Math.floor(Math.random() * list.length)]);
+    if (voice) u.voice = voice;
+    u.rate = kind === "attack" ? 1.25 : 1.1; u.pitch = gen ? 0.6 : 0.85 + Math.random() * 0.4; u.volume = 0.9;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+    if (ac && pref.s) { const n = now(); nz(n, 0.06, "bandpass", 2200, 2, 0.05, 0.002, 0, 0); } // radio click
+  };
   S.ui = () => { if (ac && pref.s) tone(now(), "triangle", 880, 660, 0.05, 0.06, 0.002, 0, 0); };
   S.sting = win => {
     if (!ac) return; const t = now() + 0.05;
@@ -2003,7 +2027,9 @@ const SND = (() => {
       }
       const dTarget = (UI.paused && G && !G.attract && !G.over) ? 0.35 : 1;
       duck += (dTarget - duck) * 0.2;
-      musBus.gain.setTargetAtTime(pref.m ? 0.55 * duck : 0, now(), 0.15);
+      musBus.gain.setTargetAtTime(pref.m ? (0.45 + 0.6 * tension) * duck : 0, now(), 0.15);
+      sfxBus.gain.setTargetAtTime(pref.s ? 0.8 - 0.25 * tension : 0, now(), 0.15);
+      if (dbgEl) dbgEl.textContent = "music intensity " + tension.toFixed(2) + " · heat " + heat.toFixed(1);
       while (next < now() + 0.25) {
         const t = next, bar = Math.floor(idx / 16), st = idx % 16, cI = Math.floor(bar / 2) % 4, T = tension;
         if (idx % 32 === 0) pad(t, chords[cI], beat * 8);
@@ -2457,11 +2483,11 @@ window.addEventListener("keydown", e => {
   else if (e.key === "\\") setSpeed(1);
 });
 function refreshSnd() {
-  document.querySelectorAll("[data-snd]").forEach(b => { const on = SND.pref[b.dataset.snd]; b.classList.toggle("off", !on); b.textContent = (b.dataset.snd === "m" ? "Music" : "Effects") + (on ? " on" : " off"); });
-  $("sndBtn").classList.toggle("off", !SND.pref.m && !SND.pref.s);
+  document.querySelectorAll("[data-snd]").forEach(b => { const on = SND.pref[b.dataset.snd]; b.classList.toggle("off", !on); b.textContent = ({ m: "Music", s: "Effects", v: "Voices" })[b.dataset.snd] + (on ? " on" : " off"); });
+  $("sndBtn").classList.toggle("off", !SND.pref.m && !SND.pref.s && !SND.pref.v);
 }
 document.querySelectorAll("[data-snd]").forEach(b => b.addEventListener("click", () => { SND.setPref(b.dataset.snd, !SND.pref[b.dataset.snd]); refreshSnd(); }));
-$("sndBtn").addEventListener("click", () => { const on = !(SND.pref.m || SND.pref.s); SND.setPref("m", on); SND.setPref("s", on); refreshSnd(); });
+$("sndBtn").addEventListener("click", () => { const on = !(SND.pref.m || SND.pref.s || SND.pref.v); SND.setPref("m", on); SND.setPref("s", on); SND.setPref("v", on); if (!on && window.speechSynthesis) speechSynthesis.cancel(); refreshSnd(); });
 refreshSnd();
 $("resumeBtn").addEventListener("click", togglePause);
 $("howBtn").addEventListener("click", () => { $("menu").hidden = true; $("howto").hidden = false; $("howto").scrollTop = 0; });
