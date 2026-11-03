@@ -1854,7 +1854,7 @@ const SND = (() => {
     if (ac) { if (ac.state === "suspended") ac.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     ac = new AC();
-    comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2;
+    comp = ac.createDynamicsCompressor(); comp.threshold.value = -10; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.2;
     master = ac.createGain(); master.gain.value = 1.3; master.connect(comp); comp.connect(ac.destination);
     sfxBus = ac.createGain(); sfxBus.gain.value = pref.s ? 0.8 : 0; sfxBus.connect(master);
     musBus = ac.createGain(); musBus.gain.value = pref.m ? 0.55 : 0; musBus.connect(master);
@@ -1908,9 +1908,9 @@ const SND = (() => {
 
   // ---- effects ----
   S.shot = (x, y, w, mine) => {
-    if (!ac || !pref.s) return;
+    if (!ac) return;
     const P = place(x, y); heat += (P.d < 1.2 ? 1 : 0.5) * (mine ? 1.2 : 1); lastShot = performance.now();
-    if (!budget()) return;
+    if (!pref.s || !budget()) return;
     const t = now() + Math.random() * 0.012, v = P.v * (G && G.attract ? 0.25 : 1);
     if (w > 2.3) { // base turret: heavy thump
       nz(t, 0.25, "lowpass", 900, 0.7, 0.5 * v, 0.003, P.pan, 0.25);
@@ -1961,7 +1961,7 @@ const SND = (() => {
   // ---- adaptive music ----
   // D minor; calm = slow pad + sparse plucks; tension = driving bass ostinato, drums, string stabs
   const music = (() => {
-    const BPM = 112, beat = 60 / BPM, six = beat / 4;
+    const BPM = 100, beat = 60 / BPM; let six = beat / 4;
     const chords = [[0, 3, 7], [-4, 0, 3], [-7, -4, 0], [-2, 2, 5]]; // Dm  Bb  F/A  C
     const roots = [0, -4, -9, -2];
     let next = 0, idx = 0, timer = null, padNodes = [];
@@ -1970,7 +1970,7 @@ const SND = (() => {
       for (const g of padNodes) { try { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, 0.6); } catch (e) {} }
       padNodes = [];
       const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 500 + tension * 1800; lp.Q.value = 0.5;
-      const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09 * (1 - 0.55 * tension) + 0.005, t + 1.2); g.gain.setTargetAtTime(0.0001, t + len, 0.8);
+      const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.035 * (1 - 0.8 * tension) + 0.003, t + 1.2); g.gain.setTargetAtTime(0.0001, t + len, 0.8);
       lp.connect(g); g.connect(musBus); g.connect(wetSend(0.7));
       for (const s of ch) for (const det of [-6, 6]) {
         const o = ac.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz(s); o.detune.value = det;
@@ -1978,9 +1978,9 @@ const SND = (() => {
       }
       padNodes.push(g);
     }
-    function kick(t, v) { tone(t, "sine", 120, 40, 0.28, 0.75 * v, 0.003, 0, 0, musBus); nz(t, 0.02, "highpass", 3000, 0.7, 0.08 * v, 0.001, 0, 0, musBus); }
-    function snare(t, v) { nz(t, 0.16, "bandpass", 1800, 0.6, 0.32 * v, 0.002, 0, 0.35, musBus); tone(t, "triangle", 210, 160, 0.08, 0.12 * v, 0.002, 0, 0, musBus); }
-    function hat(t, v) { nz(t, 0.03, "highpass", 8000, 0.7, 0.05 * v, 0.001, (Math.random() - 0.5) * 0.4, 0, musBus); }
+    function kick(t, v) { tone(t, "sine", 150, 45, 0.22, 0.35 * v, 0.003, 0, 0, musBus); tone(t, "triangle", 900, 200, 0.03, 0.18 * v, 0.001, 0, 0, musBus); nz(t, 0.025, "bandpass", 2500, 0.8, 0.14 * v, 0.001, 0, 0, musBus); }
+    function snare(t, v) { nz(t, 0.18, "bandpass", 2000, 0.5, 0.65 * v, 0.002, 0, 0.35, musBus); tone(t, "triangle", 210, 160, 0.08, 0.12 * v, 0.002, 0, 0, musBus); }
+    function hat(t, v) { nz(t, 0.035, "highpass", 7000, 0.7, 0.07 * v, 0.001, (Math.random() - 0.5) * 0.4, 0, musBus); }
     function tom(t, v, f) { tone(t, "sine", f, f * 0.55, 0.35, 0.4 * v, 0.003, 0, 0.3, musBus); nz(t, 0.08, "lowpass", 900, 0.6, 0.1 * v, 0.002, 0, 0.2, musBus); }
     function schedule() {
       if (!ac) return;
@@ -2013,22 +2013,33 @@ const SND = (() => {
           const ch = chords[cI], s = ch[Math.floor(Math.random() * 3)] + 12 * (Math.random() < 0.5 ? 1 : 2);
           tone(t, "triangle", hz(s), hz(s), 0.9, 0.07 * (1 - T), 0.005, (Math.random() - 0.5) * 0.6, 0.6, musBus);
         }
-        // tension layers
-        if (T > 0.06) { // bass ostinato
+        // tension layers, voiced in the mid range so phone and laptop speakers carry them
+        if (T > 0.06) { // driving ostinato: low octave for weight + mid octave you can hear on any speaker
           const pat = [0, 0, 12, 0, 0, 7, 0, 12, 0, 0, 12, 0, 3, 0, 7, 12];
-          if (st % (T > 0.3 ? 1 : 2) === 0) tone(t, "sawtooth", hz(root - 12 + pat[st]), hz(root - 12 + pat[st]), six * 0.9, 0.16 * Math.min(1, T * 2), 0.004, 0, 0, musBus, 300 + T * 900);
+          if (st % (T > 0.25 ? 1 : 2) === 0) {
+            const n = root + pat[st], v = Math.min(1, T * 2.2);
+            tone(t, "sawtooth", hz(n - 12), hz(n - 12), six * 0.85, 0.06 * v, 0.004, 0, 0, musBus, 400 + T * 900);
+            tone(t, "sawtooth", hz(n + 12), hz(n + 12), six * 0.7, 0.32 * v, 0.003, (st % 4 - 1.5) * 0.25, 0.15, musBus, 1400 + T * 2600);
+          }
         }
-        if (T > 0.12 && (st % 2 === 1 || T > 0.6)) hat(t, Math.min(1.3, T * 1.8));
-        if (T > 0.18 && (st === 0 || st === 8 || (T > 0.45 && (st === 6 || st === 10 || st === 11)))) kick(t, Math.min(1.3, T * 1.8));
-        if (T > 0.3 && (st === 4 || st === 12)) snare(t, Math.min(1.3, T * 1.7));
-        if (T > 0.5 && (bar % 2 === 1 || T > 0.85) && st >= 12) tom(t, T * 1.2, [180, 160, 140, 120][st - 12]);
-        if (T > 0.55 && (st === 0 || st === 3 || st === 6 || st === 10)) { // string stabs
-          for (const s of chords[cI]) tone(t, "sawtooth", hz(s + 12), hz(s + 12), six * 1.6, 0.05 * T, 0.006, 0, 0.4, musBus, 2400);
+        if (T > 0.1 && (st % 2 === 1 || T > 0.5)) hat(t, Math.min(2.2, T * 3));
+        if (T > 0.15 && (st === 0 || st === 8 || (T > 0.45 && (st === 6 || st === 10 || st === 11)))) kick(t, Math.min(1.3, T * 1.8));
+        if (T > 0.25 && (st === 4 || st === 12 || (T > 0.8 && st === 14))) snare(t, Math.min(1.6, T * 2));
+        if (T > 0.45 && (bar % 2 === 1 || T > 0.85) && st >= 12) tom(t, T * 1.3, [300, 260, 220, 180][st - 12]);
+        if (T > 0.35 && (st === 0 || st === 3 || st === 6 || st === 10)) { // string stabs
+          for (const s of chords[cI]) tone(t, "sawtooth", hz(s + 12), hz(s + 12), six * 1.6, 0.2 * T, 0.006, 0, 0.4, musBus, 3200);
         }
+        if (T > 0.7 && st === 0 && bar % 2 === 0) { // brass swell on the downbeat at the climax
+          for (const s of chords[cI]) for (const det of [-8, 8]) { const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+            o.type = "sawtooth"; o.frequency.value = hz(s); o.detune.value = det; f.type = "lowpass"; f.frequency.setValueAtTime(600, t); f.frequency.linearRampToValueAtTime(2600, t + beat * 2);
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09 * T, t + beat * 1.5); g.gain.exponentialRampToValueAtTime(0.0001, t + beat * 4);
+            o.connect(f); f.connect(g); g.connect(musBus); g.connect(wetSend(0.4)); o.start(t); o.stop(t + beat * 4.2); }
+        }
+        six = 60 / (100 + 50 * T) / 4; // tempo rises with the fight: 100 to 150 bpm
         next += six; idx++;
       }
     }
-    return { start() { next = now() + 0.1; idx = 0; timer = setInterval(schedule, 60); }, get tension() { return tension; } };
+    return { start() { next = now() + 0.1; idx = 0; timer = setInterval(schedule, 60); }, get tension() { return tension; }, get dbg() { return { heat, lastShot, ac: ac && ac.state }; } };
   })();
   S.music = music;
   S.setPref = (k, v) => {
@@ -2282,7 +2293,8 @@ $("nameOk").addEventListener("click", async () => {
     $("nameOk").disabled = false; $("nameOk").textContent = "See your rank";
   } catch (e) {
     msg.className = "arcade-msg bad";
-    msg.textContent = e.status >= 400 && e.status < 500 ? "The leaderboard turned this score down (" + e.status + (e.detail ? ": " + e.detail : "") + ")." : "Couldn't reach the leaderboard. Check your connection and try again.";
+    console.warn("leaderboard submit failed", e.status, e.detail);
+    msg.textContent = "Couldn't post your score right now. Please try again in a moment.";
     $("nameOk").disabled = false; $("nameOk").textContent = "Try again";
   }
 });
@@ -2331,6 +2343,18 @@ setInterval(() => { if (!document.hidden && !$("menu").hidden) loadCounters(); }
 setInterval(reportKills, 30000);
 loadCounters();
 window.addEventListener("pagehide", reportKills);
+// owner check: open the game with ?lbcheck to post one TEST score (army 50 vs 30) and see the server's answer
+if (/[?&]lbcheck\b/.test(location.search) && LB.url) (async () => {
+  let out;
+  try {
+    const res = await fetch(LB.url + "/rest/v1/scores", { method: "POST", headers: { ...lbHead(), "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ name: "TEST", diff: 2, enemies: 1, army: 30, my_army: 50, secs: 12, kills: 3, win: false }) });
+    const j = await res.json().catch(() => null);
+    out = res.ok ? "LEADERBOARD OK. Test score posted: " + (j && j[0] ? j[0].score + " points (expected 2). Delete the TEST row in Supabase." : "") : "LEADERBOARD ERROR " + res.status + ": " + (j && (j.message || j.hint) || "");
+  } catch (e) { out = "LEADERBOARD UNREACHABLE: " + e.message; }
+  const d = document.createElement("div"); d.textContent = out;
+  d.style.cssText = "position:fixed;left:12px;right:12px;top:12px;z-index:99;background:#111;color:#fff;border:2px solid #e8c05a;padding:14px;font:15px/1.4 monospace;border-radius:6px";
+  document.body.appendChild(d);
+})();
 document.addEventListener("visibilitychange", () => { if (document.hidden) reportKills(); });
 
 // ---- leaderboard data ----
