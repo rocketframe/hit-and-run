@@ -367,6 +367,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b> twice to remove the selected soldiers yourself. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
+    <section><h3>Marks on your soldiers</h3><ul><li><b>Pale ring</b>: selected.</li><li><b>Bar underneath</b>: health, shown once a soldier is hurt.</li><li><b>Gold ring and arc</b>: mercenary. The arc shows how long they stay.</li><li><b>Green bubbles and dashed ring</b>: plague. It jumps to soldiers close by, so SPREAD out.</li><li><b>Dot above the head</b>: a crate effect. <b style="color:#ff9a3c">Orange</b> rapid fire, <b style="color:#6fd3ff">blue</b> sniper rounds, <b style="color:#9a9a9a">grey</b> radio jammed, blinking <b style="color:#ff3b30">red</b> flare gun (the enemy can see you).</li><li>Your army level is the <b>L</b> number at the top left.</li></ul></section>
     <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: [ and ] to slow down or speed up time, \ for normal speed, shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, Z army (all but the general), I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
     <button class="go ghost" id="howBack">Back</button>
   </div>
@@ -1863,12 +1864,13 @@ function render(dtReal) {
       const f = clamp((u.temp - G.time) / 60, 0, 1); c.strokeStyle = "#ffe08a"; c.lineWidth = 2.2; c.beginPath(); c.arc(u.x, u.y, 12.5, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.stroke();
       c.fillStyle = "#f3c85a"; c.beginPath(); c.moveTo(u.x, u.y - 17); c.lineTo(u.x + 3, u.y - 13); c.lineTo(u.x, u.y - 9); c.lineTo(u.x - 3, u.y - 13); c.fill();
     }
-    if (u.plague) { c.fillStyle = `rgba(150,230,80,${0.25 + Math.sin(now * 6 + u.id) * 0.12})`; c.beginPath(); c.arc(u.x, u.y, 10, 0, TAU); c.fill(); if (rnd() < 0.04) addPart({ k: "smoke", x: u.x, y: u.y, vx: 0, vy: -10, life: 0.8, max: 0.8, s: 5, g: 6 }); }
+    if (u.plague) { // sick: pulsing toxic ring and rising green bubbles
+      const pa = 0.55 + Math.sin(now * 6 + u.id) * 0.3; c.fillStyle = `rgba(120,220,40,${pa * 0.35})`; c.beginPath(); c.arc(u.x, u.y, 10, 0, TAU); c.fill();
+      c.strokeStyle = `rgba(150,255,60,${pa})`; c.lineWidth = 1.6; c.setLineDash([3, 2]); c.beginPath(); c.arc(u.x, u.y, 11, now * 2, now * 2 + TAU); c.stroke(); c.setLineDash([]);
+      c.fillStyle = "rgba(170,255,90,.85)"; for (let k = 0; k < 3; k++) { const t = (now * 0.9 + k / 3 + u.id * 0.13) % 1; c.beginPath(); c.arc(u.x + Math.sin(k * 2.1 + u.id) * 5, u.y - 6 - t * 14, 1.2 + t * 1.3, 0, TAU); c.globalAlpha = 1 - t; c.fill(); } c.globalAlpha = 1; }
     { let bx = u.x - 6; const r = CFG[u.kind].r, by = u.y - r - 13; // little buff and curse markers
-      const dot = col => { c.fillStyle = col; c.beginPath(); c.arc(bx, by, 2, 0, TAU); c.fill(); bx += 5; };
+      const dot = col => { c.fillStyle = "rgba(0,0,0,.7)"; c.beginPath(); c.arc(bx, by, 3.3, 0, TAU); c.fill(); c.fillStyle = col; c.beginPath(); c.arc(bx, by, 2.4, 0, TAU); c.fill(); bx += 7; };
       if (u.rapid > G.time) dot("#ff9a3c"); if (u.snipe > G.time) dot("#6fd3ff"); if (u.jam > G.time) dot("#9a9a9a"); if (u.flare > G.time && Math.sin(now * 10) > 0) dot("#ff3b30"); }
-    const lv = G.players[u.owner].level;
-    if (lv > 0) { c.fillStyle = "#e7c76a"; const n = Math.min(lv, 5), r = CFG[u.kind].r; for (let i = 0; i < n; i++) c.fillRect(u.x - r + i * 3.4, u.y - r - 8, 2.4, 2.4); }
     const mh = maxHp(u);
     if (u.hp < mh * 0.995) {
       const w = gen ? 26 : 14, r = CFG[u.kind].r, f = clamp(u.hp / mh, 0, 1);
