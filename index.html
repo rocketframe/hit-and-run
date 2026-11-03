@@ -2155,7 +2155,7 @@ const SND = (() => {
       if (o.vib) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 5.6; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * o.vib, t + Math.min(0.35, dur)); l.connect(lg); lg.connect(c.frequency); l.start(t); l.stop(t + dur + 0.4); }
       const a = o.a || 0.004, rel = o.rel || 0.08;
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(lv, t + a); g.gain.setValueAtTime(lv, t + Math.max(a, dur - rel * 0.5)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + rel);
-      c.connect(g); out(g, o.pan || 0, o.wet || 0, musBus);
+      c.connect(g); out(g, o.pan || 0, o.wet || 0, musBus); if (o.echo) { const e = ac.createGain(); e.gain.value = o.echo; g.connect(e); e.connect(echoIn()); }
       c.start(t); m.start(t); c.stop(t + dur + rel + 0.05); m.stop(t + dur + rel + 0.05);
     }
     function fmDrum(t, k, v) {
@@ -2300,7 +2300,9 @@ const SND = (() => {
           const st = fmI % 16, bar = Math.floor(fmI / 16), pos = fmI % 32, blk = Math.floor(fmI / 32) % 4; fmI++;
           const rt = [0, 0, 1, -2][blk];
           if (!fmBattle) { // ---- calm: drone, heartbeat, distant drums, a metallic tick now and then ----
-            if (pos === 0) { fm(t, hz(rt - 24), six * 30, 0.2, { r: 1, i0: 1.1, i1: 0.3, id: 2, a: 0.5, rel: 1.2, wet: 0.5 }); fm(t, hz(rt - 17), six * 30, 0.07, { r: 0.5, i0: 0.8, i1: 0.2, id: 2, a: 0.8, rel: 1.2, wet: 0.6 }); }
+            if (pos === 0) fm(t, hz(rt - 24), six * 30, 0.1, { r: 0.5, i0: 0.8, i1: 0.2, id: 2, a: 0.8, rel: 1.5, wet: 0.6 }); // sub drone
+            { const BL = [[0, -12, 10], [12, -12, 4], [16, -12, 8], [26, -11, 6]]; // long ringing bass: root, root, root, then a minor second up
+              for (const [s0, n, len] of BL) if (pos === s0) fm(t, hz(rt + n), six * len, 0.24, { r: 1, i0: 2.4, i1: 0.35, id: six * len * 0.7, a: 0.01, rel: 1.6, wet: 1.1, echo: 0.6 }); }
             if (st === 0) dk(t, "kick", 0.55); if (st === 3) dk(t, "kick", 0.35);
             if (pos === 24 && blk % 2 === 1) dk(t, "boom", 0.6);
             if (st % 2 === 0 && rnd() < 0.12) dk(t, "tick", 0.5);
@@ -2346,6 +2348,15 @@ const SND = (() => {
         } }
     };
     // dark drum kit: deep kick, cracking snare, metallic FM hats and ticks, low toms, a giant boom
+    // long dark echo: repeats fade and darken, then feed the reverb
+    let echoNode = null;
+    function echoIn() {
+      if (echoNode) return echoNode;
+      const d = ac.createDelay(2), fb = ac.createGain(), lp = ac.createBiquadFilter(), o = ac.createGain();
+      d.delayTime.value = 0.54; fb.gain.value = 0.55; lp.type = "lowpass"; lp.frequency.value = 700; o.gain.value = 0.9;
+      d.connect(lp); lp.connect(fb); fb.connect(d); lp.connect(o); o.connect(musBus); o.connect(wetSend(0.9));
+      return (echoNode = d);
+    }
     function dk(t, k, v, f) {
       if (k === "kick") { tone(t, "sine", 140, 38, 0.28, 0.55 * v, 0.002, 0, 0, musBus); nz(t, 0.02, "lowpass", 3000, 0.7, 0.12 * v, 0.001, 0, 0, musBus); }
       else if (k === "snare") { nz(t, 0.22, "bandpass", 1700, 0.5, 0.75 * v, 0.001, 0, 0.4, musBus, 900); tone(t, "triangle", 180, 120, 0.09, 0.2 * v, 0.002, 0, 0.2, musBus); }
