@@ -76,6 +76,12 @@ button:focus-visible{outline:2px solid var(--khaki);outline-offset:2px}
   radial-gradient(ellipse at 30% 20%,rgba(205,180,106,.08),transparent 60%),
   linear-gradient(90deg,rgba(6,8,6,.9) 0%,rgba(6,8,6,.72) 45%,rgba(6,8,6,.35) 100%)}
 #menu .card{text-shadow:0 1px 12px rgba(0,0,0,.6)}
+.armyset{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:4px;padding:8px 10px;background:rgba(6,8,6,.45)}
+.arow{display:grid;grid-template-columns:78px 36px 1fr 36px 40px;align-items:center;gap:8px}
+.arow .an{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-dim);text-transform:uppercase}
+.arow .av{font-size:19px;font-weight:800;text-align:right;color:var(--khaki)}
+.ast{height:36px;border:1px solid var(--line);border-radius:4px;background:rgba(0,0,0,.35);font-size:20px;font-weight:800;padding:0}
+.arow input[type=range]{width:100%;accent-color:#cdb46a;height:28px;margin:0}
 .best{font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.5;min-height:1.5em}
 .best b{color:var(--khaki);font-weight:700}
 .record{font-family:var(--mono);font-size:13px;color:var(--khaki);border:1px solid var(--khaki);border-radius:4px;padding:8px 10px}
@@ -186,12 +192,15 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <p class="lede">Find the enemy in the fog, shoot first, keep your general alive, and take their base.</p>
     <div class="opt"><label>Enemy armies (AI)</label>
       <div class="seg" id="optPlayers"><button data-v="2" class="on">1</button><button data-v="3">2</button><button data-v="4">3</button></div></div>
-    <div class="opt"><label>Points per army upgrade</label>
-      <div class="seg" id="optUp"><button data-v="25">25</button><button data-v="50">50</button><button data-v="100" class="on">100</button></div></div>
+    <div class="opt"><label>Game pace (army upgrades)</label>
+      <div class="seg" id="optUp"><button data-v="25">Quick</button><button data-v="50">Medium</button><button data-v="100" class="on">Slow</button></div></div>
     <div class="opt"><label>Enemy skill</label>
       <div class="seg" id="optDiff"><button data-v="1">Recruit</button><button data-v="2" class="on">Veteran</button><button data-v="3">Elite</button><button data-v="4">Invincible</button></div></div>
-    <div class="opt"><label>Enemy army size</label>
-      <div class="seg" id="optArmy"><button data-v="5">5</button><button data-v="10">10</button><button data-v="15">15</button><button data-v="20">20</button><button data-v="25">25</button><button data-v="30" class="on">30</button></div>
+    <div class="opt"><label>Army sizes (soldiers, 1 to 100)</label>
+      <div class="armyset">
+        <div class="arow"><span class="an">You</span><button class="ast" data-k="me" data-d="-1" aria-label="Fewer">−</button><input type="range" min="1" max="100" id="armyMe" aria-label="Your army size"><button class="ast" data-k="me" data-d="1" aria-label="More">+</button><b class="av" id="armyMeV"></b></div>
+        <div class="arow"><span class="an">Each enemy</span><button class="ast" data-k="army" data-d="-1" aria-label="Fewer">−</button><input type="range" min="1" max="100" id="armyEn" aria-label="Enemy army size"><button class="ast" data-k="army" data-d="1" aria-label="More">+</button><b class="av" id="armyEnV"></b></div>
+      </div>
       <div class="best" id="bestLine"></div></div>
     <button class="go" id="startBtn">Deploy</button>
     <button class="go ghost" id="boardBtn">Leaderboard</button>
@@ -227,7 +236,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <div class="tiles" id="statTiles"></div>
     <div class="opt"><label>Best wins by skill</label><div class="bests" id="statBests"></div></div>
     <div class="opt"><label>Recent games</label><div class="logwrap"><table class="log" id="statLog"></table></div></div>
-    <p class="fine">Score = (kills × 5, plus 1,000 for a win and up to 900 for speed) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × enemy strength (number of enemies × their army size ÷ 30).</p>
+    <p class="fine">Score = (kills × 5, plus 1,000 for a win and up to 900 for speed) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (number of enemies × their army size ÷ your army size).</p>
     <button class="go" id="statsBack">Back</button>
     <button class="go ghost" id="clearLog">Clear record</button>
   </div>
@@ -313,11 +322,11 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 let G = null;
 
 const DIFF = { 1: { mult: 0.85, respawn: 1.2, smart: false }, 2: { mult: 1.1, respawn: 0.85, smart: true }, 3: { mult: 1.3, respawn: 0.65, smart: true }, 4: { mult: 1.8, respawn: 0.45, smart: true, think: 0.7 } };
-function newGame(nPlayers, upEvery, seed, diff, enemyArmy) {
+function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy) {
   const rng = mulberry32(seed);
   const S = nPlayers === 2 ? 1900 : 2300, inset = 200;
   const corners = [[inset, S - inset], [S - inset, inset], [S - inset, S - inset], [inset, inset]];
-  const g = { rng, S, upEvery, diff, enemyArmy: enemyArmy || CFG.army, fx: [], tick: 0, time: 0, cmds: [], units: [], players: [], rocks: [], tracers: [], corpses: [], pings: [], over: null, nextId: 1, human: 0 };
+  const g = { rng, S, upEvery, diff, enemyArmy: enemyArmy || CFG.army, myArmy: myArmy || CFG.army, fx: [], tick: 0, time: 0, cmds: [], units: [], players: [], rocks: [], tracers: [], corpses: [], pings: [], over: null, nextId: 1, human: 0 };
 
   // rocks: generate one quadrant, mirror 4 ways for fairness
   const q = [];
@@ -344,12 +353,15 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy) {
     const cx = S / 2 - bx, cy = S / 2 - by, cl = Math.hypot(cx, cy);
     p.fwd = { x: cx / cl, y: cy / cl };
     // army
-    const armyN = i ? (enemyArmy || CFG.army) : CFG.army;
-    p.aiState.threshold = Math.max(3, Math.min(p.aiState.threshold, Math.round(armyN * 0.7)));
+    const armyN = i ? (enemyArmy || CFG.army) : (myArmy || CFG.army);
+    const cols = Math.max(6, Math.ceil(Math.sqrt(armyN * 0.8)));
+    // small armies get a smaller fort so tiny games still end
+    p.base.hp = p.base.max = Math.round(CFG.base.hp * clamp(armyN / 30, 0.15, 1));
+    p.aiState.threshold = Math.max(1, Math.min(Math.round(p.aiState.threshold * armyN / 30), Math.round(armyN * 0.7)));
     for (let k = 0; k < armyN; k++) {
-      const col = k % 6, row = Math.floor(k / 6);
-      const ox = bx + p.fwd.x * (90 + row * 18) + (-p.fwd.y) * ((col - 2.5) * 18);
-      const oy = by + p.fwd.y * (90 + row * 18) + (p.fwd.x) * ((col - 2.5) * 18);
+      const col = k % cols, row = Math.floor(k / cols), cc = (cols - 1) / 2;
+      const ox = bx + p.fwd.x * (90 + row * 18) + (-p.fwd.y) * ((col - cc) * 18);
+      const oy = by + p.fwd.y * (90 + row * 18) + (p.fwd.x) * ((col - cc) * 18);
       g.units.push(mkUnit(g, i, "inf", ox, oy, Math.min(2, Math.floor(k * 3 / armyN))));
     }
     g.units.push(mkUnit(g, i, "gen", bx + p.fwd.x * 60, by + p.fwd.y * 60, -1));
@@ -425,9 +437,14 @@ function pushOutOfRocks(x, y, rad) {
 const NAV = 25;
 const NB = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 function navCell(x, y) { return clamp(Math.floor(y / NAV), 0, G.nw - 1) * G.nw + clamp(Math.floor(x / NAV), 0, G.nw - 1); }
+// cached per goal cell (LRU); building is limited per tick so huge armies stay smooth
 function flowField(goal) {
-  let f = G.fields.get(goal); if (f) return f;
-  if (G.fields.size > 96) G.fields.clear();
+  let f = G.fields.get(goal);
+  if (f) { G.fields.delete(goal); G.fields.set(goal, f); return f; }
+  if (G.fieldTick !== G.tick) { G.fieldTick = G.tick; G.fieldBudget = 4; }
+  if (G.fieldBudget <= 0) return null;
+  G.fieldBudget--;
+  if (G.fields.size >= 320) G.fields.delete(G.fields.keys().next().value);
   const n = G.nw, blk = G.block;
   f = new Uint16Array(n * n).fill(65535);
   const q = new Int32Array(n * n); let h = 0, t = 0;
@@ -455,7 +472,11 @@ function pathClear(x1, y1, x2, y2, rad) {
 // direction to walk from (x,y) toward goal: straight if clear, else follow the flow field around rocks
 function navDir(x, y, gx, gy, rad, dvx, dvy) {
   if (pathClear(x, y, gx, gy, rad)) return [dvx, dvy];
-  const f = flowField(navCell(gx, gy)), n = G.nw, c = navCell(x, y), cx = c % n, cy = (c / n) | 0;
+  // chase goals snap to a 2x2-cell grid so units hunting nearby targets share one field
+  let gc = navCell(Math.floor(gx / (NAV * 2)) * NAV * 2 + NAV, Math.floor(gy / (NAV * 2)) * NAV * 2 + NAV);
+  if (G.block[gc]) gc = navCell(gx, gy);
+  const f = flowField(gc); if (!f) return [dvx, dvy];
+  const n = G.nw, c = navCell(x, y), cx = c % n, cy = (c / n) | 0;
   let best = -1, bv = f[c];
   for (const [ox, oy] of NB) {
     const xx = cx + ox, yy = cy + oy; if (xx < 0 || yy < 0 || xx >= n || yy >= n) continue;
@@ -1259,7 +1280,7 @@ function render(dtReal) {
       c.closePath(); c.fill();
       if (b.flash > 0) { c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.35; c.drawImage(SPR.glow, b.x - 50, b.y - 50, 100, 100); c.globalCompositeOperation = "source-over"; }
       // damaged bases burn
-      const f = b.hp / CFG.base.hp;
+      const f = b.hp / (b.max || CFG.base.hp);
       if (f < 0.6 && rnd() < (0.6 - f) * 0.6) addPart({ k: "smoke", x: b.x + (rnd() - 0.5) * 60, y: b.y + (rnd() - 0.5) * 60, vx: 4, vy: -14, life: 2.5, max: 2.5, s: 14, g: 20 });
       if (f < 0.35 && rnd() < 0.3) addPart({ k: "glow", x: b.x + (rnd() - 0.5) * 50, y: b.y + (rnd() - 0.5) * 50, life: 0.25, max: 0.25, s: 26 });
       // hp ring
@@ -1651,7 +1672,7 @@ function renderScore() {
     const lvlBase = p.level * G.upEvery, prog = (p.points - lvlBase) / G.upEvery;
     html += `<div class="row${p.out ? " out" : ""}"><span class="sw" style="background:${p.team.c}"></span><span class="nm">${p.id === G.human ? "You" : p.team.name}</span>` +
       `<span class="st"><span class="lv">L${p.level + 1}</span><span>${p.points}</span><span class="prog"><i style="width:${(prog * 100).toFixed(0)}%"></i></span>` +
-      `<span class="hpb" title="Base health"><i style="width:${(p.base.hp / CFG.base.hp * 100).toFixed(0)}%"></i></span></span></div>`;
+      `<span class="hpb" title="Base health"><i style="width:${(p.base.hp / (p.base.max || CFG.base.hp) * 100).toFixed(0)}%"></i></span></span></div>`;
   }
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
   const t = Math.floor(G.time), mm = String(Math.floor(t / 60)).padStart(2, "0"), ss = String(t % 60).padStart(2, "0");
@@ -1669,18 +1690,31 @@ function seg(id, key) {
     });
   });
 }
-UI.opts.army = 30;
-seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optArmy", "army");
+UI.opts.army = 30; UI.opts.me = 30;
+try { const a = JSON.parse(localStorage.getItem("hr-army") || "{}"); if (a.me) UI.opts.me = clamp(a.me | 0, 1, 100); if (a.army) UI.opts.army = clamp(a.army | 0, 1, 100); } catch (e) {}
+seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff");
+function setArmy(k, v) {
+  UI.opts[k] = clamp(Math.round(v), 1, 100);
+  $("armyMe").value = UI.opts.me; $("armyEn").value = UI.opts.army;
+  $("armyMeV").textContent = UI.opts.me; $("armyEnV").textContent = UI.opts.army;
+  try { localStorage.setItem("hr-army", JSON.stringify({ me: UI.opts.me, army: UI.opts.army })); } catch (e) {}
+  showBest();
+}
+$("armyMe").addEventListener("input", e => setArmy("me", +e.target.value));
+$("armyEn").addEventListener("input", e => setArmy("army", +e.target.value));
+document.querySelectorAll(".ast").forEach(b => b.addEventListener("click", () => setArmy(b.dataset.k, UI.opts[b.dataset.k] + +b.dataset.d)));
 
 // ---- best results: the bigger the enemy armies you beat, the better ----
 const DIFF_NAME = { 1: "Recruit", 2: "Veteran", 3: "Elite", 4: "Invincible" };
 function loadBest() { try { return JSON.parse(localStorage.getItem("hr-best") || "{}"); } catch (e) { return {}; } }
 function saveBest(b) { try { localStorage.setItem("hr-best", JSON.stringify(b)); } catch (e) {} }
-const scoreOf = r => r ? r.army * 10 + r.enemies : 0;
+const odds = r => r.enemies * r.army / (r.me || 30);
+const scoreOf = r => r ? odds(r) : 0;
 function showBest() {
   const best = loadBest(), parts = [];
-  for (const d of [4, 3, 2, 1]) { const r = best[d]; if (r) parts.push(`${DIFF_NAME[d]} <b>${r.army} vs 30</b>${r.enemies > 1 ? " ×" + r.enemies : ""}`); }
+  for (const d of [4, 3, 2, 1]) { const r = best[d]; if (r) parts.push(`${DIFF_NAME[d]} <b>${r.me || 30} vs ${r.enemies > 1 ? r.enemies + "×" : ""}${r.army}</b>`); }
   $("bestLine").innerHTML = parts.length ? "Best wins: " + parts.join(" · ") : (UI.opts.diff === 4 ? "Invincible can't be beaten at 30 vs 30. Shrink their armies and work your way up." : "");
+  if (typeof setArmy === "function" && $("armyMeV").textContent === "") setArmy("me", UI.opts.me);
 }
 showBest();
 
@@ -1711,7 +1745,7 @@ function attractCam(dt) {
 
 function start() {
   document.body.classList.remove("attract");
-  initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army));
+  initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me));
   const b = G.players[G.human].base, p = G.players[G.human];
   cam.z = Math.min(W, H) < 600 ? 0.9 : 1.05;
   cam.x = b.x + p.fwd.x * 160; cam.y = b.y + p.fwd.y * 160; clampCam();
@@ -1722,7 +1756,7 @@ function start() {
   UI.paused = false; acc = 0; last = performance.now(); SND.reset();
   updateFog();
   toast("Drag to look around. Pick a squad, then tap where to go.");
-  if (UI.opts.diff === 4) toast("Invincible: enemy armies of " + UI.opts.army, "bad");
+  if (UI.opts.diff === 4) toast("Invincible: enemy armies of " + UI.opts.army + " vs your " + UI.opts.me, "bad");
 }
 function togglePause() {
   if (!G || G.over || G.attract) return;
@@ -1923,9 +1957,9 @@ const SND = (() => {
 // ---- game log & score (kept on this device) ----
 const SKILL_F = { 1: 1, 2: 2, 3: 3, 4: 5 };
 const GAME_URL = "https://claude.ai/artifact/4x6WieAiF3e6Lyh4V1Ahd8";
-function gameScore(win, kills, secs, diff, enemies, army) {
+function gameScore(win, kills, secs, diff, enemies, army, mine = 30) {
   const base = kills * 5 + (win ? 1000 + Math.max(0, 900 - secs) : 0);
-  return Math.round(base * SKILL_F[diff] * (enemies * army / 30));
+  return Math.round(base * SKILL_F[diff] * (enemies * army / mine));
 }
 function loadLog() { try { return JSON.parse(localStorage.getItem("hr-log") || "[]"); } catch (e) { return []; } }
 function saveLog(l) { try { localStorage.setItem("hr-log", JSON.stringify(l.slice(-200))); } catch (e) {} }
@@ -1938,7 +1972,7 @@ function showStats() {
     ["Fastest win", wins.length ? fmtT(Math.min(...wins.map(g => g.secs))) : "—"], ["Top level", log.length ? "L" + Math.max(...log.map(g => g.level)) : "—"]];
   $("statTiles").innerHTML = tiles.map(([k, v]) => `<div class="tile"><b>${v}</b><span>${k}</span></div>`).join("");
   const best = loadBest();
-  $("statBests").innerHTML = [4, 3, 2, 1].map(d => { const r = best[d]; return `<div><b>${DIFF_NAME[d]}</b>${r ? `beat ${r.enemies} × ${r.army}` : "no win yet"}</div>`; }).join("");
+  $("statBests").innerHTML = [4, 3, 2, 1].map(d => { const r = best[d]; return `<div><b>${DIFF_NAME[d]}</b>${r ? `beat ${r.enemies} × ${r.army} with ${r.me || 30}` : "no win yet"}</div>`; }).join("");
   const rows = log.slice().reverse().slice(0, 30).map(g => `<tr><td>${new Date(g.at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</td><td class="${g.win ? "w" : "l"}">${g.win ? "Win" : "Loss"}</td><td>${DIFF_NAME[g.diff]}</td><td>${g.enemies} × ${g.army}</td><td>${fmtT(g.secs)}</td><td>${g.kills}/${g.losses}</td><td>L${g.level}</td><td>${fmtN(g.score)}</td></tr>`).join("");
   $("statLog").innerHTML = `<thead><tr><th>Date</th><th>Result</th><th>Skill</th><th>Enemies</th><th>Time</th><th>K/L</th><th>Lvl</th><th>Score</th></tr></thead><tbody>${rows || '<tr><td colspan="8">No games yet. Deploy and finish a battle to start your record.</td></tr>'}</tbody>`;
   $("menu").hidden = true; $("stats").hidden = false;
@@ -2065,13 +2099,14 @@ async function lbSubmit(row) {
     return r;
   }
   const body = { name: row.name, diff: row.diff, enemies: row.enemies, army: row.army, secs: row.secs, kills: row.kills, win: row.win };
+  if (row.my_army && row.my_army !== 30) body.my_army = row.my_army;
   const res = await fetch(LB.url + "/rest/v1/scores", { method: "POST", headers: { ...lbHead(), "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify(body) });
   if (!res.ok) throw new Error("submit " + res.status);
   return (await res.json())[0];
 }
 async function lbTop(diff) {
   if (!LB.url) return localBoard().filter(r => !diff || r.diff === diff).slice(0, 100);
-  const q = "select=id,name,score,diff,enemies,army,secs,kills,win,created_at&order=score.desc,created_at.asc&limit=100" + (diff ? "&diff=eq." + diff : "");
+  const q = "select=*&order=score.desc,created_at.asc&limit=100" + (diff ? "&diff=eq." + diff : "");
   const res = await fetch(LB.url + "/rest/v1/scores?" + q, { headers: lbHead() });
   if (!res.ok) throw new Error("top " + res.status);
   return res.json();
@@ -2084,14 +2119,14 @@ async function showBoard(diff, mine) {
   $("menu").hidden = true; $("over").hidden = true; $("board").hidden = false;
   $("boardTabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.v === boardDiff));
   $("boardSrc").textContent = LB.url ? "Public leaderboard · everyone's best" : "Leaderboard · this device";
-  $("boardNote").textContent = LB.url ? "Score = (kills × 5 + win bonus) × skill × enemy strength. Ties go to whoever got there first." : "Scores here stay on this device. The public leaderboard is at " + PUBLIC_URL.replace("https://", "");
+  $("boardNote").textContent = LB.url ? "Score = (kills × 5 + win bonus) × skill × odds (enemy soldiers ÷ yours). Ties go to whoever got there first." : "Scores here stay on this device. The public leaderboard is at " + PUBLIC_URL.replace("https://", "");
   const t = $("boardTable");
   t.innerHTML = `<tbody><tr><td>LOADING…</td></tr></tbody>`;
   let rows;
   try { rows = await lbTop(boardDiff); } catch (e) { t.innerHTML = `<tbody><tr><td>Couldn't load the leaderboard. Check your connection.</td></tr></tbody>`; return; }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   t.innerHTML = `<thead><tr><th>Rank</th><th>Name</th><th style="text-align:right">Score</th><th>Skill</th><th>Enemies</th><th>Time</th></tr></thead><tbody>` +
-    (rows.length ? rows.map((r, i) => `<tr class="${i < 3 ? "top" + (i + 1) : ""}${boardMine && r.id === boardMine.id ? " me" : ""}"><td class="rk">${ord(i + 1)}</td><td class="nm">${esc(r.name)}</td><td class="sc">${fmtN(r.score)}</td><td>${DIFF_NAME[r.diff] || ""}</td><td>${r.enemies} × ${r.army}${r.win ? "" : " ✕"}</td><td>${fmtT(r.secs)}</td></tr>`).join("")
+    (rows.length ? rows.map((r, i) => `<tr class="${i < 3 ? "top" + (i + 1) : ""}${boardMine && r.id === boardMine.id ? " me" : ""}"><td class="rk">${ord(i + 1)}</td><td class="nm">${esc(r.name)}</td><td class="sc">${fmtN(r.score)}</td><td>${DIFF_NAME[r.diff] || ""}</td><td>${r.my_army || 30} v ${r.enemies > 1 ? r.enemies + "×" : ""}${r.army}${r.win ? "" : " ✕"}</td><td>${fmtT(r.secs)}</td></tr>`).join("")
       : `<tr><td colspan="6">No scores yet. Be the first.</td></tr>`) + `</tbody>`;
   const me = t.querySelector("tr.me"); if (me) me.scrollIntoView({ block: "center" });
 }
@@ -2105,25 +2140,25 @@ function showOver() {
   $("overTitle").textContent = G.over.win ? "Victory" : "Defeated";
   $("overEyebrow").textContent = G.over.win ? "All enemy bases destroyed" : "Your base has fallen";
   const t = Math.floor(G.time);
-  $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your 30<br>Time ${Math.floor(t / 60)}m ${t % 60}s<br>Kills ${me.kills} · Losses ${me.losses}<br>Army level ${me.level + 1} (${me.points} points)`;
+  $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your ${G.myArmy}<br>Time ${Math.floor(t / 60)}m ${t % 60}s<br>Kills ${me.kills} · Losses ${me.losses}<br>Army level ${me.level + 1} (${me.points} points)`;
   const enemies = G.players.length - 1, secs = t, win = !!G.over.win;
-  const score = gameScore(win, me.kills, secs, G.diff, enemies, G.enemyArmy);
+  const score = gameScore(win, me.kills, secs, G.diff, enemies, G.enemyArmy, G.myArmy);
   const log = loadLog(), prevHi = log.reduce((m, g) => Math.max(m, g.score), 0);
-  log.push({ at: Date.now(), win, diff: G.diff, enemies, army: G.enemyArmy, secs, kills: me.kills, losses: me.losses, level: me.level + 1, score });
+  log.push({ at: Date.now(), win, diff: G.diff, enemies, army: G.enemyArmy, me: G.myArmy, secs, kills: me.kills, losses: me.losses, level: me.level + 1, score });
   saveLog(log);
   const newHi = score > prevHi && score > 0;
   $("overScore").innerHTML = `<small>${newHi ? "New high score" : "Score · best " + fmtN(prevHi)}</small>${fmtN(score)}`;
   lastShareShort = win ? `I beat ${DIFF_NAME[G.diff]} in Hit and Run with a score of ${fmtN(score)}. Beat that!` : `I scored ${fmtN(score)} in Hit and Run. Your turn!`;
   lastShare = win
-    ? `I just beat ${DIFF_NAME[G.diff]} in Hit and Run: ${enemies > 1 ? enemies + " enemy armies" : "an enemy army"} of ${G.enemyArmy}, ${me.kills} kills in ${fmtT(secs)}. Score ${fmtN(score)}${newHi ? " (new personal best)" : ""}. Beat that 👉 ${SHARE_URL}`
+    ? `I just beat ${DIFF_NAME[G.diff]} in Hit and Run: ${enemies > 1 ? enemies + " enemy armies" : "an enemy army"} of ${G.enemyArmy} with ${G.myArmy} soldiers, ${me.kills} kills in ${fmtT(secs)}. Score ${fmtN(score)}${newHi ? " (new personal best)" : ""}. Beat that 👉 ${SHARE_URL}`
     : `${DIFF_NAME[G.diff]} got me in Hit and Run, but not before ${me.kills} kills in ${fmtT(secs)}. Score ${fmtN(score)}. Your turn 👉 ${SHARE_URL}`;
   setShareLinks();
   SND.sting(win);
-  startNameEntry({ score, diff: G.diff, enemies, army: G.enemyArmy, secs, kills: me.kills, win });
+  startNameEntry({ score, diff: G.diff, enemies, army: G.enemyArmy, my_army: G.myArmy, secs, kills: me.kills, win });
   const rec = $("overRecord"); rec.hidden = true;
   if (G.over.win) {
-    const best = loadBest(), r = { army: G.enemyArmy, enemies: G.players.length - 1 };
-    if (scoreOf(r) > scoreOf(best[G.diff])) { best[G.diff] = r; saveBest(best); rec.hidden = false; rec.textContent = `New best on ${DIFF_NAME[G.diff]}: beat ${r.enemies > 1 ? r.enemies + " armies" : "an army"} of ${r.army}`; }
+    const best = loadBest(), r = { army: G.enemyArmy, me: G.myArmy, enemies: G.players.length - 1 };
+    if (scoreOf(r) > scoreOf(best[G.diff])) { best[G.diff] = r; saveBest(best); rec.hidden = false; rec.textContent = `New best on ${DIFF_NAME[G.diff]}: beat ${r.enemies > 1 ? r.enemies + " armies" : "an army"} of ${r.army} with ${r.me}`; }
     showBest();
   }
   $("over").hidden = false;
