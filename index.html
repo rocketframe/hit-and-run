@@ -34,6 +34,7 @@ button:focus-visible{outline:2px solid var(--khaki);outline-offset:2px}
 #score{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);display:flex;flex-direction:column;gap:4px;max-width:calc(100vw - 170px)}
 .row{display:grid;grid-template-columns:10px auto 1fr;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:3px 8px 3px 6px;font-size:13px;line-height:1.1;min-width:0}
 .row.out{opacity:.4;text-decoration:line-through}
+#score .mis{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(20,18,12,.78);border:1px solid #c9a14a;border-radius:4px;padding:4px 7px;font-size:11px;letter-spacing:.03em;color:#efe6c8;max-width:250px}#score .mis b{color:#f3c85a;text-transform:uppercase;font-weight:900}#score .mis em{font-style:normal;color:#f3c85a;font-weight:800;margin-left:auto}
 .sw{width:10px;height:10px;border-radius:2px}
 .row .nm{font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 .row .st{font-family:var(--mono);font-size:11px;color:var(--ink-dim);white-space:nowrap;display:flex;gap:6px;align-items:center}
@@ -77,8 +78,8 @@ body.attract #alertArrow{display:none!important}
 .cb .k{display:none}
 @media (hover:hover) and (pointer:fine){ .cb .k{display:inline;font-family:var(--mono);font-size:9px;color:var(--ink-dim);margin-left:3px} }
 
-#toast{left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 150px);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
-#toast div{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 12px;font-size:15px;font-weight:700;letter-spacing:.03em;animation:tin .25s ease-out;white-space:nowrap}
+#toast{left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 150px);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;width:calc(100vw - 32px)}
+#toast div{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 12px;font-size:15px;font-weight:700;letter-spacing:.03em;animation:tin .25s ease-out;white-space:normal;text-align:center;max-width:calc(100vw - 32px);width:max-content}
 #toast div.gold{border-color:var(--khaki);color:var(--khaki)}
 #toast div.bad{border-color:var(--danger);color:var(--danger)}
 @keyframes tin{from{opacity:0;transform:translateY(-6px)}}
@@ -259,6 +260,8 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
       <div class="seg" id="optUp"><button data-v="25">Quick</button><button data-v="50">Medium</button><button data-v="100" class="on">Slow</button></div></div>
     <div class="opt"><label>Supply crates</label>
       <div class="seg" id="optCrates"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div></div>
+    <div class="opt"><label>Missions</label>
+      <div class="seg" id="optMissions"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div></div>
     <div class="opt"><label>Enemy skill</label>
       <div class="seg" id="optDiff"><button data-v="1">Recruit</button><button data-v="2" class="on">Veteran</button><button data-v="3">Elite</button><button data-v="4">Invincible</button></div></div>
     <div class="opt"><label>Army sizes (soldiers, 1 to 100)</label>
@@ -320,7 +323,8 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
     <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li><b>RUN &amp; GUN</b> moves and shoots on the way. <b>ENGAGE</b> stops to chase anything it sees. Tap the button to switch.</li></ul></section>
     <section><h3>Picking exactly who you want</h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
-    <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, a medkit, rapid fire, sniper rounds, a recon flare that lifts the fog, camouflage, or an airstrike you aim with <b>STRIKE</b>). Some are bad (plague that spreads between soldiers standing close, a booby trap, a jammed radio, a flare that shows your squad to the enemy, or deserters). Every few minutes a <b>mission</b> crate (★) comes with a radio call and a countdown. It's always good and twice as big, and the enemy races you for it. Recruits ignore crates. Tougher enemies hunt them. Turn crates off in the menu if you want a pure battle.</p></section>
+    <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, a medkit, rapid fire, sniper rounds, a recon flare that lifts the fog, camouflage, or an airstrike you aim with <b>STRIKE</b>). Some are bad (plague that spreads between soldiers standing close, a booby trap, a jammed radio, a flare that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
+    <section><h3>Missions</h3><p>Every couple of minutes a radio call hands you a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Cargo:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply truck drives home only while your soldiers walk next to it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it, for 30 seconds.</li><li><b>Rescue:</b> find the downed pilot in the marked area, then walk him home.</li><li><b>Assassinate:</b> an officer with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> blow up the supply depot near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p></section>
     <section><h3>Spread out</h3><p>Tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, airstrikes and booby traps. The general always gets right of way through his own soldiers.</p></section>
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b> twice to remove the selected soldiers yourself. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
@@ -390,6 +394,11 @@ const CFG = {
   inf:  { hp: 40,  sight: 170, range: 130, dmg: 7,  cd: 0.9, speed: 62, r: 7 },
   gen:  { hp: 420, sight: 280, range: 235, dmg: 16, cd: 1.1, speed: 72, r: 11 },
   base: { hp: 8000, sight: 320, r: 44, range: 220, dmg: 12, cd: 0.7 },
+  // mission units
+  truck:   { hp: 600, sight: 120, range: 0, dmg: 0, cd: 99, speed: 34, r: 12 },
+  pilot:   { hp: 120, sight: 90, range: 0, dmg: 0, cd: 99, speed: 52, r: 6 },
+  officer: { hp: 220, sight: 200, range: 150, dmg: 9, cd: 1, speed: 40, r: 9 },
+  depot:   { hp: 1600, sight: 150, range: 0, dmg: 0, cd: 99, speed: 0, r: 20 },
   auraR: 260, aura: 1.3, respawn: 6, genRespawn: 40, army: 30, upStep: 0.15,
   hitStill: 0.85, hitMoving: 0.65, dt: 1 / 30, fogCell: 20
 };
@@ -611,7 +620,7 @@ function scan(u) {
     if (v.camo > G.time && dd > 45 * 45) continue; // camouflaged: only spotted up close
     if (dd < s2) {
       if (dd < sd) { sd = dd; seen = v; }
-      if (dd < r2) { const sc = v.hp / maxHp(v) + dd / r2 * 0.35 + (v.kind === "gen" ? 0.15 : 0); if (sc < td && clearShot(u.x, u.y, v.x, v.y)) { td = sc; tgt = v; } }
+      if (dd < r2) { const sc = v.hp / maxHp(v) + dd / r2 * 0.35 + (v.kind === "gen" ? 0.15 : 0) + (v.kind === "truck" ? 0.6 : 0); if (sc < td && clearShot(u.x, u.y, v.x, v.y)) { td = sc; tgt = v; } }
     }
   }
   for (const p of G.players) {
@@ -625,6 +634,7 @@ function scan(u) {
 
 function damage(t, amount, by) {
   if (!t.alive) return;
+  if (t.kind === "truck") amount *= 0.35; // armoured
   t.hp -= amount; t.flash = 0.12; t.hitAt = G.time;
   if (t.owner === G.human && by !== G.human && !G.attract) alertHit(t.x, t.y);
   if (t.hp > 0) return;
@@ -711,7 +721,6 @@ function dropCrate(mission) {
   const c = { id: G.crateId++, x: s.x, y: s.y, kind: list[Math.floor(G.rng() * list.length)], mission, land: G.time + CRATE.land, until: mission ? G.time + CRATE.missionLife : Infinity };
   G.crates.push(c);
   pushFx({ k: "crate", x: c.x, y: c.y, mission });
-  if (mission && !G.attract) missionCall(c);
 }
 // a cheap unit for mercenaries and deserters: recycled from earlier temporary units when possible
 function tempUnit(owner, x, y, squad, life) {
@@ -750,7 +759,7 @@ function openCrate(c, u) {
   const kinds = c.mission ? ["upgrade", "mercs", "medkit"] : [c.kind];
   pushFx({ k: "open", x: c.x, y: c.y, owner: u.owner, bad: CRATE.bad.includes(c.kind) && !c.mission, mission: c.mission });
   if (!G.attract) {
-    if (c.mission) toast(me ? "Cargo secured! Army upgraded, mercenaries and medics on the way" : p.team.name + " recovered the cargo", me ? "gold" : "bad");
+    if (c.mission) { if (me) toast("Cargo secured! Army upgraded, mercenaries and medics on the way", "gold"); }
     else if (me) { if (c.kind !== "desert") toast(CRATE_TXT[c.kind][0], CRATE_TXT[c.kind][1] === "bad" ? "bad" : "gold"); }
     else if (isVis(c.x, c.y)) toast(p.team.name + " opened a supply crate");
   }
@@ -786,16 +795,15 @@ function stepCrates(dt) {
   const T = G.time;
   if (G.cratesOn) {
     G.crateT -= dt; if (G.crateT <= 0) { G.crateT = rr(CRATE.every[0], CRATE.every[1]); if (G.crates.filter(c => !c.mission).length < CRATE.max) dropCrate(false); }
-    G.missionT -= dt; if (G.missionT <= 0) { G.missionT = rr(CRATE.missionEvery[0], CRATE.missionEvery[1]); if (!G.crates.some(c => c.mission)) dropCrate(true); }
   }
   // pickups: first unit to reach a landed crate opens it (lowest id wins ties)
   for (let i = G.crates.length - 1; i >= 0; i--) {
     const c = G.crates[i];
-    if (T > c.until) { G.crates.splice(i, 1); if (c.mission && !G.attract) toast("The cargo was lost", "bad"); pushFx({ k: "lost", x: c.x, y: c.y }); continue; }
+    if (T > c.until) { G.crates.splice(i, 1); pushFx({ k: "lost", x: c.x, y: c.y }); continue; }
     if (T < c.land) continue;
     let who = null;
     for (const u of G.units) if (u.alive && d2(u, c) < CRATE.pick * CRATE.pick && (!who || u.id < who.id)) who = u;
-    if (who) { G.crates.splice(i, 1); openCrate(c, who); }
+    if (who) { G.crates.splice(i, 1); c.by = who.owner; openCrate(c, who); }
   }
   // airstrikes land after a short whistle
   for (let i = G.strikes.length - 1; i >= 0; i--) {
@@ -819,6 +827,121 @@ function stepCrates(dt) {
   }
 }
 const TAU2 = Math.PI * 2;
+
+// ======================================================================
+// MISSIONS: side quests for the human player, separate from supply crates (own on/off switch)
+// cargo race · escort the truck · hold the hill · rescue the pilot · assassinate the officer · sabotage the depot
+// ======================================================================
+const MIS = {
+  first: [100, 140], gap: [110, 170],
+  types: {
+    cargo:  { name: "Cargo", life: 60,  brief: "Supply plane down! Recover the cargo before the enemy does" },
+    escort: { name: "Escort", life: 150, brief: "Escort the supply truck home. It only drives with soldiers next to it" },
+    hold:   { name: "Hold the hill", life: 120, brief: "Take the hill and hold it for 30 seconds" },
+    rescue: { name: "Rescue", life: 150, brief: "A pilot was shot down in the marked area. Find him and bring him home" },
+    kill:   { name: "Assassinate", life: 120, brief: "An enemy officer is in the marked area. Take him out" },
+    sabo:   { name: "Sabotage", life: 180, brief: "Blow up the enemy supply depot" }
+  }
+};
+function misUnit(owner, kind, x, y) {
+  const u = mkUnit(G, owner, kind, x, y, -2); u.mis = true; u.respawn = Infinity; u.hp = maxHp(u); u.mode = "move";
+  G.units.push(u); G.unitById.set(u.id, u); return u;
+}
+function missionsInit() { G.mis = null; G.misT = rr(MIS.first[0], MIS.first[1]); G.misLast = null; G.misN = 0; }
+function startMission() {
+  const me = G.players[G.human], foes = G.players.filter(q => q.id !== G.human && !q.out);
+  if (me.out || !foes.length) return;
+  const keys = Object.keys(MIS.types).filter(k => k !== G.misLast);
+  const type = keys[Math.floor(G.rng() * keys.length)], T = MIS.types[type];
+  const spot = crateSpot(true) || { x: G.S / 2, y: G.S / 2 };
+  const m = { type, t0: G.time, until: G.time + T.life, x: spot.x, y: spot.y, prog: 0, foe: foes[Math.floor(G.rng() * foes.length)].id, id: ++G.misN };
+  if (type === "cargo") { const c = { id: G.crateId++, x: spot.x, y: spot.y, kind: "upgrade", mission: true, land: G.time + CRATE.land, until: m.until }; G.crates.push(c); m.crate = c; pushFx({ k: "crate", x: c.x, y: c.y, mission: true }); }
+  else if (type === "escort") { m.unit = misUnit(G.human, "truck", spot.x, spot.y); }
+  else if (type === "hold") { m.r = 110; }
+  else if (type === "rescue") { m.unit = misUnit(G.human, "pilot", spot.x, spot.y); const a = G.rng() * TAU2, d = G.rng() * 140; m.ax = spot.x + Math.cos(a) * d; m.ay = spot.y + Math.sin(a) * d; m.r = 220; }
+  else if (type === "kill") {
+    m.unit = misUnit(m.foe, "officer", spot.x, spot.y); m.guards = [];
+    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU2, g = tempUnit(m.foe, spot.x + Math.cos(a) * 30, spot.y + Math.sin(a) * 30, 0, T.life + 5); g.guard = true; m.guards.push(g); }
+    const a = G.rng() * TAU2, d = G.rng() * 110; m.ax = spot.x + Math.cos(a) * d; m.ay = spot.y + Math.sin(a) * d; m.r = 200;
+  }
+  else if (type === "sabo") {
+    const q = G.players[m.foe], b = q.base, pt = pushOutOfRocks(b.x + q.fwd.x * 430 + q.fwd.y * 150, b.y + q.fwd.y * 430 - q.fwd.x * 150, 40);
+    m.x = pt.x; m.y = pt.y; m.unit = misUnit(m.foe, "depot", pt.x, pt.y);
+  }
+  G.mis = m;
+  pushFx({ k: "mission", x: m.x, y: m.y, owner: G.human, mt: type });
+}
+function missionReward(x, y) {
+  const p = G.players[G.human];
+  levelUp(p);
+  const n = clamp(Math.round(G.myArmy * 0.25), 3, 10);
+  for (let i = 0; i < n; i++) { const a = i / n * TAU2; tempUnit(G.human, x + Math.cos(a) * 26, y + Math.sin(a) * 26, 0, 60).merc = true; }
+  for (const v of G.units) if (v.alive && v.owner === G.human && d2(v, { x, y }) < 260 * 260) { v.hp = maxHp(v); v.plague = 0; }
+}
+function endMission(win, why) {
+  const m = G.mis; if (!m) return;
+  G.mis = null; G.misLast = m.type; G.misT = rr(MIS.gap[0], MIS.gap[1]);
+  if (m.crate) { const i = G.crates.indexOf(m.crate); if (i >= 0) G.crates.splice(i, 1); }
+  const pos = m.unit && m.unit.alive ? m.unit : m;
+  if (win && !why) missionReward(pos.x, pos.y);
+  const quiet = m.type === "cargo" && win;
+  for (const u of [m.unit, ...(m.guards || [])]) if (u && u.alive && (u.mis || u.guard)) { u.alive = false; u.respawn = Infinity; pushFx({ k: "recall", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c }); }
+  pushFx({ k: win ? "misWin" : "misFail", x: pos.x, y: pos.y, owner: G.human });
+  if (!G.attract && !quiet) toast(win ? "Mission complete! Army upgraded, mercenaries and medics on the way" : "Mission failed" + (why ? ": " + why : ""), win ? "gold" : "bad");
+}
+// everyone in a circle, by owner
+function inZone(x, y, r) { const by = {}; for (const u of G.units) if (u.alive && d2(u, { x, y }) < r * r && u.kind !== "depot") by[u.owner] = (by[u.owner] || 0) + 1; return by; }
+function stepMissions(dt) {
+  if (!G.mis) { if (G.missionsOn && !G.over) { G.misT -= dt; if (G.misT <= 0) startMission(); } return; }
+  const m = G.mis, T = G.time, me = G.human, home = G.players[me].base;
+  if (G.players[me].out) { G.mis = null; return; }
+  if (m.type === "cargo") {
+    if (!G.crates.includes(m.crate)) { // someone opened it, or it expired
+      if (m.crate.by === me) endMission(true, "taken"); // reward already given by the crate
+      else endMission(false, m.crate.by != null ? G.players[m.crate.by].team.name + " got the cargo" : "the cargo was lost");
+      return;
+    }
+  } else if (m.type === "escort" || m.type === "rescue") {
+    const u = m.unit;
+    if (!u.alive) return endMission(false, m.type === "escort" ? "the truck was destroyed" : "the pilot was killed");
+    let near = false; for (const v of G.units) if (v.alive && v.owner === me && v !== u && !v.mis && d2(v, u) < (m.type === "rescue" && !u.found ? 70 : 150) ** 2) { near = true; break; }
+    if (m.type === "rescue" && !u.found) { if (near) { u.found = true; pushFx({ k: "found", x: u.x, y: u.y, owner: me }); if (!G.attract) toast("Pilot found! Bring him home", "gold"); } }
+    else if (near) { u.tx = home.x; u.ty = home.y; u.mode = "move"; } else { u.tx = u.x; u.ty = u.y; }
+    if (d2(u, home) < 170 * 170) return endMission(true);
+  } else if (m.type === "hold") {
+    const by = inZone(m.x, m.y, m.r), mine = by[me] || 0, theirs = Object.keys(by).some(k => +k !== me);
+    m.contested = mine > 0 && theirs; m.holding = mine > 0 && !theirs;
+    if (m.holding) m.prog += dt / 30;
+    if (m.prog >= 1) return endMission(true);
+  } else if (m.type === "kill") {
+    const u = m.unit;
+    if (!u.alive) return endMission(true);
+    if (isVis(u.x, u.y)) m.seen = true;
+    // the officer strolls around his spot with the guards close by
+    if ((G.tick + u.id) % 120 === 0) { const a = G.rng() * TAU2; u.tx = m.x + Math.cos(a) * 90; u.ty = m.y + Math.sin(a) * 90; u.mode = "move"; }
+    for (const g of m.guards) if (g.alive && !g.seen) { g.tx = u.x + (g.id % 5 - 2) * 18; g.ty = u.y + ((g.id >> 2) % 3 - 1) * 18; g.mode = "attack"; }
+  } else if (m.type === "sabo") {
+    if (!m.unit.alive) return endMission(true);
+  }
+  if (T > m.until) endMission(false, "out of time");
+}
+// AI pushback: Recruits leave missions alone, Veterans contest the easy ones, Elite and Invincible fight for every one
+function missionRunners(p, inf) {
+  const m = G.mis; if (!m || G.diff <= 1 || p.id === G.human) return inf;
+  const lvl = G.diff, n = lvl >= 3 ? 6 : 3;
+  let goal = null;
+  if (m.type === "hold") goal = m;
+  else if (lvl >= 3) {
+    // give the player a head start before the hunters come for the truck or the pilot
+    if ((m.type === "escort" || m.type === "rescue") && G.time - m.t0 > 25) goal = m.unit.found || m.type === "escort" ? m.unit : { x: m.ax, y: m.ay };
+    else if ((m.type === "kill" || m.type === "sabo") && p.id === m.foe) goal = m.unit;
+  }
+  if (!goal || !goal.alive && goal.alive !== undefined) return inf;
+  const cand = inf.filter(u => !(u.jam > G.time)).sort((a, b) => d2(a, goal) - d2(b, goal)).slice(0, n);
+  if (!cand.length || (lvl === 2 && d2(cand[0], goal) > 800 * 800)) return inf;
+  issue({ p: p.id, ids: cand.map(u => u.id), x: goal.x, y: goal.y, mode: "attack" });
+  const s = new Set(cand); return inf.filter(u => !s.has(u));
+}
 // AI crate hunting: Recruits ignore crates, Veterans grab nearby ones, Elite and Invincible go out of their way for every one
 function crateRunners(p, inf) {
   if (!G.crates || !G.crates.length) return inf;
@@ -841,7 +964,7 @@ function step() {
   // apply orders
   for (const c of G.cmds) applyCmd(c);
   G.cmds.length = 0;
-  stepCrates(dt);
+  stepCrates(dt); stepMissions(dt);
   // AI thinking
   for (const p of G.players) if (p.ai && !p.out) { p.aiState.t -= dt; if (p.aiState.t <= 0) { p.aiState.t = p.thinkEvery; (p.think || aiThink)(p); } }
 
@@ -957,7 +1080,8 @@ function separate() {
           const d = Math.sqrt(dd) || 0.01, push = (m - d) / 2, nx = dx / d, ny = dy / d;
           // the general has right of way: his own soldiers step aside, he doesn't get shoved
           let wu = 1, wv = 1;
-          if (u.owner === v.owner && u.kind !== v.kind) { if (u.kind === "gen") { wu = 0; wv = 2; } else { wu = 2; wv = 0; } }
+          if (u.kind === "depot") { wu = 0; wv = 2; } else if (v.kind === "depot") { wu = 2; wv = 0; }
+          else if (u.owner === v.owner && (u.kind === "gen") !== (v.kind === "gen")) { if (u.kind === "gen") { wu = 0; wv = 2; } else { wu = 2; wv = 0; } }
           u.x -= nx * push * wu; u.y -= ny * push * wu; v.x += nx * push * wv; v.y += ny * push * wv;
         }
       }
@@ -978,7 +1102,7 @@ function centroid(list) { let x = 0, y = 0; for (const u of list) { x += u.x; y 
 
 function aiThink(p) {
   const A = p.aiState, b = p.base, me = p.id;
-  const inf = crateRunners(p, G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive));
+  const inf = missionRunners(p, crateRunners(p, G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive && !u.guard)));
   const gen = G.gens[me];
   const order = (list, x, y, mode) => { if (list.length) issue({ p: me, ids: list.map(u => u.id), x: clamp(x, 30, G.S - 30), y: clamp(y, 30, G.S - 30), mode }); };
   const rally = { x: b.x + p.fwd.x * 300, y: b.y + p.fwd.y * 300 };
@@ -1122,7 +1246,7 @@ function updateFog() {
   };
   const me = G.players[G.human];
   if (me.base.alive) stamp(me.base.x, me.base.y, CFG.base.sight);
-  for (const u of G.units) if (u.alive && u.owner === G.human) stamp(u.x, u.y, CFG[u.kind].sight);
+  for (const u of G.units) if (u.alive && u.owner === G.human && !(u.kind === "pilot" && !u.found)) stamp(u.x, u.y, CFG[u.kind].sight);
   if (G.over || G.attract || G.reveal > G.time) visible.fill(1), explored.fill(1), soft.fill(255);
 }
 const isVis = (x, y) => { const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return false; return G.visible[cy * G.gw + cx] === 1; };
@@ -1479,6 +1603,8 @@ function consumeFx() {
     const pub = e.k === "crate" || e.k === "strike" || e.k === "strikeIn" || e.k === "open" || e.k === "trap" || e.k === "lost";
     if (!seen && !pub) continue;
     if (e.k === "strikeIn" && e.owner !== me && !G.attract) toast("Incoming airstrike!", "bad");
+    if (e.k === "mission" && !G.attract) { toast("Mission: " + MIS.types[e.mt].brief, "gold"); SND.say("mission"); alerts.beacons.push({ x: e.x, y: e.y, t0: performance.now(), gold: true }); SND.fx(e); continue; }
+    if ((e.k === "misWin" || e.k === "misFail" || e.k === "found") && !G.attract) { SND.fx(e); if (e.k === "misWin") burst(e.x, e.y, "open"); continue; }
     burst(e.x, e.y, e.k, e.c, e.big); SND.fx(e);
     if (e.k === "death" && e.big && e.owner === me) shake.a = Math.max(shake.a, 8);
   }
@@ -1503,6 +1629,47 @@ function stepParts(dt) {
 
 // ---------- drawing ----------
 const TAU = Math.PI * 2;
+// mission markers on the map, above the fog
+function drawMission(c, z, now) {
+  const m = G.mis, lw = 2 / Math.max(z, 0.6), gold = a => `rgba(243,200,90,${a})`;
+  const label = (x, y, t) => { c.font = `800 ${Math.max(11, 10 / z)}px system-ui,sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = "rgba(0,0,0,.55)"; c.fillText(t, x + 1, y + 1); c.fillStyle = gold(1); c.fillText(t, x, y); };
+  const ring = (x, y, r, dash) => { c.strokeStyle = gold(0.75); c.lineWidth = lw; if (dash) c.setLineDash([8 / z, 8 / z]); c.beginPath(); c.arc(x, y, r, 0, TAU); c.stroke(); c.setLineDash([]); };
+  if (m.type === "hold") {
+    c.fillStyle = m.contested ? "rgba(255,90,60,.12)" : m.holding ? "rgba(243,200,90,.16)" : "rgba(243,200,90,.07)"; c.beginPath(); c.arc(m.x, m.y, m.r, 0, TAU); c.fill();
+    ring(m.x, m.y, m.r, false);
+    c.strokeStyle = gold(1); c.lineWidth = lw * 2.5; c.beginPath(); c.arc(m.x, m.y, m.r + 6 / z, -Math.PI / 2, -Math.PI / 2 + TAU * m.prog); c.stroke();
+    label(m.x, m.y - m.r - 14 / z, m.contested ? "CONTESTED" : "HOLD " + Math.round(m.prog * 100) + "%");
+  } else if (m.type === "rescue" && !m.unit.found) { ring(m.ax, m.ay, m.r, true); label(m.ax, m.ay, "PILOT DOWN"); }
+  else if (m.type === "kill") { if (m.seen && m.unit.alive && isVis(m.unit.x, m.unit.y)) ring(m.unit.x, m.unit.y, 22, false); else { ring(m.ax, m.ay, m.r, true); label(m.ax, m.ay, "OFFICER"); } }
+  else if (m.type === "sabo" && m.unit.alive) { const pr = (now % 1); ring(m.x, m.y, 30 + pr * 20, false); label(m.x, m.y - 44, "DEPOT"); }
+  else if ((m.type === "escort" || m.type === "rescue") && m.unit.alive) { const b = G.players[G.human].base; c.strokeStyle = gold(0.35); c.lineWidth = lw; c.setLineDash([6 / z, 10 / z]); c.beginPath(); c.moveTo(m.unit.x, m.unit.y); c.lineTo(b.x, b.y); c.stroke(); c.setLineDash([]); label(m.unit.x, m.unit.y - 22, m.type === "escort" ? "TRUCK" : "PILOT"); }
+}
+// mission units: supply truck, downed pilot, enemy officer, supply depot
+function drawMisUnit(c, u, T, now) {
+  const col = G.players[u.owner].team.c, fl = u.flash > 0;
+  c.save(); c.translate(u.x, u.y);
+  if (u.kind === "truck") {
+    c.rotate(u.face || 0);
+    c.fillStyle = fl ? "#fff" : "#55583a"; c.fillRect(-14, -8, 21, 16);
+    c.fillStyle = fl ? "#fff" : "#3d3f28"; c.fillRect(7, -7, 8, 14);
+    c.fillStyle = "#9fc3d6"; c.fillRect(11, -5, 3, 10);
+    c.fillStyle = col; c.fillRect(-12, -2, 17, 4);
+    c.fillStyle = "#161611"; for (const [x, y] of [[-10, -9], [-10, 8], [9, -9], [9, 8]]) c.fillRect(x - 2.5, y - 1.5, 5, 3);
+  } else if (u.kind === "pilot") {
+    c.fillStyle = "rgba(240,236,214,.75)"; c.beginPath(); c.ellipse(-9, -6, 9, 4, -0.5, 0, TAU); c.fill();
+    c.fillStyle = fl ? "#fff" : "#e2902f"; c.beginPath(); c.arc(0, 0, 6, 0, TAU); c.fill();
+    c.strokeStyle = col; c.lineWidth = 1.5; c.stroke();
+    const pr = (now * 1.2) % 1; c.strokeStyle = `rgba(243,200,90,${1 - pr})`; c.beginPath(); c.arc(0, 0, 8 + pr * 14, 0, TAU); c.stroke();
+  } else if (u.kind === "officer") {
+    c.restore(); drawSpr(fl ? T.infW : T.inf, u.x, u.y, u.face, 32); c.save(); c.translate(u.x, u.y);
+    c.fillStyle = "#f3c85a"; c.beginPath(); for (let i = 0; i < 10; i++) { const a = i / 10 * TAU - Math.PI / 2, r = i % 2 ? 2.4 : 5.5; c.lineTo(Math.cos(a) * r, -16 + Math.sin(a) * r); } c.fill();
+  } else if (u.kind === "depot") {
+    for (const [x, y, s] of [[-10, 4, 16], [7, 6, 14], [-2, -9, 15]]) { c.fillStyle = fl ? "#fff" : "#6e5530"; c.fillRect(x - s / 2, y - s / 2, s, s); c.strokeStyle = "#2b1f0f"; c.lineWidth = 1.4; c.strokeRect(x - s / 2, y - s / 2, s, s); c.beginPath(); c.moveTo(x - s / 2, y - s / 2); c.lineTo(x + s / 2, y + s / 2); c.stroke(); }
+    c.strokeStyle = "#2a261c"; c.lineWidth = 1.4; c.beginPath(); c.moveTo(14, -6); c.lineTo(14, -26); c.stroke();
+    c.fillStyle = col; c.beginPath(); c.moveTo(14, -26); c.lineTo(26, -22); c.lineTo(14, -18); c.fill();
+  }
+  c.restore();
+}
 function drawSpr(img, x, y, a, size) {
   ctx.save(); ctx.translate(x, y); if (a) ctx.rotate(a);
   ctx.drawImage(img, -size / 2, -size / 2, size, size); ctx.restore();
@@ -1584,6 +1751,7 @@ function render(dtReal) {
   const showU = [];
   for (const u of G.units) {
     if (!u.alive || !inView(u.x, u.y)) continue;
+    if (u.kind === "pilot" && !u.found && !seeAll) continue;
     if (u.owner !== G.human && !seeAll) {
       if (!(vis(u.x, u.y) || u.flare > G.time)) continue;
       if (u.camo > G.time && !G.units.some(v => v.alive && v.owner === G.human && d2(u, v) < 45 * 45)) continue;
@@ -1605,7 +1773,7 @@ function render(dtReal) {
     const img = u.flash > 0 ? (gen ? T.genW : T.infW) : (gen ? T.gen : T.inf);
     const bob = u.moving ? Math.sin(now * 14 + u.id) * 0.6 : 0;
     if (u.camo > G.time) c.globalAlpha = 0.45;
-    drawSpr(img, u.x, u.y + bob, u.face, gen ? 44 : 28);
+    if (u.mis) drawMisUnit(c, u, T, now); else drawSpr(img, u.x, u.y + bob, u.face, gen ? 44 : 28);
     c.globalAlpha = 1;
     if (u.temp) { c.strokeStyle = u.turncoat ? "rgba(255,255,255,.55)" : "rgba(243,215,124,.8)"; c.lineWidth = 1; c.setLineDash([2, 2]); c.beginPath(); c.arc(u.x, u.y, 9.5, 0, TAU); c.stroke(); c.setLineDash([]); }
     if (u.plague) { c.fillStyle = `rgba(150,230,80,${0.25 + Math.sin(now * 6 + u.id) * 0.12})`; c.beginPath(); c.arc(u.x, u.y, 10, 0, TAU); c.fill(); if (rnd() < 0.04) addPart({ k: "smoke", x: u.x, y: u.y, vx: 0, vy: -10, life: 0.8, max: 0.8, s: 5, g: 6 }); }
@@ -1721,6 +1889,7 @@ function render(dtReal) {
     c.beginPath(); c.arc(st.x, st.y, R * f, 0, TAU); c.stroke();
     c.beginPath(); c.moveTo(st.x - R * 1.15, st.y); c.lineTo(st.x - R * 0.3, st.y); c.moveTo(st.x + R * 0.3, st.y); c.lineTo(st.x + R * 1.15, st.y); c.moveTo(st.x, st.y - R * 1.15); c.lineTo(st.x, st.y - R * 0.3); c.moveTo(st.x, st.y + R * 0.3); c.lineTo(st.x, st.y + R * 1.15); c.stroke();
   }
+  if (G.mis && !seeAll) drawMission(c, z, now);
   c.textAlign = "start"; c.textBaseline = "alphabetic";
 
   // order pings (above fog)
@@ -1796,10 +1965,14 @@ function renderMini() {
   for (const u of G.units) {
     if (!u.alive) continue;
     if (!G.attract && u.owner !== G.human && !isVis(u.x, u.y)) continue;
+    if (u.kind === "pilot" && !u.found) continue;
     c.fillStyle = G.players[u.owner].team.c;
     const s = u.kind === "gen" ? 7 : 3.5; c.fillRect(u.x * k - s / 2, u.y * k - s / 2, s, s);
   }
   for (const cr of G.crates || []) { const s = cr.mission ? 9 : 6; c.fillStyle = cr.mission ? "#f3c85a" : "#f1ead2"; c.fillRect(cr.x * k - s / 2, cr.y * k - s / 2, s, s); c.strokeStyle = "#000"; c.lineWidth = 1.5; c.strokeRect(cr.x * k - s / 2, cr.y * k - s / 2, s, s); }
+  if (G.mis && !G.attract) { const m = G.mis, q = m.type === "rescue" && !m.unit.found ? { x: m.ax, y: m.ay } : m.type === "kill" && !(m.seen && isVis(m.unit.x, m.unit.y)) ? { x: m.ax, y: m.ay } : m.unit && m.unit.alive ? m.unit : m;
+    const pr = (performance.now() / 900) % 1; c.strokeStyle = `rgba(243,200,90,${1 - pr})`; c.lineWidth = 2.5; c.beginPath(); c.arc(q.x * k, q.y * k, 5 + pr * 14, 0, 7); c.stroke();
+    c.fillStyle = "#f3c85a"; c.beginPath(); c.arc(q.x * k, q.y * k, 4, 0, 7); c.fill(); }
   for (const st of G.strikes || []) { c.strokeStyle = "#ff5a3c"; c.lineWidth = 2; c.beginPath(); c.arc(st.x * k, st.y * k, 120 * k, 0, 7); c.stroke(); }
   if (!G.attract) drawBeacons(c, k);
   c.strokeStyle = "rgba(233,229,211,.85)"; c.lineWidth = 2;
@@ -1830,7 +2003,7 @@ function toast(msg, cls) {
 }
 
 const isIdle = u => u.alive && u.idleT > 1.5;
-function myUnits(filter) { return G.units.filter(u => u.owner === G.human && filter(u)); }
+function myUnits(filter) { return G.units.filter(u => u.owner === G.human && !u.mis && filter(u)); }
 function selectKey(k) {
   UI.selKey = k; UI.sel.clear();
   const list = k === "all" ? myUnits(() => true) : k === "gen" ? myUnits(u => u.kind === "gen") : k === "idle" ? myUnits(isIdle) : myUnits(u => u.squad === +k);
@@ -1890,11 +2063,6 @@ function spreadOut() {
   if (!ids.length) { toast("Pick a squad first"); return; }
   issue({ p: G.human, t: "spread", ids }); SND.order("move"); SND.say("move");
 }
-// a mission crate: radio call, beacon on the minimap
-function missionCall(c) {
-  toast("Mission: supply plane down! Recover the cargo within " + CRATE.missionLife + " seconds", "gold");
-  SND.say("mission"); alerts.beacons.push({ x: c.x, y: c.y, t0: performance.now(), gold: true });
-}
 $("modeBtn").addEventListener("click", () => { UI.mode = UI.mode === "move" ? "attack" : "move"; refreshBar(); });
 let killArm = null;
 function killSelected() {
@@ -1939,7 +2107,7 @@ function handleTap(sx, sy, additive) {
   if (UI.strikeMode) { issue({ p: G.human, t: "strike", ids: [], x: w.x, y: w.y }); UI.strikeMode = false; UI.pings.push({ x: w.x, y: w.y, t: 0.7, mode: "attack" }); SND.say("strike"); refreshBar(); return; }
   // own unit?
   let best = null, bd = hitR * hitR;
-  for (const u of G.units) if (u.alive && u.owner === G.human) { const dd = d2(u, w); if (dd < bd) { bd = dd; best = u; } }
+  for (const u of G.units) if (u.alive && u.owner === G.human && !u.mis) { const dd = d2(u, w); if (dd < bd) { bd = dd; best = u; } }
   if (UI.boxMode && !best) { UI.boxMode = false; refreshBar(); return; }
   if (best) {
     if (additive || UI.boxMode) {
@@ -2048,10 +2216,15 @@ function renderScore() {
   const el = $("score");
   let html = "";
   for (const p of G.players) {
-    const lvlBase = p.level * G.upEvery, prog = (p.points - lvlBase) / G.upEvery;
+    const lvlBase = (p.level - (p.bonus || 0)) * G.upEvery, prog = clamp((p.points - lvlBase) / G.upEvery, 0, 1);
     html += `<div class="row${p.out ? " out" : ""}"><span class="sw" style="background:${p.team.c}"></span><span class="nm">${p.id === G.human ? "You" : p.team.name}</span>` +
       `<span class="st"><span class="lv">L${p.level + 1}</span><span>${p.points}</span><span class="prog"><i style="width:${(prog * 100).toFixed(0)}%"></i></span>` +
       `<span class="hpb" title="Base health"><i style="width:${(p.base.hp / (p.base.max || CFG.base.hp) * 100).toFixed(0)}%"></i></span></span></div>`;
+  }
+  if (G.mis && !G.attract) {
+    const m = G.mis, left = Math.max(0, Math.ceil(m.until - G.time)), tx = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+    const goal = { cargo: "Grab the cargo", escort: "Walk the truck home", hold: m.contested ? "Contested! Clear the hill" : "Hold the hill " + Math.round(m.prog * 100) + "%", rescue: m.unit && m.unit.found ? "Bring the pilot home" : "Find the pilot", kill: "Kill the officer", sabo: "Destroy the depot" }[m.type];
+    html += `<div class="mis"><b>★ ${MIS.types[m.type].name}</b><span>${goal}</span><em>${tx}</em></div>`;
   }
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
   const t = Math.floor(G.time), mm = String(Math.floor(t / 60)).padStart(2, "0"), ss = String(t % 60).padStart(2, "0");
@@ -2069,10 +2242,12 @@ function seg(id, key) {
     });
   });
 }
-UI.opts.army = 30; UI.opts.me = 30; UI.opts.crates = 1;
+UI.opts.army = 30; UI.opts.me = 30; UI.opts.crates = 1; UI.opts.missions = 1;
+try { const v = localStorage.getItem("hr-missions"); if (v !== null) UI.opts.missions = +v ? 1 : 0; } catch (e) {}
 try { const v = localStorage.getItem("hr-crates"); if (v !== null) UI.opts.crates = +v ? 1 : 0; } catch (e) {}
 try { const a = JSON.parse(localStorage.getItem("hr-army") || "{}"); if (a.me) UI.opts.me = clamp(a.me | 0, 1, 100); if (a.army) UI.opts.army = clamp(a.army | 0, 1, 100); } catch (e) {}
-seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optCrates", "crates");
+seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optCrates", "crates"); seg("optMissions", "missions");
+$("optMissions").addEventListener("click", () => { try { localStorage.setItem("hr-missions", String(UI.opts.missions)); } catch (e) {} });
 $("optCrates").addEventListener("click", () => { try { localStorage.setItem("hr-crates", String(UI.opts.crates)); } catch (e) {} });
 function setArmy(k, v) {
   UI.opts[k] = clamp(Math.round(v), 1, 100);
@@ -2103,7 +2278,7 @@ function initGame(g) {
   G = g;
   G.unitById = new Map(G.units.map(u => [u.id, u]));
   G.gens = G.players.map(p => G.units.find(u => u.owner === p.id && u.kind === "gen"));
-  cratesInit(); G.cratesOn = true; UI.strikeMode = false;
+  cratesInit(); missionsInit(); G.cratesOn = true; G.missionsOn = false; UI.strikeMode = false;
   buildWorld();
 }
 // a live AI battle plays behind the menu
@@ -2142,7 +2317,7 @@ function start() {
   TUT.stop(); setTimeout(resize, 0);
   document.body.classList.remove("attract");
   initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me));
-  G.cratesOn = !!UI.opts.crates;
+  G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions;
   const b = G.players[G.human].base, p = G.players[G.human];
   cam.z = Math.min(W, H) < 600 ? 0.9 : 1.05;
   cam.x = b.x + p.fwd.x * 160; cam.y = b.y + p.fwd.y * 160; clampCam();
@@ -2280,6 +2455,11 @@ const SND = (() => {
       if (e.bad && e.owner === G.human) { tone(t, "sawtooth", 220, 110, 0.4, 0.12, 0.005, 0, 0.2, sfxBus, 900); tone(t + 0.05, "sawtooth", 233, 116, 0.4, 0.1, 0.005, 0, 0.2, sfxBus, 900); }
       else { const q = e.owner === G.human ? [0, 7, 12, 16] : [0, 3, 7]; q.forEach((s, i) => tone(t + i * 0.06, "triangle", 784 * Math.pow(2, s / 12), 784 * Math.pow(2, s / 12), 0.35, 0.12 * v, 0.004, P.pan, 0.4)); }
       nz(t, 0.1, "lowpass", 1200, 0.8, 0.2 * v, 0.002, P.pan, 0.2); // lid cracks open
+    } else if (e.k === "mission") { // radio horn: two low brass blasts
+      [0, 0.45].forEach(d => { tone(t + d, "sawtooth", 196, 196, 0.35, 0.12, 0.02, 0, 0.4, sfxBus, 1400); tone(t + d, "sawtooth", 293.66, 293.66, 0.35, 0.1, 0.02, 0, 0.4, sfxBus, 1400); });
+    } else if (e.k === "misWin") { S.fanfare();
+    } else if (e.k === "misFail") { [0, -3, -7].forEach((q, i) => tone(t + i * 0.22, "sawtooth", 220 * Math.pow(2, q / 12), 220 * Math.pow(2, q / 12), 0.5, 0.1, 0.02, 0, 0.4, sfxBus, 1200));
+    } else if (e.k === "found") { [0, 7].forEach((q, i) => tone(t + i * 0.1, "triangle", 660 * Math.pow(2, q / 12), 660 * Math.pow(2, q / 12), 0.3, 0.12, 0.004, 0, 0.3));
     } else if (e.k === "strikeIn") { // falling bomb whistle
       tone(t, "sine", 1600, 380, 1.75, 0.07, 0.3, P.pan, 0.3, sfxBus);
     } else if (e.k === "strike" || e.k === "trap") {
@@ -2859,7 +3039,7 @@ const TUT = (() => {
     try { localStorage.setItem("hr-tut", "1"); } catch (e) {}
     stop();
     if (keepPlaying) {
-      const R = red(); R.ai = true; G.cratesOn = !!UI.opts.crates;
+      const R = red(); R.ai = true; G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions;
       for (const u of G.units) if (u.owner === 1 && !u.alive) u.respawn = 2 + Math.random() * 6;
       toast("Practice battle: take their base!", "gold");
     } else toMenu();
