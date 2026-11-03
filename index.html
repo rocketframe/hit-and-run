@@ -1911,7 +1911,7 @@ const SND = (() => {
   const dbgEl = /[?&]musdebug\b/.test(location.search) ? Object.assign(document.createElement("div"), { style: "position:fixed;left:8px;bottom:8px;z-index:99;background:#000;color:#9fe07a;font:12px monospace;padding:4px 6px" }) : null;
   if (dbgEl) setTimeout(() => document.body.appendChild(dbgEl), 0);
   let tension = 0, heat = 0, lastShot = -1e9, lastSting = -1e9, lastHp = null, duck = 1, voices = 0, voiceT = 0;
-  const S = { get on() { return !!ac; }, get pref() { return pref; }, style: urlStyle || "fm", force: null };
+  const S = { get on() { return !!ac; }, get pref() { return pref; }, style: urlStyle || "dark", force: null };
 
   function init() {
     if (ac) { if (ac.state === "suspended") ac.resume(); return; }
@@ -2291,8 +2291,40 @@ const SND = (() => {
           if (!leadOn && st % 2 === 0) { const s = ch[[0, 1, 2, 1, 0, 2, 1, 2][st >> 1]] + 24; fm(t, hz(s), six * 1.6, 0.06, { r: 3, i0: 2, i1: 0.3, id: 0.15, pan: st % 4 ? 0.4 : -0.4, wet: 0.3 }); }
           if (hot > 0.3 && (pos === 0 || pos === 16 || pos === 22)) for (const s of ch) fm(t, hz(s + 12), six * (pos === 22 ? 2 : 3), 0.05, { r: 1, i0: 0.8, i1: 3.5, id: 0.12, a: 0.03, rel: 0.1, wet: 0.35 });
         } },
+      dark: { // dark and drum-driven: a low drone and heartbeat when calm; a heavy drum battery and chugging bass in battle
+        name: "Dark drums", chords: [[0, 3, 7], [0, 3, 7], [1, 5, 8], [-2, 2, 5]], roots: [0, 0, 1, -2], bpm: [84, 0],
+        tempo: T => fmBattle ? 120 + 20 * clamp((T - 0.25) / 0.75, 0, 1) : 84,
+        step(t, st0, bar0, T) {
+          const want = fmBattle ? T > 0.15 : T >= 0.25;
+          if (want !== fmBattle) { fmBattle = want; fmI = 0; if (want) { cymbal(t, 1.4, 1.8); dk(t, "boom", 1.4); } }
+          const st = fmI % 16, bar = Math.floor(fmI / 16), pos = fmI % 32, blk = Math.floor(fmI / 32) % 4; fmI++;
+          const rt = [0, 0, 1, -2][blk];
+          if (!fmBattle) { // ---- calm: drone, heartbeat, distant drums, a metallic tick now and then ----
+            if (pos === 0) { fm(t, hz(rt - 24), six * 30, 0.2, { r: 1, i0: 1.1, i1: 0.3, id: 2, a: 0.5, rel: 1.2, wet: 0.5 }); fm(t, hz(rt - 17), six * 30, 0.07, { r: 0.5, i0: 0.8, i1: 0.2, id: 2, a: 0.8, rel: 1.2, wet: 0.6 }); }
+            if (st === 0) dk(t, "kick", 0.55); if (st === 3) dk(t, "kick", 0.35);
+            if (pos === 24 && blk % 2 === 1) dk(t, "boom", 0.6);
+            if (st % 2 === 0 && rnd() < 0.12) dk(t, "tick", 0.5);
+            if (blk === 2 && pos === 8) fm(t, hz(rt), six * 12, 0.06, { r: 1, i0: 0.7, i1: 0.3, id: 1, a: 0.3, rel: 0.6, wet: 0.6, vib: 0.006 });
+            return;
+          }
+          // ---- battle ----
+          const hot = clamp((T - 0.25) / 0.75, 0, 1);
+          const chug = [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1][st], riff = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, -2, 0][st];
+          if (chug) fm(t, hz(rt - 24 + (bar % 2 ? riff : 0)), six * 0.8, st % 4 === 0 ? 0.3 : 0.2, { r: 1, i0: 2.2, i1: 0.3, id: six * 0.6, rel: 0.03 });
+          if (chug && hot > 0.3) fm(t, hz(rt - 12 + (bar % 2 ? riff : 0)), six * 0.7, 0.08, { r: 1, i0: 1.4, i1: 0.3, id: six * 0.5, rel: 0.03, pan: 0.2 });
+          const K = hot > 0.7 ? [1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1] : [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0];
+          if (K[st]) dk(t, "kick", 1.2);
+          if (st === 4 || st === 12) dk(t, "snare", 1.1);
+          if (hot > 0.45 && st === 15) dk(t, "snare", 0.5);
+          if (st % 2 === 0 || hot > 0.55) dk(t, "hat", st % 4 === 2 ? 0.9 : 0.5);
+          if (bar % 4 === 3 && st >= 8) { if (st % 2 === 0 || hot > 0.5) dk(t, "tom", 1, [150, 140, 125, 115, 100, 90, 80, 72][st - 8]); }
+          if (pos === 0 && blk % 2 === 0) cymbal(t, 0.9 + hot, 1.6);
+          if (st === 0) dk(t, "boom", 0.7 + hot * 0.5);
+          if (hot > 0.35 && (pos === 0 || pos === 22)) for (const s of [rt - 12, rt - 5, rt]) fm(t, hz(s), six * (pos === 22 ? 3 : 5), 0.07, { r: 1, i0: 0.6, i1: 3, id: 0.15, a: 0.02, rel: 0.12, wet: 0.35 });
+          if (hot > 0.6 && pos === 0) fm(t, hz(rt + 12), six * 28, 0.05, { r: 1, i0: 0.5, i1: 1.6, id: 1.2, a: 0.6, rel: 0.6, wet: 0.5, vib: 0.008 });
+        } },
     };
-    const styleKey = () => (STY[S.style] ? S.style : "fm");
+    const styleKey = () => (STY[S.style] ? S.style : "dark");
 
     // ---- victory and defeat: the battle music stops and a theme takes over until you leave the screen ----
     const END = {
@@ -2311,6 +2343,33 @@ const SND = (() => {
           const mel = [[7, 5, 3, 2], [3, 2, 0, -2], [2, 0, -2, -4], [1, 0, -1, -3]][bar % 4];
           if (st % 4 === 0 && bar < 8) tone(t, "triangle", hz(mel[st / 4] + 12), hz(mel[st / 4] + 12), beat * 1.1, 0.09, 0.08, 0, 0.6, musBus, 2200);
           if (st === 0 && bar % 2 === 0 && bar < 8) choir(t, ch.map(s => s + 12), beat * 3.8, 0.025);
+        } }
+    };
+    // dark drum kit: deep kick, cracking snare, metallic FM hats and ticks, low toms, a giant boom
+    function dk(t, k, v, f) {
+      if (k === "kick") { tone(t, "sine", 140, 38, 0.28, 0.55 * v, 0.002, 0, 0, musBus); nz(t, 0.02, "lowpass", 3000, 0.7, 0.12 * v, 0.001, 0, 0, musBus); }
+      else if (k === "snare") { nz(t, 0.22, "bandpass", 1700, 0.5, 0.75 * v, 0.001, 0, 0.4, musBus, 900); tone(t, "triangle", 180, 120, 0.09, 0.2 * v, 0.002, 0, 0.2, musBus); }
+      else if (k === "hat") fm(t, 420, 0.03, 0.05 * v, { r: 3.71, i0: 9, i1: 4, id: 0.03, rel: 0.02, pan: 0.15 });
+      else if (k === "tick") fm(t, 300 + rnd() * 200, 0.06, 0.05 * v, { r: 2.83, i0: 8, i1: 1, id: 0.06, rel: 0.05, wet: 0.6, pan: (rnd() - 0.5) * 0.8 });
+      else if (k === "tom") { tone(t, "sine", f, f * 0.6, 0.32, 0.5 * v, 0.003, 0, 0.3, musBus); nz(t, 0.06, "lowpass", 800, 0.6, 0.12 * v, 0.002, 0, 0.2, musBus); }
+      else if (k === "boom") { tone(t, "sine", 70, 30, 1.2, 0.5 * v, 0.004, 0, 0.5, musBus); nz(t, 0.5, "lowpass", 300, 0.7, 0.25 * v, 0.004, 0, 0.6, musBus, 80); }
+    }
+    const END_DARK = {
+      win: { bpm: 100, chords: [[0, 7, 12], [-4, 3, 8], [-2, 5, 10], [0, 7, 12]], // D5  Bb5  C5  D5 power chords
+        step(t, st, bar, ch) {
+          if (bar >= 6) return;
+          if (st === 0) { for (const s of ch) fm(t, hz(s - 12), six * 14, 0.08, { r: 1, i0: 0.6, i1: 3, id: 0.3, a: 0.04, rel: 0.4, wet: 0.45 }); dk(t, "boom", 1.2); cymbal(t, 1.2, 2); }
+          if ([0, 3, 6, 8, 10].includes(st)) dk(t, "kick", 1);
+          if (st === 4 || st === 12) dk(t, "snare", 1);
+          if (bar % 2 === 1 && st >= 12) dk(t, "tom", 1, [140, 120, 100, 85][st - 12]);
+          if (bar === 4 && st === 0) fm(t, hz(ch[0]), six * 30, 0.08, { r: 1, i0: 0.5, i1: 2.5, id: 0.6, a: 0.1, rel: 1, wet: 0.5, vib: 0.008 });
+        } },
+      lose: { bpm: 60, chords: [[0, 3, 7], [1, 5, 8], [-2, 2, 5], [0, 3, 7]],
+        step(t, st, bar, ch) {
+          if (bar >= 6) return;
+          if (st === 0) { fm(t, hz(ch[0] - 24), six * 15, 0.22, { r: 1, i0: 1, i1: 0.2, id: 1.5, a: 0.3, rel: 0.8, wet: 0.5 }); dk(t, "boom", 0.9); }
+          if (st === 8 && bar % 2 === 0) dk(t, "tom", 0.7, 70);
+          if (st === 0 && bar < 4) fm(t, hz(ch[0] - 12 + (bar % 2 ? -1 : 0)), six * 14, 0.06, { r: 1, i0: 0.6, i1: 0.3, id: 1, a: 0.4, rel: 0.8, wet: 0.6, vib: 0.01 });
         } }
     };
     // FM versions of the end themes
@@ -2359,7 +2418,7 @@ const SND = (() => {
       while (next < now() + 0.25) {
         const t = next;
         if (endMode) {
-          const E = (styleKey() === "fm" ? END_FM : END)[endMode], bar = Math.floor(endIdx / 16), st = endIdx % 16;
+          const E = ({ fm: END_FM, dark: END_DARK }[styleKey()] || END)[endMode], bar = Math.floor(endIdx / 16), st = endIdx % 16;
           beat = 60 / E.bpm; six = beat / 4;
           E.step(t, st, bar, E.chords[bar % 4]);
           next += six; endIdx++; idx = 0; continue;
