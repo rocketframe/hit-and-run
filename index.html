@@ -68,6 +68,7 @@ body.attract #alertArrow{display:none!important}
 .cb small{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--ink-dim)}
 .cb.on{border-color:var(--khaki);background:rgba(205,180,106,.16);color:#fff}
 .cb.mode{min-width:84px}
+.cb.strike{border-color:#ff8a4c;background:rgba(255,138,76,.18);animation:strikeP 1.2s ease-in-out infinite}.cb.strike.on{background:#ff8a4c;color:#1a0d0b}.cb.strike.on small{color:#1a0d0b}@keyframes strikeP{50%{box-shadow:0 0 0 3px rgba(255,138,76,.35)}}
 .cb.kill.armed{border-color:var(--danger);background:var(--danger);color:#1a0d0b}
 .cb.kill.armed small{color:#1a0d0b}
 .cb.box.on{border-color:#e9e5d3;background:rgba(233,229,211,.14)}
@@ -237,6 +238,8 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
   </div>
   <div class="grp">
     <button class="cb" id="boxBtn">SELECT<small>drag a box</small></button>
+    <button class="cb" id="spreadBtn">SPREAD<small>out</small></button>
+    <button class="cb strike" id="strikeBtn" hidden>STRIKE<small>1 ready</small></button>
     <button class="cb mode" id="modeBtn">RUN &amp; GUN<small>tap to switch</small></button>
     <button class="cb kill" id="killBtn">KILL<small>selected</small></button>
     <button class="cb" id="homeBtn">BASE<small>view</small></button>
@@ -254,6 +257,8 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
       <div class="seg" id="optPlayers"><button data-v="2" class="on">1</button><button data-v="3">2</button><button data-v="4">3</button></div></div>
     <div class="opt"><label>Game pace (army upgrades)</label>
       <div class="seg" id="optUp"><button data-v="25">Quick</button><button data-v="50">Medium</button><button data-v="100" class="on">Slow</button></div></div>
+    <div class="opt"><label>Supply crates</label>
+      <div class="seg" id="optCrates"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div></div>
     <div class="opt"><label>Enemy skill</label>
       <div class="seg" id="optDiff"><button data-v="1">Recruit</button><button data-v="2" class="on">Veteran</button><button data-v="3">Elite</button><button data-v="4">Invincible</button></div></div>
     <div class="opt"><label>Army sizes (soldiers, 1 to 100)</label>
@@ -315,6 +320,8 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
     <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li><b>RUN &amp; GUN</b> moves and shoots on the way. <b>ENGAGE</b> stops to chase anything it sees. Tap the button to switch.</li></ul></section>
     <section><h3>Picking exactly who you want</h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
+    <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, a medkit, rapid fire, sniper rounds, a recon flare that lifts the fog, camouflage, or an airstrike you aim with <b>STRIKE</b>). Some are bad (plague that spreads between soldiers standing close, a booby trap, a jammed radio, a flare that shows your squad to the enemy, or deserters). Every few minutes a <b>mission</b> crate (★) comes with a radio call and a countdown. It's always good and twice as big, and the enemy races you for it. Recruits ignore crates. Tougher enemies hunt them. Turn crates off in the menu if you want a pure battle.</p></section>
+    <section><h3>Spread out</h3><p>Tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, airstrikes and booby traps. The general always gets right of way through his own soldiers.</p></section>
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b> twice to remove the selected soldiers yourself. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
@@ -476,8 +483,14 @@ function pushFx(e) { if (G.fx.length < 400) G.fx.push(e); }
 
 function applyCmd(c) {
   const p = G.players[c.p]; if (p.out) return;
-  const us = c.ids.map(id => G.unitById.get(id)).filter(u => u && u.alive && u.owner === c.p);
+  if (c.t === "strike") { if (p.strikes > 0) { p.strikes--; strikeAt(c.p, c.x, c.y); } return; }
+  const us = c.ids.map(id => G.unitById.get(id)).filter(u => u && u.alive && u.owner === c.p && !(u.jam > G.time));
   if (!us.length) return;
+  if (c.t === "spread") {
+    // loosen up around where they're headed: wide gaps so fire and plague can't hit everyone at once
+    const m = centroid(us.map(u => ({ x: u.tx, y: u.ty })));
+    c = { p: c.p, x: m.x, y: m.y, mode: us[0].mode, sp: 46 };
+  }
   if (c.t === "kill") {
     // self-destruct: nobody scores, units respawn at base on the normal timer
     for (const u of us) {
@@ -488,20 +501,24 @@ function applyCmd(c) {
     return;
   }
   // formation: grid of slots around target, matched in sorted order to reduce crossing
-  const n = us.length, cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols), sp = 20;
-  const slots = [];
-  for (let i = 0; i < n; i++) {
+  // the general stands in the middle with room around him; soldiers take the slots around
+  const hasGen = us.length > 1 && us.some(u => u.kind === "gen");
+  const n = us.length, ns = n + (hasGen ? 1 : 0), cols = Math.ceil(Math.sqrt(ns)), rows = Math.ceil(ns / cols), sp = c.sp || 20;
+  let slots = [];
+  for (let i = 0; i < ns; i++) {
     const cc = i % cols, rr = Math.floor(i / cols);
     slots.push({ x: c.x + (cc - (cols - 1) / 2) * sp, y: c.y + (rr - (rows - 1) / 2) * sp });
   }
+  if (hasGen) { let k = 0; slots.forEach((s, i) => { if (d2(s, c) < d2(slots[k], c)) k = i; }); slots.splice(k, 1); }
   us.sort((a, b) => a.y - b.y || a.x - b.x);
   // within each row band, sort by x
   const bands = [];
   for (let i = 0; i < n; i += cols) bands.push(us.slice(i, i + cols).sort((a, b) => a.x - b.x));
   const ordered = bands.flat();
-  ordered.forEach((u, i) => {
-    let { x, y } = slots[i];
-    if (u.kind === "gen" && n > 1) { x = c.x; y = c.y; }
+  let si = 0;
+  ordered.forEach(u => {
+    let x, y;
+    if (u.kind === "gen" && hasGen) { x = c.x; y = c.y; } else ({ x, y } = slots[si++]);
     x = clamp(x, 10, G.S - 10); y = clamp(y, 10, G.S - 10);
     const pt = pushOutOfRocks(x, y, CFG[u.kind].r + 2);
     u.tx = pt.x; u.ty = pt.y; u.mode = c.mode;
@@ -586,11 +603,12 @@ function clearShot(x1, y1, x2, y2) {
 }
 
 function scan(u) {
-  const C = CFG[u.kind], s2 = C.sight * C.sight, r2 = C.range * C.range;
+  const C = CFG[u.kind], R = rangeOf(u), s2 = Math.max(C.sight, R) ** 2, r2 = R * R;
   let seen = null, sd = 1e18, tgt = null, td = 1e18;
   for (const v of G.units) {
     if (!v.alive || v.owner === u.owner) continue;
     const dx = v.x - u.x, dy = v.y - u.y, dd = dx * dx + dy * dy;
+    if (v.camo > G.time && dd > 45 * 45) continue; // camouflaged: only spotted up close
     if (dd < s2) {
       if (dd < sd) { sd = dd; seen = v; }
       if (dd < r2) { const sc = v.hp / maxHp(v) + dd / r2 * 0.35 + (v.kind === "gen" ? 0.15 : 0); if (sc < td && clearShot(u.x, u.y, v.x, v.y)) { td = sc; tgt = v; } }
@@ -598,7 +616,7 @@ function scan(u) {
   }
   for (const p of G.players) {
     const b = p.base; if (p.id === u.owner || !b.alive) continue;
-    const dd = d2(u, b), rr = C.range + b.r, ss = C.sight + b.r;
+    const dd = d2(u, b), rr = R + b.r, ss = C.sight + b.r;
     if (!seen && dd < ss * ss) seen = b;
     if (!tgt && dd < rr * rr) tgt = b;
   }
@@ -624,7 +642,7 @@ function damage(t, amount, by) {
 
 function addPoints(p, n) {
   p.points += n;
-  while (p.points >= (p.level + 1) * G.upEvery) {
+  while (p.points >= (p.level - (p.bonus || 0) + 1) * G.upEvery) {
     const before = p.level; p.level++; pushFx({ k: "level", owner: p.id, x: p.base.x, y: p.base.y });
     for (const u of G.units) if (u.owner === p.id && u.alive) {
       const C = CFG[u.kind].hp; u.hp *= (1 + CFG.upStep * p.level) / (1 + CFG.upStep * before);
@@ -654,12 +672,176 @@ function genAura(owner) {
   return gnl && gnl.alive ? gnl : null;
 }
 
+// ======================================================================
+// SUPPLY CRATES: mystery drops by parachute, plus timed missions. Deterministic like the rest of the sim.
+// ======================================================================
+const CRATE = {
+  every: [45, 60], missionEvery: [150, 210], missionFirst: [110, 150], missionLife: 60, max: 3, land: 3, pick: 20,
+  good: ["upgrade", "mercs", "medkit", "rapid", "snipe", "recon", "camo", "strike"],
+  bad: ["plague", "trap", "jam", "flare", "desert"]
+};
+const CRATE_TXT = {
+  upgrade: ["Battle standard! Army upgraded", "good"], mercs: ["Mercenaries join you for 60 seconds", "good"], medkit: ["Medkit: squad fully healed", "good"],
+  rapid: ["Rapid fire for 20 seconds", "good"], snipe: ["Sniper rounds: longer range for 20 seconds", "good"], recon: ["Recon flare: whole map revealed for 10 seconds", "good"],
+  camo: ["Camouflage: squad hidden from the enemy for 20 seconds", "good"], strike: ["Airstrike ready! Tap STRIKE, then a target", "good"],
+  plague: ["Plague! Spread your soldiers out before it spreads", "bad"], trap: ["Booby trap!", "bad"], jam: ["Radio jammed: squad ignores orders for 10 seconds", "bad"],
+  flare: ["Flare gun! The enemy can see your squad", "bad"], desert: ["Deserters! Soldiers ran off to the enemy", "bad"]
+};
+const rr = (a, b) => a + G.rng() * (b - a);
+const boosted = (u, k) => u[k] > G.time;
+const rangeOf = u => CFG[u.kind].range * (u.snipe > G.time ? 1.4 : 1);
+function cratesInit() {
+  G.crates = []; G.strikes = []; G.crateId = 1; G.reveal = 0;
+  G.crateT = rr(25, 40); G.missionT = rr(CRATE.missionFirst[0], CRATE.missionFirst[1]);
+  for (const p of G.players) { p.bonus = 0; p.strikes = 0; p.recon = 0; }
+}
+function crateSpot(mission) {
+  for (let tries = 0; tries < 60; tries++) {
+    const x = rr(150, G.S - 150), y = rr(150, G.S - 150);
+    if (G.rocks.some(o => Math.hypot(x - o.x, y - o.y) < o.r + 50)) continue;
+    if (G.players.some(p => Math.hypot(x - p.base.x, y - p.base.y) < (mission ? 650 : 450))) continue;
+    if (G.crates.some(c => Math.hypot(x - c.x, y - c.y) < 300)) continue;
+    return { x, y };
+  }
+  return null;
+}
+function dropCrate(mission) {
+  const s = crateSpot(mission); if (!s) return;
+  const bad = !mission && G.rng() < 0.3, list = bad ? CRATE.bad : CRATE.good;
+  const c = { id: G.crateId++, x: s.x, y: s.y, kind: list[Math.floor(G.rng() * list.length)], mission, land: G.time + CRATE.land, until: mission ? G.time + CRATE.missionLife : Infinity };
+  G.crates.push(c);
+  pushFx({ k: "crate", x: c.x, y: c.y, mission });
+  if (mission && !G.attract) missionCall(c);
+}
+// a cheap unit for mercenaries and deserters: recycled from earlier temporary units when possible
+function tempUnit(owner, x, y, squad, life) {
+  let u = G.units.find(v => v.temp && !v.alive && v.owner === owner);
+  if (!u) { u = mkUnit(G, owner, "inf", x, y, squad); G.units.push(u); G.unitById.set(u.id, u); }
+  const p = G.players[owner];
+  Object.assign(u, { x, y, tx: x, ty: y, squad, alive: true, respawn: Infinity, mode: "attack", seen: null, tgt: null, temp: G.time + life, plague: 0, camo: 0, jam: 0, flare: 0, rapid: 0, snipe: 0, hitAt: -99 });
+  u.hp = maxHp(u);
+  return u;
+}
+function killQuiet(u) { // no points for anyone
+  u.alive = false; u.respawn = u.temp ? Infinity : (u.kind === "gen" ? CFG.genRespawn : CFG.respawn) * G.players[u.owner].respawnMult; u.seen = u.tgt = null;
+  pushFx({ k: "death", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" });
+}
+function levelUp(p) {
+  const before = p.level; p.level++; p.bonus = (p.bonus || 0) + 1; pushFx({ k: "level", owner: p.id, x: p.base.x, y: p.base.y });
+  for (const u of G.units) if (u.owner === p.id && u.alive) u.hp *= (1 + CFG.upStep * p.level) / (1 + CFG.upStep * before);
+}
+function strikeAt(owner, x, y) {
+  G.strikes.push({ owner, x: clamp(x, 0, G.S), y: clamp(y, 0, G.S), t: 1.8 });
+  pushFx({ k: "strikeIn", x, y, owner });
+}
+// the AI picks the thickest enemy cluster its army can see, else the nearest enemy base it knows
+function aiStrikeTarget(p) {
+  const mine = G.units.filter(u => u.alive && u.owner === p.id), seen = new Set();
+  for (const u of mine) if (u.seen && !u.seen.isBase) seen.add(u.seen);
+  let best = null, bn = 0;
+  for (const v of seen) { let n = 0; for (const w of seen) if (d2(v, w) < 110 * 110) n++; if (n > bn) { bn = n; best = v; } }
+  if (best) return best;
+  let bb = null, bd = 1e18; for (const q of G.players) if (q.id !== p.id && !q.out) { const dd = d2(q.base, p.base); if (dd < bd) { bd = dd; bb = q.base; } }
+  return bb;
+}
+function openCrate(c, u) {
+  const p = G.players[u.owner], me = u.owner === G.human, T = G.time;
+  const group = G.units.filter(v => v.alive && v.owner === u.owner && d2(v, u) < 160 * 160);
+  const kinds = c.mission ? ["upgrade", "mercs", "medkit"] : [c.kind];
+  pushFx({ k: "open", x: c.x, y: c.y, owner: u.owner, bad: CRATE.bad.includes(c.kind) && !c.mission, mission: c.mission });
+  if (!G.attract) {
+    if (c.mission) toast(me ? "Cargo secured! Army upgraded, mercenaries and medics on the way" : p.team.name + " recovered the cargo", me ? "gold" : "bad");
+    else if (me) { if (c.kind !== "desert") toast(CRATE_TXT[c.kind][0], CRATE_TXT[c.kind][1] === "bad" ? "bad" : "gold"); }
+    else if (isVis(c.x, c.y)) toast(p.team.name + " opened a supply crate");
+  }
+  for (const k of kinds) {
+    if (k === "upgrade") levelUp(p);
+    else if (k === "mercs") {
+      const n = clamp(Math.round((u.owner === G.human ? G.myArmy : G.enemyArmy) * 0.25), 3, 10) * (c.mission ? 1 : 1);
+      const sq = u.kind === "gen" ? 0 : u.squad;
+      for (let i = 0; i < n; i++) { const a = i / n * TAU2; tempUnit(u.owner, c.x + Math.cos(a) * 26, c.y + Math.sin(a) * 26, sq, 60).merc = true; }
+    }
+    else if (k === "medkit") { for (const v of G.units) if (v.alive && v.owner === u.owner && d2(v, u) < 220 * 220) { v.hp = maxHp(v); v.plague = 0; } }
+    else if (k === "rapid") for (const v of group) v.rapid = T + 20;
+    else if (k === "snipe") for (const v of group) v.snipe = T + 20;
+    else if (k === "recon") { if (me) G.reveal = T + 10; p.recon = T + 10; }
+    else if (k === "camo") for (const v of group) v.camo = T + 20;
+    else if (k === "strike") { if (p.ai) { const t = aiStrikeTarget(p); if (t) strikeAt(p.id, t.x, t.y); } else p.strikes++; }
+    else if (k === "plague") { for (const v of group) if (d2(v, u) < 60 * 60) v.plague = T + 25; }
+    else if (k === "trap") {
+      pushFx({ k: "trap", x: c.x, y: c.y });
+      for (const v of G.units) if (v.alive && d2(v, c) < 90 * 90) { v.hp -= 32 * (1 - Math.sqrt(d2(v, c)) / 140); v.flash = 0.15; v.hitAt = T; if (v.hp <= 0) killQuiet(v); }
+    }
+    else if (k === "jam") for (const v of group) v.jam = T + 10;
+    else if (k === "flare") for (const v of group) v.flare = T + 20;
+    else if (k === "desert") {
+      let foe = null, fd = 1e18; for (const q of G.players) if (q.id !== u.owner && !q.out) { const dd = d2(q.base, c); if (dd < fd) { fd = dd; foe = q; } }
+      const inf = group.filter(v => v.kind === "inf" && !v.temp), n = Math.min(inf.length, 3);
+      if (foe) for (let i = 0; i < n; i++) { const v = inf[i]; v.alive = false; v.respawn = CFG.respawn * p.respawnMult; v.seen = v.tgt = null; pushFx({ k: "recall", x: v.x, y: v.y, owner: v.owner, c: p.team.c }); tempUnit(foe.id, v.x, v.y, 0, 60).turncoat = true; }
+      if (me && foe) toast(n + (n === 1 ? " soldier ran off to " : " soldiers ran off to ") + foe.team.name, "bad");
+    }
+  }
+}
+function stepCrates(dt) {
+  const T = G.time;
+  if (G.cratesOn) {
+    G.crateT -= dt; if (G.crateT <= 0) { G.crateT = rr(CRATE.every[0], CRATE.every[1]); if (G.crates.filter(c => !c.mission).length < CRATE.max) dropCrate(false); }
+    G.missionT -= dt; if (G.missionT <= 0) { G.missionT = rr(CRATE.missionEvery[0], CRATE.missionEvery[1]); if (!G.crates.some(c => c.mission)) dropCrate(true); }
+  }
+  // pickups: first unit to reach a landed crate opens it (lowest id wins ties)
+  for (let i = G.crates.length - 1; i >= 0; i--) {
+    const c = G.crates[i];
+    if (T > c.until) { G.crates.splice(i, 1); if (c.mission && !G.attract) toast("The cargo was lost", "bad"); pushFx({ k: "lost", x: c.x, y: c.y }); continue; }
+    if (T < c.land) continue;
+    let who = null;
+    for (const u of G.units) if (u.alive && d2(u, c) < CRATE.pick * CRATE.pick && (!who || u.id < who.id)) who = u;
+    if (who) { G.crates.splice(i, 1); openCrate(c, who); }
+  }
+  // airstrikes land after a short whistle
+  for (let i = G.strikes.length - 1; i >= 0; i--) {
+    const s = G.strikes[i]; s.t -= dt; if (s.t > 0) continue;
+    G.strikes.splice(i, 1);
+    pushFx({ k: "strike", x: s.x, y: s.y, owner: s.owner });
+    const lv = 1 + CFG.upStep * G.players[s.owner].level;
+    for (const v of G.units) if (v.alive && v.owner !== s.owner) { const d = Math.sqrt(d2(v, s)); if (d < 120) damage(v, 75 * lv * (1 - d / 240), s.owner); }
+    for (const q of G.players) if (q.id !== s.owner && q.base.alive && d2(q.base, s) < 160 * 160) damage(q.base, 700 * lv, s.owner);
+  }
+  // timed effects: mercenaries leave, plague drains and spreads to anyone standing close
+  for (const u of G.units) {
+    if (!u.alive) continue;
+    if (u.temp && T > u.temp) { u.alive = false; u.respawn = Infinity; u.seen = u.tgt = null; pushFx({ k: "recall", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c }); continue; }
+    if (u.plague) {
+      if (T > u.plague) { u.plague = 0; u.immune = T + 20; continue; }
+      u.hp -= maxHp(u) * 0.03 * dt; u.hitAt = T;
+      if (u.hp <= 0) { killQuiet(u); u.plague = 0; continue; }
+      if ((G.tick + u.id) % 15 === 0) for (const v of G.units) if (v.alive && v.owner === u.owner && !v.plague && !(v.immune > T) && v !== u && d2(u, v) < 26 * 26 && G.rng() < 0.35) v.plague = T + 25;
+    }
+  }
+}
+const TAU2 = Math.PI * 2;
+// AI crate hunting: Recruits ignore crates, Veterans grab nearby ones, Elite and Invincible go out of their way for every one
+function crateRunners(p, inf) {
+  if (!G.crates || !G.crates.length) return inf;
+  const lvl = G.diff; if (lvl <= 1) return inf;
+  const free = inf.slice(), taken = new Set();
+  for (const c of G.crates) {
+    const n = c.mission ? (lvl >= 3 ? 6 : 3) : (lvl >= 3 ? 3 : 2);
+    const cand = free.filter(u => !taken.has(u) && !(u.jam > G.time)).sort((a, b) => d2(a, c) - d2(b, c)).slice(0, n);
+    if (!cand.length) continue;
+    if (lvl === 2 && d2(cand[0], c) > 650 * 650) continue; // Veterans only go for crates close by
+    for (const u of cand) taken.add(u);
+    issue({ p: p.id, ids: cand.map(u => u.id), x: c.x, y: c.y, mode: c.mission ? "attack" : "move" });
+  }
+  return taken.size ? inf.filter(u => !taken.has(u)) : inf;
+}
+
 function step() {
   const dt = CFG.dt;
   G.tick++; G.time += dt;
   // apply orders
   for (const c of G.cmds) applyCmd(c);
   G.cmds.length = 0;
+  stepCrates(dt);
   // AI thinking
   for (const p of G.players) if (p.ai && !p.out) { p.aiState.t -= dt; if (p.aiState.t <= 0) { p.aiState.t = p.thinkEvery; (p.think || aiThink)(p); } }
 
@@ -685,7 +867,7 @@ function step() {
     let gx = u.tx, gy = u.ty, stopAt = 3;
     if (u.mode === "attack" && u.seen) {
       gx = u.seen.x; gy = u.seen.y;
-      stopAt = (u.seen.isBase ? C.range + u.seen.r - 14 : C.range * 0.8);
+      stopAt = (u.seen.isBase ? rangeOf(u) + u.seen.r - 14 : rangeOf(u) * 0.8);
     }
     const dx = gx - u.x, dy = gy - u.y, dist = Math.hypot(dx, dy);
     u.moving = false;
@@ -719,9 +901,9 @@ function step() {
     if (G.time - (u.hitAt || -99) > 5) { const mh = maxHp(u); if (u.hp < mh) { const pb = G.players[u.owner].base; const rate = u.kind === "gen" ? (d2(u, pb) < 300 * 300 ? 0.08 : 0.03) : 0.03; u.hp = Math.min(mh, u.hp + mh * rate * dt); } }
     u.cd -= dt;
     const t = u.tgt; if (!t || u.cd > 0) continue;
-    const C = CFG[u.kind], rr = C.range + (t.isBase ? t.r : 0);
+    const C = CFG[u.kind], rr = rangeOf(u) + (t.isBase ? t.r : 0);
     if (d2(u, t) > rr * rr) { u.tgt = null; continue; }
-    u.cd = C.cd * (0.9 + G.rng() * 0.2);
+    u.cd = C.cd * (0.9 + G.rng() * 0.2) * (u.rapid > G.time ? 0.45 : 1);
     u.face = Math.atan2(t.y - u.y, t.x - u.x);
     const p = G.players[u.owner];
     let dmg = C.dmg * (1 + CFG.upStep * p.level) * p.mult;
@@ -773,7 +955,10 @@ function separate() {
         const dx = v.x - u.x, dy = v.y - u.y, m = ru + CFG[v.kind].r + 1, dd = dx * dx + dy * dy;
         if (dd < m * m) {
           const d = Math.sqrt(dd) || 0.01, push = (m - d) / 2, nx = dx / d, ny = dy / d;
-          u.x -= nx * push; u.y -= ny * push; v.x += nx * push; v.y += ny * push;
+          // the general has right of way: his own soldiers step aside, he doesn't get shoved
+          let wu = 1, wv = 1;
+          if (u.owner === v.owner && u.kind !== v.kind) { if (u.kind === "gen") { wu = 0; wv = 2; } else { wu = 2; wv = 0; } }
+          u.x -= nx * push * wu; u.y -= ny * push * wu; v.x += nx * push * wv; v.y += ny * push * wv;
         }
       }
     }
@@ -793,7 +978,7 @@ function centroid(list) { let x = 0, y = 0; for (const u of list) { x += u.x; y 
 
 function aiThink(p) {
   const A = p.aiState, b = p.base, me = p.id;
-  const inf = G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive);
+  const inf = crateRunners(p, G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive));
   const gen = G.gens[me];
   const order = (list, x, y, mode) => { if (list.length) issue({ p: me, ids: list.map(u => u.id), x: clamp(x, 30, G.S - 30), y: clamp(y, 30, G.S - 30), mode }); };
   const rally = { x: b.x + p.fwd.x * 300, y: b.y + p.fwd.y * 300 };
@@ -812,7 +997,7 @@ function aiThink(p) {
   // what my army can see
   const known = new Set();
   for (const u of G.units) if (u.alive && u.owner === me && u.seen && !u.seen.isBase) known.add(u.seen);
-  for (const v of G.units) if (v.alive && v.owner !== me && d2(v, b) < 520 * 520) known.add(v);
+  for (const v of G.units) if (v.alive && v.owner !== me && (d2(v, b) < 520 * 520 || v.flare > G.time || p.recon > G.time)) known.add(v);
   const knownArr = [...known];
   // estimated defence of an enemy base: its turret plus every unit of theirs not seen out in the field
   const basePow = q => 8 + power(G.units.filter(v => v.alive && v.owner === q.id && !(known.has(v) && d2(v, q.base) > 700 * 700)));
@@ -938,7 +1123,7 @@ function updateFog() {
   const me = G.players[G.human];
   if (me.base.alive) stamp(me.base.x, me.base.y, CFG.base.sight);
   for (const u of G.units) if (u.alive && u.owner === G.human) stamp(u.x, u.y, CFG[u.kind].sight);
-  if (G.over || G.attract) visible.fill(1), explored.fill(1), soft.fill(255);
+  if (G.over || G.attract || G.reveal > G.time) visible.fill(1), explored.fill(1), soft.fill(255);
 }
 const isVis = (x, y) => { const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return false; return G.visible[cy * G.gw + cx] === 1; };
 const isExp = (x, y) => { const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return false; return G.explored[cy * G.gw + cx] === 1; };
@@ -1269,6 +1454,18 @@ function burst(x, y, kind, color, big) {
     addPart({ k: "glow", x, y, life: 0.3, max: 0.3, s: 26, tint: true });
   } else if (kind === "level") {
     addPart({ k: "ring", x, y, life: 0.8, max: 0.8, s: 40, c: "243,215,124" });
+  } else if (kind === "open") {
+    addPart({ k: "ring", x, y, life: 0.6, max: 0.6, s: 60, c: "243,215,124" });
+    addPart({ k: "glow", x, y, life: 0.35, max: 0.35, s: 50 });
+    for (let i = 0; i < 10; i++) { const a = rnd() * 7, s = 40 + rnd() * 80; addPart({ k: "debris", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.6, max: 0.6, s: 2.2, c: "#8b6a3c", rot: rnd() * 7 }); }
+  } else if (kind === "strike" || kind === "trap") {
+    const big = kind === "strike";
+    shake.a = Math.max(shake.a, big ? 12 : 6);
+    addPart({ k: "glow", x, y, life: 0.5, max: 0.5, s: big ? 240 : 120 });
+    addPart({ k: "ring", x, y, life: 0.7, max: 0.7, s: big ? 240 : 110, c: "255,200,140" });
+    for (let i = 0; i < (big ? 40 : 18); i++) { const a = rnd() * 7, s = 80 + rnd() * (big ? 360 : 200); addPart({ k: "spark", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.4 + rnd() * 0.7, max: 1.1, s: 2, c: "255,180,80" }); }
+    for (let i = 0; i < (big ? 18 : 8); i++) { const a = rnd() * 7, s = 20 + rnd() * 70; addPart({ k: "smoke", x: x + Math.cos(a) * 20, y: y + Math.sin(a) * 20, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 10, life: 2 + rnd() * 1.5, max: 3.5, s: big ? 34 : 20, g: 40 }); }
+    if (P.decals) { const s = big ? 200 : 90; decalCtx.drawImage(SPR.scorch, x - s / 2, y - s / 2, s, s); }
   }
 }
 function consumeFx() {
@@ -1279,7 +1476,9 @@ function consumeFx() {
       for (const u of G.units) if (u.alive && u.owner === e.owner && (G.attract || u.owner === me || isVis(u.x, u.y))) burst(u.x, u.y, "level");
       SND.fx(e); continue;
     }
-    if (!seen) continue;
+    const pub = e.k === "crate" || e.k === "strike" || e.k === "strikeIn" || e.k === "open" || e.k === "trap" || e.k === "lost";
+    if (!seen && !pub) continue;
+    if (e.k === "strikeIn" && e.owner !== me && !G.attract) toast("Incoming airstrike!", "bad");
     burst(e.x, e.y, e.k, e.c, e.big); SND.fx(e);
     if (e.k === "death" && e.big && e.owner === me) shake.a = Math.max(shake.a, 8);
   }
@@ -1385,7 +1584,10 @@ function render(dtReal) {
   const showU = [];
   for (const u of G.units) {
     if (!u.alive || !inView(u.x, u.y)) continue;
-    if (u.owner !== G.human && !vis(u.x, u.y)) continue;
+    if (u.owner !== G.human && !seeAll) {
+      if (!(vis(u.x, u.y) || u.flare > G.time)) continue;
+      if (u.camo > G.time && !G.units.some(v => v.alive && v.owner === G.human && d2(u, v) < 45 * 45)) continue;
+    }
     showU.push(u);
   }
   for (const u of showU) { const r = CFG[u.kind].r; c.globalAlpha = 0.9; c.drawImage(SPR.shadow, u.x - r * 1.6 + 2.5, u.y - r * 1.6 + 3.5, r * 3.2, r * 3.2); }
@@ -1402,7 +1604,14 @@ function render(dtReal) {
     const T = SPR.team[u.owner], gen = u.kind === "gen";
     const img = u.flash > 0 ? (gen ? T.genW : T.infW) : (gen ? T.gen : T.inf);
     const bob = u.moving ? Math.sin(now * 14 + u.id) * 0.6 : 0;
+    if (u.camo > G.time) c.globalAlpha = 0.45;
     drawSpr(img, u.x, u.y + bob, u.face, gen ? 44 : 28);
+    c.globalAlpha = 1;
+    if (u.temp) { c.strokeStyle = u.turncoat ? "rgba(255,255,255,.55)" : "rgba(243,215,124,.8)"; c.lineWidth = 1; c.setLineDash([2, 2]); c.beginPath(); c.arc(u.x, u.y, 9.5, 0, TAU); c.stroke(); c.setLineDash([]); }
+    if (u.plague) { c.fillStyle = `rgba(150,230,80,${0.25 + Math.sin(now * 6 + u.id) * 0.12})`; c.beginPath(); c.arc(u.x, u.y, 10, 0, TAU); c.fill(); if (rnd() < 0.04) addPart({ k: "smoke", x: u.x, y: u.y, vx: 0, vy: -10, life: 0.8, max: 0.8, s: 5, g: 6 }); }
+    { let bx = u.x - 6; const r = CFG[u.kind].r, by = u.y - r - 13; // little buff and curse markers
+      const dot = col => { c.fillStyle = col; c.beginPath(); c.arc(bx, by, 2, 0, TAU); c.fill(); bx += 5; };
+      if (u.rapid > G.time) dot("#ff9a3c"); if (u.snipe > G.time) dot("#6fd3ff"); if (u.jam > G.time) dot("#9a9a9a"); if (u.flare > G.time && Math.sin(now * 10) > 0) dot("#ff3b30"); }
     const lv = G.players[u.owner].level;
     if (lv > 0) { c.fillStyle = "#e7c76a"; const n = Math.min(lv, 5), r = CFG[u.kind].r; for (let i = 0; i < n; i++) c.fillRect(u.x - r + i * 3.4, u.y - r - 8, 2.4, 2.4); }
     const mh = maxHp(u);
@@ -1483,6 +1692,37 @@ function render(dtReal) {
     c.setTransform(DPR * z, 0, 0, DPR * z, ox * DPR, oy * DPR);
   }
 
+  // supply crates and incoming airstrikes (above fog: everyone sees the parachutes)
+  for (const cr of G.crates || []) {
+    if (!inView(cr.x, cr.y)) continue;
+    const sz = Math.max(14, 11 / z), fall = Math.max(0, cr.land - G.time) / CRATE.land, lift = fall * 90;
+    c.fillStyle = `rgba(0,0,0,${0.35 * (1 - fall * 0.6)})`; c.beginPath(); c.ellipse(cr.x + 3, cr.y + 4, sz * (0.5 + 0.3 * (1 - fall)), sz * 0.3, 0, 0, TAU); c.fill();
+    const y = cr.y - lift + Math.sin(now * 2) * 2 * fall, sway = Math.sin(now * 1.7 + cr.id) * 5 * fall;
+    if (fall > 0) { // parachute
+      c.strokeStyle = "rgba(240,236,214,.7)"; c.lineWidth = 0.8;
+      c.beginPath(); c.moveTo(cr.x - sz / 2, y - sz / 2); c.lineTo(cr.x + sway - sz * 1.1, y - sz * 2); c.moveTo(cr.x + sz / 2, y - sz / 2); c.lineTo(cr.x + sway + sz * 1.1, y - sz * 2); c.stroke();
+      c.fillStyle = cr.mission ? "#e8b54a" : "#e9e3cc"; c.beginPath(); c.ellipse(cr.x + sway, y - sz * 2, sz * 1.25, sz * 0.7, 0, Math.PI, TAU); c.fill();
+      c.fillStyle = "rgba(0,0,0,.18)"; for (let i = -1; i <= 1; i += 2) { c.beginPath(); c.ellipse(cr.x + sway + i * sz * 0.42, y - sz * 2, sz * 0.2, sz * 0.66, 0, Math.PI, TAU); c.fill(); }
+    } else { // landed: pulse so it's easy to spot
+      const pr = (now * 0.8 + cr.id * 0.3) % 1;
+      c.strokeStyle = cr.mission ? `rgba(243,200,90,${1 - pr})` : `rgba(240,236,214,${0.7 * (1 - pr)})`; c.lineWidth = 2 / Math.max(z, 0.6);
+      c.beginPath(); c.arc(cr.x, cr.y, sz * (0.8 + pr * (cr.mission ? 2.6 : 1.6)), 0, TAU); c.stroke();
+    }
+    c.fillStyle = cr.mission ? "#c8922e" : "#8b6a3c"; c.fillRect(cr.x - sz / 2, y - sz / 2, sz, sz);
+    c.strokeStyle = "#3b2a14"; c.lineWidth = sz * 0.1; c.strokeRect(cr.x - sz / 2, y - sz / 2, sz, sz);
+    c.beginPath(); c.moveTo(cr.x - sz / 2, y - sz / 2); c.lineTo(cr.x + sz / 2, y + sz / 2); c.moveTo(cr.x + sz / 2, y - sz / 2); c.lineTo(cr.x - sz / 2, y + sz / 2); c.stroke();
+    c.fillStyle = "#f6efd8"; c.font = `900 ${sz * 0.8}px system-ui,sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(cr.mission ? "★" : "?", cr.x, y + sz * 0.04);
+    if (cr.mission && cr.until < Infinity) { c.font = `800 ${Math.max(11, 10 / z)}px system-ui,sans-serif`; c.fillStyle = "#f3c85a"; c.fillText(Math.max(0, Math.ceil(cr.until - G.time)) + "s", cr.x, y - sz * (fall > 0 ? 3 : 1.1)); }
+  }
+  for (const st of G.strikes || []) {
+    const f = st.t / 1.8, R = 120;
+    c.strokeStyle = `rgba(255,80,50,${0.5 + Math.sin(now * 18) * 0.3})`; c.lineWidth = 2.5 / Math.max(z, 0.6);
+    c.beginPath(); c.arc(st.x, st.y, R, 0, TAU); c.stroke();
+    c.beginPath(); c.arc(st.x, st.y, R * f, 0, TAU); c.stroke();
+    c.beginPath(); c.moveTo(st.x - R * 1.15, st.y); c.lineTo(st.x - R * 0.3, st.y); c.moveTo(st.x + R * 0.3, st.y); c.lineTo(st.x + R * 1.15, st.y); c.moveTo(st.x, st.y - R * 1.15); c.lineTo(st.x, st.y - R * 0.3); c.moveTo(st.x, st.y + R * 0.3); c.lineTo(st.x, st.y + R * 1.15); c.stroke();
+  }
+  c.textAlign = "start"; c.textBaseline = "alphabetic";
+
   // order pings (above fog)
   for (const pg of UI.pings) {
     const a = pg.t / 0.7; c.globalAlpha = a;
@@ -1527,9 +1767,9 @@ function alertHit(x, y) {
 function drawBeacons(c, k) {
   const t = performance.now(); alerts.beacons = alerts.beacons.filter(q => t - q.t0 < 4500);
   for (const q of alerts.beacons) {
-    const a = (t - q.t0) / 1000;
-    for (let i = 0; i < 3; i++) { const f = ((a * 1.2 + i / 3) % 1); c.strokeStyle = `rgba(255,70,50,${(1 - f) * (1 - a / 4.5)})`; c.lineWidth = 3; c.beginPath(); c.arc(q.x * k, q.y * k, 6 + f * 40, 0, 7); c.stroke(); }
-    c.fillStyle = "#ff4632"; c.beginPath(); c.arc(q.x * k, q.y * k, 5, 0, 7); c.fill();
+    const a = (t - q.t0) / 1000, col = q.gold ? "243,200,90" : "255,70,50";
+    for (let i = 0; i < 3; i++) { const f = ((a * 1.2 + i / 3) % 1); c.strokeStyle = `rgba(${col},${(1 - f) * (1 - a / 4.5)})`; c.lineWidth = 3; c.beginPath(); c.arc(q.x * k, q.y * k, 6 + f * 40, 0, 7); c.stroke(); }
+    c.fillStyle = q.gold ? "#f3c85a" : "#ff4632"; c.beginPath(); c.arc(q.x * k, q.y * k, 5, 0, 7); c.fill();
   }
 }
 // arrow at the screen edge pointing to the newest beacon while it's off screen
@@ -1559,6 +1799,8 @@ function renderMini() {
     c.fillStyle = G.players[u.owner].team.c;
     const s = u.kind === "gen" ? 7 : 3.5; c.fillRect(u.x * k - s / 2, u.y * k - s / 2, s, s);
   }
+  for (const cr of G.crates || []) { const s = cr.mission ? 9 : 6; c.fillStyle = cr.mission ? "#f3c85a" : "#f1ead2"; c.fillRect(cr.x * k - s / 2, cr.y * k - s / 2, s, s); c.strokeStyle = "#000"; c.lineWidth = 1.5; c.strokeRect(cr.x * k - s / 2, cr.y * k - s / 2, s, s); }
+  for (const st of G.strikes || []) { c.strokeStyle = "#ff5a3c"; c.lineWidth = 2; c.beginPath(); c.arc(st.x * k, st.y * k, 120 * k, 0, 7); c.stroke(); }
   if (!G.attract) drawBeacons(c, k);
   c.strokeStyle = "rgba(233,229,211,.85)"; c.lineWidth = 2;
   c.strokeRect((cam.x - W / 2 / cam.z) * k, (cam.y - H / 2 / cam.z) * k, W / cam.z * k, H / cam.z * k);
@@ -1610,8 +1852,11 @@ function refreshBar() {
   mb.classList.toggle("atk", UI.mode === "attack");
   mb.firstChild.textContent = UI.mode === "attack" ? "ENGAGE" : "RUN & GUN";
   $("boxBtn").classList.toggle("on", UI.boxMode);
+  const sb = $("strikeBtn"), ns = G.players[G.human].strikes || 0;
+  sb.hidden = !ns; if (!ns) UI.strikeMode = false; sb.classList.toggle("on", !!UI.strikeMode);
+  const st = UI.strikeMode ? "pick target" : ns + " ready"; if (sb.lastChild.textContent !== st) sb.lastChild.textContent = st;
   const h = $("hint"), custom = UI.selKey === null && UI.sel.size;
-  const txt = UI.boxMode ? "Drag a box around units, or tap units to add them" : custom ? UI.sel.size + " selected. Hold A, B, C or D to save as a group" : "";
+  const txt = UI.strikeMode ? "Tap the map where the airstrike should hit" : UI.boxMode ? "Drag a box around units, or tap units to add them" : custom ? UI.sel.size + " selected. Hold A, B, C or D to save as a group" : "";
   h.hidden = !txt; if (h.textContent !== txt) h.textContent = txt;
 }
 function assignSquad(sq) {
@@ -1638,6 +1883,18 @@ document.querySelectorAll("#squads .cb").forEach(b => {
 });
 $("boxBtn").classList.add("box");
 $("boxBtn").addEventListener("click", () => { UI.boxMode = !UI.boxMode; refreshBar(); });
+$("spreadBtn").addEventListener("click", spreadOut);
+$("strikeBtn").addEventListener("click", () => { UI.strikeMode = !UI.strikeMode; SND.ui(); refreshBar(); });
+function spreadOut() {
+  const ids = [...UI.sel].filter(id => G.unitById.get(id).alive);
+  if (!ids.length) { toast("Pick a squad first"); return; }
+  issue({ p: G.human, t: "spread", ids }); SND.order("move"); SND.say("move");
+}
+// a mission crate: radio call, beacon on the minimap
+function missionCall(c) {
+  toast("Mission: supply plane down! Recover the cargo within " + CRATE.missionLife + " seconds", "gold");
+  SND.say("mission"); alerts.beacons.push({ x: c.x, y: c.y, t0: performance.now(), gold: true });
+}
 $("modeBtn").addEventListener("click", () => { UI.mode = UI.mode === "move" ? "attack" : "move"; refreshBar(); });
 let killArm = null;
 function killSelected() {
@@ -1679,6 +1936,7 @@ function orderTo(wx, wy, forceMode) {
 
 function handleTap(sx, sy, additive) {
   const w = s2w(sx, sy), hitR = Math.max(16, 22 / cam.z);
+  if (UI.strikeMode) { issue({ p: G.human, t: "strike", ids: [], x: w.x, y: w.y }); UI.strikeMode = false; UI.pings.push({ x: w.x, y: w.y, t: 0.7, mode: "attack" }); SND.say("strike"); refreshBar(); return; }
   // own unit?
   let best = null, bd = hitR * hitR;
   for (const u of G.units) if (u.alive && u.owner === G.human) { const dd = d2(u, w); if (dd < bd) { bd = dd; best = u; } }
@@ -1811,9 +2069,11 @@ function seg(id, key) {
     });
   });
 }
-UI.opts.army = 30; UI.opts.me = 30;
+UI.opts.army = 30; UI.opts.me = 30; UI.opts.crates = 1;
+try { const v = localStorage.getItem("hr-crates"); if (v !== null) UI.opts.crates = +v ? 1 : 0; } catch (e) {}
 try { const a = JSON.parse(localStorage.getItem("hr-army") || "{}"); if (a.me) UI.opts.me = clamp(a.me | 0, 1, 100); if (a.army) UI.opts.army = clamp(a.army | 0, 1, 100); } catch (e) {}
-seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff");
+seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optCrates", "crates");
+$("optCrates").addEventListener("click", () => { try { localStorage.setItem("hr-crates", String(UI.opts.crates)); } catch (e) {} });
 function setArmy(k, v) {
   UI.opts[k] = clamp(Math.round(v), 1, 100);
   $("armyMe").value = UI.opts.me; $("armyEn").value = UI.opts.army;
@@ -1843,6 +2103,7 @@ function initGame(g) {
   G = g;
   G.unitById = new Map(G.units.map(u => [u.id, u]));
   G.gens = G.players.map(p => G.units.find(u => u.owner === p.id && u.kind === "gen"));
+  cratesInit(); G.cratesOn = true; UI.strikeMode = false;
   buildWorld();
 }
 // a live AI battle plays behind the menu
@@ -1881,6 +2142,7 @@ function start() {
   TUT.stop(); setTimeout(resize, 0);
   document.body.classList.remove("attract");
   initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me));
+  G.cratesOn = !!UI.opts.crates;
   const b = G.players[G.human].base, p = G.players[G.human];
   cam.z = Math.min(W, H) < 600 ? 0.9 : 1.05;
   cam.x = b.x + p.fwd.x * 160; cam.y = b.y + p.fwd.y * 160; clampCam();
@@ -2011,6 +2273,19 @@ const SND = (() => {
       nz(t + 0.25, 1.6, "bandpass", 500, 0.8, 0.4, 0.05, -P.pan, 0.6, sfxBus, 150);
     } else if (e.k === "recall") {
       if (budget()) tone(t, "sawtooth", 700, 120, 0.22, 0.08 * v, 0.004, P.pan, 0.3, sfxBus, 1800);
+    } else if (e.k === "crate") { // parachute drop: rustle and a soft landing thump
+      nz(t, 1.2, "bandpass", 900, 0.6, 0.06, 0.6, 0, 0.3, sfxBus, 300);
+      tone(t + 3, "sine", 120, 50, 0.25, 0.25, 0.004, 0, 0.2); nz(t + 3, 0.12, "lowpass", 700, 0.7, 0.15, 0.002, 0, 0.2);
+    } else if (e.k === "open") {
+      if (e.bad && e.owner === G.human) { tone(t, "sawtooth", 220, 110, 0.4, 0.12, 0.005, 0, 0.2, sfxBus, 900); tone(t + 0.05, "sawtooth", 233, 116, 0.4, 0.1, 0.005, 0, 0.2, sfxBus, 900); }
+      else { const q = e.owner === G.human ? [0, 7, 12, 16] : [0, 3, 7]; q.forEach((s, i) => tone(t + i * 0.06, "triangle", 784 * Math.pow(2, s / 12), 784 * Math.pow(2, s / 12), 0.35, 0.12 * v, 0.004, P.pan, 0.4)); }
+      nz(t, 0.1, "lowpass", 1200, 0.8, 0.2 * v, 0.002, P.pan, 0.2); // lid cracks open
+    } else if (e.k === "strikeIn") { // falling bomb whistle
+      tone(t, "sine", 1600, 380, 1.75, 0.07, 0.3, P.pan, 0.3, sfxBus);
+    } else if (e.k === "strike" || e.k === "trap") {
+      heat += e.k === "strike" ? 8 : 4; const big = e.k === "strike";
+      nz(t, big ? 2.4 : 1.2, "lowpass", 1300, 0.6, big ? 0.85 : 0.6, 0.006, P.pan, 0.5, sfxBus, 60);
+      tone(t, "sine", 80, 26, big ? 1.8 : 0.9, big ? 0.85 : 0.6, 0.006, P.pan, 0.3);
     } else if (e.k === "level" && (G.attract || e.owner === G.human)) {
       [0, 4, 7, 12].forEach((s, i) => tone(t + i * 0.08, "triangle", 587 * Math.pow(2, s / 12), 587 * Math.pow(2, s / 12), 0.5, 0.18, 0.006, 0, 0.5));
     }
@@ -2029,7 +2304,9 @@ const SND = (() => {
     select: ["Ready!", "Sir!", "Yes, sir!", "Orders!", "Locked and loaded!"],
     gen: ["Follow me!", "On my command!", "I'll crush them!", "Forward!"],
     alert: ["We're under attack!", "Contact! Contact!", "Taking fire!", "Enemy! Return fire!"],
-    base: ["Base under attack!", "Defend the base! Now!"]
+    base: ["Base under attack!", "Defend the base! Now!"],
+    mission: ["Supply plane down! Grab that cargo!", "Cargo drop! Move! Move!", "Priority target! Recover the cargo!"],
+    strike: ["Air support inbound!", "Bombs away!", "Danger close!"]
   };
 
   // pick the deepest-sounding English voice the device offers
@@ -2039,7 +2316,7 @@ const SND = (() => {
     voice = vs.find(v => /google uk english male/i.test(v.name)) || vs.find(v => MALE.test(v.name) && !/female/i.test(v.name)) || vs[0] || null; };
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
   // move: low and steady; attack: shouted and fast; alerts: urgent
-  const STYLE = { move: [1.25, 0.45], select: [1.25, 0.5], gen: [1.1, 0.3], attack: [1.5, 0.7], alert: [1.45, 0.65], base: [1.4, 0.6] };
+  const STYLE = { move: [1.25, 0.45], select: [1.25, 0.5], gen: [1.1, 0.3], attack: [1.5, 0.7], alert: [1.45, 0.65], base: [1.4, 0.6], mission: [1.4, 0.6], strike: [1.45, 0.65] };
   S.say = (kind, gen) => {
     if (!pref.v || !window.speechSynthesis || (G && (G.attract || G.over))) return;
     const t = performance.now(), urgent = kind === "alert" || kind === "base";
@@ -2497,7 +2774,7 @@ const TUT = (() => {
     });
     return list;
   }
-  let scouts = [], lone = null;
+  let scouts = [], lone = null, crate = null;
   const S = [
     { t: "Welcome, commander", b: "This is your base. Your soldiers are split into squads A, B and C, and the star is your general. Let's learn the controls.", next: true, at: () => G.players[G.human].base },
     { t: "Look around", b: "Drag anywhere on the map to move the camera.", hand: "drag", enter() { base0 = { x: cam.x, y: cam.y }; }, ok: () => Math.hypot(cam.x - base0.x, cam.y - base0.y) > 140 },
@@ -2521,6 +2798,10 @@ const TUT = (() => {
     { t: "Find the slackers", b: "Tap IDLE to pick everyone who's standing around with nothing to do.", el: '[data-sel="idle"]', hand: "tap", ok: () => UI.selKey === "idle" },
     { t: "Last resort", b: "If a squad is trapped and about to die, tap KILL twice to remove it yourself. The enemy gets no points, and they respawn at base. Pick group D, then try it.", el: "#killBtn", hand: "tap",
       enter() { base0 = G.units.filter(u => u.owner === G.human && !u.alive).length; }, ok: () => G.units.filter(u => u.owner === G.human && !u.alive).length > base0 },
+    { t: "Spread out", b: "Bunched-up soldiers are easy prey for plague, booby traps and airstrikes. Tap ALL, then SPREAD to open up the ranks.", el: "#spreadBtn", hand: "tap", ok: () => flags.spread },
+    { t: "Supply crate", b: "A crate is parachuting in. Send a soldier over it to open it. Most crates help, some bite. Gold ★ mission crates are always good, so race the enemy for them.", hand: "tap",
+      enter() { const f = front(300), p = pushOutOfRocks(f.x - G.players[G.human].fwd.y * 120, f.y + G.players[G.human].fwd.x * 120, 40); crate = { id: 999, x: p.x, y: p.y, kind: "medkit", mission: false, land: G.time + 2, until: Infinity }; G.crates.push(crate); },
+      at: () => crate && G.crates.includes(crate) ? crate : null, ok: () => crate && !G.crates.includes(crate) },
     { t: "The minimap", b: "Tap or drag on the minimap to jump anywhere. Your fog of war clears wherever your soldiers can see.", el: "#mini", hand: "tap", ok: () => flags.mini },
     { t: "Your mission", b: "Find and destroy every enemy base. Each kill is a point, and every upgrade makes your whole army tougher and deadlier. Bigger, tougher enemies score more on the leaderboard. Good luck!", next: true, last: true }
   ];
@@ -2559,7 +2840,7 @@ const TUT = (() => {
   function start() {
     document.body.classList.remove("attract");
     initGame(newGame(2, 100, 20251103, 1, 8, 12)); setTimeout(resize, 0);
-    G.tutorial = true;
+    G.tutorial = true; G.cratesOn = false;
     const R = red(); R.ai = false;
     for (const u of G.units) if (u.owner === 1) { u.alive = false; u.respawn = Infinity; }
     const b = G.players[G.human].base, p = G.players[G.human];
@@ -2578,7 +2859,7 @@ const TUT = (() => {
     try { localStorage.setItem("hr-tut", "1"); } catch (e) {}
     stop();
     if (keepPlaying) {
-      const R = red(); R.ai = true;
+      const R = red(); R.ai = true; G.cratesOn = !!UI.opts.crates;
       for (const u of G.units) if (u.owner === 1 && !u.alive) u.respawn = 2 + Math.random() * 6;
       toast("Practice battle: take their base!", "gold");
     } else toMenu();
@@ -2589,6 +2870,7 @@ const TUT = (() => {
   $t("tutMore").addEventListener("click", () => finish(true));
   $("homeBtn").addEventListener("click", () => { flags.home = true; });
   $("mini").addEventListener("pointerdown", () => { flags.mini = true; });
+  $("spreadBtn").addEventListener("click", () => { if (UI.sel.size) flags.spread = true; });
   return { start, stop, get on() { return on; } };
 })();
 // ---- game log & score (kept on this device) ----
