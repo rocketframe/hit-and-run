@@ -46,6 +46,12 @@ button:focus-visible{outline:2px solid var(--khaki);outline-offset:2px}
 #tr{top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 #mini{width:128px;height:128px;border:1px solid var(--line);border-radius:4px;background:var(--fog);touch-action:none;display:block}
 .toprow{display:flex;gap:6px;align-items:center}
+#alertEdge{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;box-shadow:inset 0 0 0 4px rgba(255,60,40,.9),inset 0 0 90px rgba(255,40,20,.55)}
+#alertEdge.on{animation:aedge 1.6s ease-out}
+@keyframes aedge{0%,30%,60%{opacity:1}15%,45%{opacity:.25}100%{opacity:0}}
+#alertArrow{position:fixed;z-index:6;width:44px;height:44px;border-radius:50%;border:2px solid #ff4632;background:rgba(40,8,6,.85);color:#ff6a50;font-size:20px;display:grid;place-items:center;padding:0;animation:apulse .8s ease-in-out infinite}
+@keyframes apulse{50%{box-shadow:0 0 18px rgba(255,70,50,.9)}}
+body.attract #alertArrow{display:none!important}
 .ib.spd{width:auto;min-width:40px;padding:0 7px;font-family:var(--mono);font-size:13px}
 .ib.spd.fast{color:#1a1a12;background:var(--khaki)}.ib.spd.slow{color:#1a1a12;background:#8fc7ff}
 .spdpop{display:flex;align-items:center;gap:4px;background:rgba(10,13,9,.94);border:1px solid var(--line);border-radius:6px;padding:4px}
@@ -215,6 +221,8 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
   <canvas id="mini" width="256" height="256" aria-label="Minimap"></canvas>
 </div>
 <div class="hud" id="toast"></div>
+<div id="alertEdge" aria-hidden="true"></div>
+<button id="alertArrow" hidden aria-label="Go to the attack"><svg width="22" height="22" viewBox="0 0 22 22"><path d="M4 4 L19 11 L4 18 L8 11 Z" fill="#ff6a50"/></svg></button>
 <div class="hud" id="hint" hidden></div>
 <div class="hud" id="bar">
   <div class="grp" id="squads">
@@ -598,6 +606,7 @@ function scan(u) {
 function damage(t, amount, by) {
   if (!t.alive) return;
   t.hp -= amount; t.flash = 0.12; t.hitAt = G.time;
+  if (t.owner === G.human && by !== G.human && !G.attract) alertHit(t.x, t.y);
   if (t.hp > 0) return;
   if (t.isBase) { eliminate(t.owner, by); return; }
   t.alive = false; t.respawn = (t.kind === "gen" ? CFG.genRespawn : CFG.respawn) * G.players[t.owner].respawnMult; t.seen = t.tgt = null;
@@ -660,6 +669,7 @@ function step() {
       const a = Math.atan2(p.fwd.y, p.fwd.x) + (G.rng() - 0.5) * 1.6, dd = p.base.r + 22 + G.rng() * 40;
       u.x = p.base.x + Math.cos(a) * dd; u.y = p.base.y + Math.sin(a) * dd;
       u.tx = u.x; u.ty = u.y; u.hp = maxHp(u); u.alive = true; u.idleT = 0; u.mode = "attack"; u.cd = CFG[u.kind].cd;
+      if (u.kind === "gen" && u.owner === G.human && !G.attract) genBack();
     }
   }
 
@@ -1499,6 +1509,38 @@ function render(dtReal) {
   }
 }
 
+// ---- under attack: gong, voice, red edge flash, beacon on the minimap and an arrow on screen ----
+const alerts = { lastT: -1e9, lastX: 0, lastY: 0, beacons: [] };
+function alertHit(x, y) {
+  const t = performance.now(), b = G.players[G.human].base, atBase = Math.hypot(x - b.x, y - b.y) < 260;
+  const near = alerts.beacons.find(q => t - q.t0 < 4000 && Math.hypot(q.x - x, q.y - y) < 400);
+  if (near) { near.x = x; near.y = y; return; }
+  if (t - alerts.lastT < 9000 && Math.hypot(x - alerts.lastX, y - alerts.lastY) < 700) return;
+  alerts.lastT = t; alerts.lastX = x; alerts.lastY = y;
+  alerts.beacons.push({ x, y, t0: t });
+  SND.gong(); SND.say(atBase ? "base" : "alert");
+  const e = $("alertEdge"); e.classList.remove("on"); void e.offsetWidth; e.classList.add("on");
+  toast(atBase ? "Your base is under attack!" : "We're under attack! Follow the red beacon", "bad");
+}
+function drawBeacons(c, k) {
+  const t = performance.now(); alerts.beacons = alerts.beacons.filter(q => t - q.t0 < 4500);
+  for (const q of alerts.beacons) {
+    const a = (t - q.t0) / 1000;
+    for (let i = 0; i < 3; i++) { const f = ((a * 1.2 + i / 3) % 1); c.strokeStyle = `rgba(255,70,50,${(1 - f) * (1 - a / 4.5)})`; c.lineWidth = 3; c.beginPath(); c.arc(q.x * k, q.y * k, 6 + f * 40, 0, 7); c.stroke(); }
+    c.fillStyle = "#ff4632"; c.beginPath(); c.arc(q.x * k, q.y * k, 5, 0, 7); c.fill();
+  }
+}
+// arrow at the screen edge pointing to the newest beacon while it's off screen
+function updateAlertArrow() {
+  const el = $("alertArrow"), q = alerts.beacons[alerts.beacons.length - 1];
+  if (!q || !G || G.attract) { el.hidden = true; return; }
+  const sx = (q.x - cam.x) * cam.z + W / 2, sy = (q.y - cam.y) * cam.z + H / 2, m = 46;
+  if (sx > m && sx < W - m && sy > m && sy < H - m) { el.hidden = true; return; }
+  const dx = sx - W / 2, dy = sy - H / 2, sc = Math.min((W / 2 - m) / Math.abs(dx || 1e-6), (H / 2 - m) / Math.abs(dy || 1e-6));
+  el.hidden = false; el.style.left = (W / 2 + dx * sc) + "px"; el.style.top = (H / 2 + dy * sc) + "px";
+  el.style.transform = `translate(-50%,-50%) rotate(${Math.atan2(dy, dx)}rad)`;
+}
+function genBack() { SND.fanfare(); toast("Your general is back in the field", "gold"); }
 function renderMini() {
   if (!G || !miniGround) return;
   const M = mini.width, k = M / G.S, c = mctx;
@@ -1515,6 +1557,7 @@ function renderMini() {
     c.fillStyle = G.players[u.owner].team.c;
     const s = u.kind === "gen" ? 7 : 3.5; c.fillRect(u.x * k - s / 2, u.y * k - s / 2, s, s);
   }
+  if (!G.attract) drawBeacons(c, k);
   c.strokeStyle = "rgba(233,229,211,.85)"; c.lineWidth = 2;
   c.strokeRect((cam.x - W / 2 / cam.z) * k, (cam.y - H / 2 / cam.z) * k, W / cam.z * k, H / cam.z * k);
 }
@@ -1605,10 +1648,11 @@ function killSelected() {
     killArm = setTimeout(disarmKill, 2500); return;
   }
   disarmKill();
-  issue({ p: G.human, t: "kill", ids }); SND.say("kill");
+  issue({ p: G.human, t: "kill", ids }); SND.scream(ids.length);
 }
 function disarmKill() { clearTimeout(killArm); killArm = null; const b = $("killBtn"); b.classList.remove("armed"); b.querySelector("small").textContent = "selected"; }
 $("killBtn").addEventListener("click", killSelected);
+$("alertArrow").addEventListener("click", () => { const q = alerts.beacons[alerts.beacons.length - 1]; if (q) { cam.x = q.x; cam.y = q.y; clampCam(); } });
 $("homeBtn").addEventListener("click", () => { const b = G.players[G.human].base; cam.x = b.x; cam.y = b.y; });
 
 function centerOnSelection() {
@@ -1935,6 +1979,7 @@ const SND = (() => {
         nz(t, 0.9, "lowpass", 600, 0.8, 0.7 * v, 0.004, P.pan, 0.4, sfxBus, 120);
         tone(t, "sine", 90, 34, 0.8, 0.7 * v, 0.005, P.pan, 0.3);
       } else if (budget()) {
+        S.ugh(e.x, e.y, G && e.owner === G.human);
         nz(t, 0.16, "lowpass", 1100, 1.2, 0.22 * v, 0.003, P.pan, 0.15, sfxBus, 300);
         tone(t + 0.01, "sine", 160, 70, 0.1, 0.18 * v, 0.003, P.pan, 0);
       }
@@ -1951,29 +1996,80 @@ const SND = (() => {
   };
   S.order = mode => {
     if (!ac || !pref.s) return;
+    if (mode === "attack") { const t = now(); [0, 7, 12].forEach(q => tone(t, "sawtooth", 146.83 * Math.pow(2, q / 12), 146.83 * Math.pow(2, q / 12), 0.35, 0.07, 0.01, 0, 0.3, sfxBus, 1800)); tone(t, "sine", 90, 40, 0.3, 0.4, 0.003, 0, 0.2); }
     const t = now(), f = mode === "attack" ? 1320 : 990;
     tone(t, "square", f, f, 0.035, 0.05, 0.002, 0, 0, sfxBus, 3000);
     tone(t + 0.05, "square", f * 1.26, f * 1.26, 0.04, 0.045, 0.002, 0, 0, sfxBus, 3000);
   };
   // ---- radio voices: soldiers answer your orders ----
   const LINES = {
-    move: ["Moving.", "On my way.", "Acknowledged.", "Copy that.", "Let's go!", "Roger, moving out.", "Understood.", "Heading there now."],
-    attack: ["Engaging!", "Weapons free!", "Attack!", "Contact, moving in!", "Let's get 'em!", "Going in hot!"],
-    select: ["Ready.", "Awaiting orders.", "Standing by.", "Yes, commander?", "Squad ready."],
-    gen: ["General here.", "At your command.", "I'll take care of it.", "Proceeding."],
-    kill: ["Understood. Goodbye.", "For the cause.", "It's been an honor."]
+    move: ["Moving out.", "On my way.", "Acknowledged.", "Copy that.", "Roger. Moving.", "Understood. Relocating.", "Affirmative.", "Heading out."],
+    attack: ["Attack!", "Engaging!", "Weapons free!", "Let's go! Let's go!", "Charge!", "Go, go, go!", "Light them up!", "Hit them hard!"],
+    select: ["Ready.", "Standing by.", "Yes, commander.", "Awaiting orders.", "Squad ready."],
+    gen: ["General here.", "At your command.", "I'll handle it.", "Proceeding."],
+    alert: ["We're under attack!", "Contact! We're under attack!", "Taking fire!", "Enemy contact!"],
+    base: ["Our base is under attack!", "Base under attack! Defend the base!"]
   };
+  // pick the deepest-sounding English voice the device offers
+  const MALE = /(daniel|alex|fred|ralph|aaron|arthur|gordon|rocko|reed|eddy|grandpa|guy|david|mark|george|james|ryan|thomas|oliver|male)/i;
   let lastSay = 0, voice = null;
-  const pickVoice = () => { const vs = window.speechSynthesis ? speechSynthesis.getVoices() : []; voice = vs.find(v => /en[-_](US|GB)/i.test(v.lang) && /male|daniel|alex|fred|google uk english male/i.test(v.name)) || vs.find(v => /^en/i.test(v.lang)) || null; };
+  const pickVoice = () => { const vs = window.speechSynthesis ? speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)) : [];
+    voice = vs.find(v => /google uk english male/i.test(v.name)) || vs.find(v => MALE.test(v.name) && !/female/i.test(v.name)) || vs[0] || null; };
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+  // move: low and steady; attack: shouted and fast; alerts: urgent
+  const STYLE = { move: [0.95, 0.35], select: [1, 0.4], gen: [0.9, 0.2], attack: [1.3, 0.6], alert: [1.25, 0.55], base: [1.2, 0.5] };
   S.say = (kind, gen) => {
     if (!pref.v || !window.speechSynthesis || (G && (G.attract || G.over))) return;
-    const t = performance.now(); if (t - lastSay < 1100 && kind !== "kill") return; lastSay = t;
-    const list = LINES[gen && kind !== "kill" ? "gen" : kind] || LINES.move, u = new SpeechSynthesisUtterance(list[Math.floor(Math.random() * list.length)]);
+    const t = performance.now(), urgent = kind === "alert" || kind === "base";
+    if (t - lastSay < 1100 && !urgent) return; lastSay = t;
+    const k = gen && (kind === "move" || kind === "select") ? "gen" : kind;
+    const list = LINES[k] || LINES.move, u = new SpeechSynthesisUtterance(list[Math.floor(Math.random() * list.length)]);
     if (voice) u.voice = voice;
-    u.rate = kind === "attack" ? 1.25 : 1.1; u.pitch = gen ? 0.6 : 0.85 + Math.random() * 0.4; u.volume = 0.9;
+    const [rate, pitch] = STYLE[k] || STYLE.move; u.rate = rate; u.pitch = pitch; u.volume = 1;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
-    if (ac && pref.s) { const n = now(); nz(n, 0.06, "bandpass", 2200, 2, 0.05, 0.002, 0, 0); } // radio click
+    if (ac && pref.s) { const n = now(); nz(n, 0.06, "bandpass", 2200, 2, 0.06, 0.002, 0, 0); } // radio click
+  };
+  // the general returns: brass fanfare in D major
+  S.fanfare = () => {
+    if (!ac || !pref.s) return; const t = now() + 0.03, hzN = q => 293.66 * Math.pow(2, q / 12);
+    [[0, 0, 0.16], [7, 0.16, 0.16], [12, 0.32, 0.16], [16, 0.48, 0.5], [12, 1.0, 0.16], [16, 1.16, 0.16], [19, 1.32, 0.9]].forEach(([q, d, len]) => {
+      for (const det of [-7, 7]) { const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+        o.type = "sawtooth"; o.frequency.value = hzN(q); o.detune.value = det; f.type = "lowpass"; f.frequency.setValueAtTime(900, t + d); f.frequency.linearRampToValueAtTime(3200, t + d + 0.06); f.Q.value = 2;
+        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.09, t + d + 0.03); g.gain.setValueAtTime(0.09, t + d + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + d + len + 0.15);
+        o.connect(f); f.connect(g); out(g, 0, 0.5, sfxBus); o.start(t + d); o.stop(t + d + len + 0.2); }
+    });
+    tone(t + 1.32, "sine", 73.4, 73.4, 1.0, 0.3, 0.01, 0, 0.3); // low drum under the last note
+  };
+  // alarm gong: inharmonic bell partials with a long tail
+  S.gong = () => {
+    if (!ac || !pref.s) return; const t = now() + 0.01;
+    [[110, 0.5], [259.6, 0.3], [438.9, 0.18], [664.4, 0.12], [55, 0.35]].forEach(([f, g]) => tone(t, "sine", f, f * 0.99, 2.8, g, 0.004, 0, 0.6, sfxBus));
+    nz(t, 0.08, "bandpass", 1800, 1, 0.25, 0.001, 0, 0.3, sfxBus);
+  };
+  // a human-ish cry: buzzy voice source through "u" -> "a" formants, pitch falling
+  const VOW = { u: [300, 870, 2240], a: [730, 1090, 2440], o: [570, 840, 2410] };
+  function vox(t, dur, f0, f1, from, to, gain, pan, vib) {
+    const o = ac.createOscillator(); o.type = "sawtooth";
+    o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * 1.12, t + dur * 0.15); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    if (vib) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 6.5; lg.gain.value = f0 * vib; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + 0.1); }
+    const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + Math.min(0.04, dur * 0.2)); g.gain.setValueAtTime(gain, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const A = VOW[from], B = VOW[to];
+    A.forEach((fa, i) => { const f = ac.createBiquadFilter(); f.type = "bandpass"; f.Q.value = [6, 9, 12][i]; f.frequency.setValueAtTime(fa, t); f.frequency.linearRampToValueAtTime(B[i], t + dur * 0.35);
+      const fg = ac.createGain(); fg.gain.value = [1, 0.6, 0.25][i] * 3; o.connect(f); f.connect(fg); fg.connect(g); });
+    out(g, pan, 0.25, sfxBus);
+    o.start(t); o.stop(t + dur + 0.05);
+    nz(t, dur * 0.8, "bandpass", 1500, 0.8, gain * 0.15, 0.02, pan, 0.2, sfxBus); // breath
+  }
+  let lastUgh = 0;
+  S.ugh = (x, y, mine) => {
+    if (!ac || !pref.s) return; const tp = performance.now(); if (tp - lastUgh < 140) return; lastUgh = tp;
+    const P = place(x, y), f = (mine ? 125 : 140) * (0.85 + Math.random() * 0.35);
+    vox(now() + 0.01, 0.28 + Math.random() * 0.12, f, f * 0.7, "u", Math.random() < 0.5 ? "a" : "o", 0.22 * P.v * (mine ? 1.2 : 0.8), P.pan, 0);
+  };
+  // the whole squad goes down together: a long "uaaaahhh"
+  S.scream = n => {
+    if (!ac || !pref.s) return; const t = now() + 0.02;
+    for (let i = 0; i < Math.min(4, Math.max(1, Math.ceil(n / 3))); i++) { const f = 150 * (0.8 + Math.random() * 0.45); vox(t + i * 0.09, 1.3 + Math.random() * 0.4, f, f * 0.62, "u", "a", 0.2, (Math.random() - 0.5) * 0.8, 0.035); }
   };
   S.ui = () => { if (ac && pref.s) tone(now(), "triangle", 880, 660, 0.05, 0.06, 0.002, 0, 0); };
   S.sting = win => {
@@ -2532,7 +2628,8 @@ function frame(now) {
   if (G && !skip) {
     if (G.attract) { render(Math.min(0.1, (now - lastAttractDraw) / 1000)); lastAttractDraw = now; } else
     render(!UI.paused ? dtReal * Math.min(UI.speed, 3) : 0);
-    miniT -= dtReal; if (miniT <= 0) { miniT = 0.1; renderMini(); }
+    miniT -= dtReal; if (miniT <= 0) { miniT = alerts.beacons.length ? 0.04 : 0.1; renderMini(); }
+    updateAlertArrow();
   } else if (!G) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#07090a"; ctx.fillRect(0, 0, cvs.width, cvs.height); }
   requestAnimationFrame(frame);
 }
