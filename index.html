@@ -1845,21 +1845,33 @@ function initGame(g) {
 }
 // a live AI battle plays behind the menu
 function startAttract() {
+  AC.vx = AC.vy = 0; AC.pickT = 0;
   setTimeout(resize, 0);
   initGame(newGame(4, 50, (Math.random() * 1e9) >>> 0, 3, 30));
   G.attract = true; G.players[0].ai = true; G.players[0].smart = true; G.players[0].mult = 1.3;
   document.body.classList.add("attract");
-  cam.z = Math.min(W, H) < 600 ? 0.75 : 0.95; cam.x = G.S / 2; cam.y = G.S / 2;
+  cam.z = Math.min(W, H) < 600 ? 0.75 : 0.95; cam.x = G.S / 2; cam.y = G.S / 2; AC.tx = cam.x; AC.ty = cam.y;
   // skip the opening walk so armies are already meeting
   for (let i = 0; i < 30 * 25; i++) step();
   G.fx.length = 0; G.visible.fill(1); G.explored.fill(1);
   UI.paused = true;
 }
+// cinematic menu camera: picks a new hotspot every few seconds and glides there on a damped spring
+const AC = { tx: 0, ty: 0, vx: 0, vy: 0, pickT: 0 };
 function attractCam(dt) {
-  let x = 0, y = 0, n = 0;
-  for (const t of G.tracers) { x += t.x2; y += t.y2; n++; }
-  if (n > 3) { x /= n; y /= n; cam.x += (x - cam.x) * Math.min(1, dt * 0.6); cam.y += (y - cam.y) * Math.min(1, dt * 0.6); }
-  cam.x += Math.sin(performance.now() / 9000) * 6 * dt; clampCam();
+  dt = Math.min(dt, 0.05);
+  AC.pickT -= dt;
+  if (AC.pickT <= 0) {
+    let x = 0, y = 0, n = 0;
+    for (const t of G.tracers) { x += t.x2; y += t.y2; n++; }
+    if (n > 3) { AC.tx = x / n; AC.ty = y / n; AC.pickT = 4; } else AC.pickT = 0.5;
+    const hw = W / 2 / cam.z, hh = H / 2 / cam.z;
+    AC.tx = clamp(AC.tx, hw, G.S - hw); AC.ty = clamp(AC.ty, hh, G.S - hh);
+  }
+  const tt = performance.now() / 1000, dx = AC.tx + Math.sin(tt / 7) * 60 - cam.x, dy = AC.ty + Math.cos(tt / 9) * 40 - cam.y;
+  AC.vx += (dx * 0.5 - AC.vx * 1.4) * dt; AC.vy += (dy * 0.5 - AC.vy * 1.4) * dt;
+  const sp = Math.hypot(AC.vx, AC.vy), mx = 110; if (sp > mx) { AC.vx *= mx / sp; AC.vy *= mx / sp; }
+  cam.x += AC.vx * dt; cam.y += AC.vy * dt;
   if (G.over) startAttract();
 }
 
@@ -2603,7 +2615,7 @@ function frame(now) {
   if (G && G.attract) {
     acc += dtReal; let steps = 0;
     while (acc >= CFG.dt && steps < 2) { step(); acc -= CFG.dt; steps++; }
-    if (acc > CFG.dt * 2) acc = 0; // never try to catch up behind the menu
+    if (acc > CFG.dt * 4) acc = CFG.dt; // never pile up a backlog behind the menu
     attractCam(dtReal);
   } else if (G && !UI.paused) {
     const ps = 700 / cam.z * dtReal;
@@ -2624,10 +2636,8 @@ function frame(now) {
     if (G.over) { updateFog(); renderScore(); setTimeout(showOver, 1400); UI.paused = true; }
   }
   // the menu backdrop draws at a steady ~30fps so the menu itself stays smooth
-  const skip = G && G.attract && now - lastAttractDraw < 28;
-  if (G && !skip) {
-    if (G.attract) { render(Math.min(0.1, (now - lastAttractDraw) / 1000)); lastAttractDraw = now; } else
-    render(!UI.paused ? dtReal * Math.min(UI.speed, 3) : 0);
+  if (G) {
+    render(G.attract ? dtReal : !UI.paused ? dtReal * Math.min(UI.speed, 3) : 0);
     miniT -= dtReal; if (miniT <= 0) { miniT = alerts.beacons.length ? 0.04 : 0.1; renderMini(); }
     updateAlertArrow();
   } else if (!G) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#07090a"; ctx.fillRect(0, 0, cvs.width, cvs.height); }
