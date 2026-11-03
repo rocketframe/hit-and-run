@@ -46,6 +46,12 @@ button:focus-visible{outline:2px solid var(--khaki);outline-offset:2px}
 #tr{top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 #mini{width:128px;height:128px;border:1px solid var(--line);border-radius:4px;background:var(--fog);touch-action:none;display:block}
 .toprow{display:flex;gap:6px;align-items:center}
+.ib.spd{width:auto;min-width:40px;padding:0 7px;font-family:var(--mono);font-size:13px}
+.ib.spd.fast{color:#1a1a12;background:var(--khaki)}.ib.spd.slow{color:#1a1a12;background:#8fc7ff}
+.spdpop{display:flex;align-items:center;gap:4px;background:rgba(10,13,9,.94);border:1px solid var(--line);border-radius:6px;padding:4px}
+.spdpop span{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;padding:0 4px}
+.spdpop button{min-width:38px;height:34px;border:1px solid var(--line);border-radius:4px;background:rgba(0,0,0,.35);font-family:var(--mono);font-size:13px;font-weight:700;padding:0 4px}
+.spdpop button.on{background:var(--khaki);color:#1a1a12}
 #clock{font-family:var(--mono);font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
 .ib{background:var(--panel);border:1px solid var(--line);border-radius:4px;width:34px;height:30px;font-size:15px;font-weight:800;display:grid;place-items:center;padding:0}
 
@@ -204,7 +210,8 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
 
 <div class="hud" id="score"></div>
 <div class="hud" id="tr">
-  <div class="toprow"><span id="clock">00:00</span><button class="ib" id="sndBtn" aria-label="Sound">♪</button><button class="ib" id="pauseBtn" aria-label="Pause">II</button></div>
+  <div class="toprow"><span id="clock">00:00</span><button class="ib spd" id="spdBtn" aria-label="Game speed">1×</button><button class="ib" id="sndBtn" aria-label="Sound">♪</button><button class="ib" id="pauseBtn" aria-label="Pause">II</button></div>
+  <div class="spdpop" id="spdPop" hidden><span>Speed</span><button data-s="0.25">¼×</button><button data-s="0.5">½×</button><button data-s="1">1×</button><button data-s="2">2×</button><button data-s="4">4×</button><button data-s="8">8×</button></div>
   <canvas id="mini" width="256" height="256" aria-label="Minimap"></canvas>
 </div>
 <div class="hud" id="toast"></div>
@@ -298,10 +305,11 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
     <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li><b>RUN &amp; GUN</b> moves and shoots on the way. <b>ENGAGE</b> stops to chase anything it sees. Tap the button to switch.</li></ul></section>
     <section><h3>Picking exactly who you want</h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
+    <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b> twice to remove the selected soldiers yourself. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
-    <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
+    <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: [ and ] to slow down or speed up time, \ for normal speed, shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
     <button class="go ghost" id="howBack">Back</button>
   </div>
 </div>
@@ -1820,7 +1828,7 @@ function start() {
   selectKey("all");
   $("menu").hidden = true; $("over").hidden = true; $("pause").hidden = true;
   $("toast").innerHTML = "";
-  UI.paused = false; acc = 0; last = performance.now(); SND.reset();
+  UI.paused = false; acc = 0; last = performance.now(); SND.reset(); setSpeed(1); $("spdPop").hidden = true;
   killsSent = 0; lbRpc("game_started");
   updateFog();
   toast("Drag to look around. Pick a squad, then tap where to go.");
@@ -1839,7 +1847,7 @@ const SND = (() => {
   let pref = { m: 1, s: 1 };
   try { Object.assign(pref, JSON.parse(localStorage.getItem("hr-sound") || "{}")); } catch (e) {}
   const save = () => { try { localStorage.setItem("hr-sound", JSON.stringify(pref)); } catch (e) {} };
-  let tension = 0, heat = 0, lastHp = null, duck = 1, voices = 0, voiceT = 0;
+  let tension = 0, heat = 0, lastShot = -1e9, lastSting = -1e9, lastHp = null, duck = 1, voices = 0, voiceT = 0;
   const S = { get on() { return !!ac; }, get pref() { return pref; } };
 
   function init() {
@@ -1901,7 +1909,7 @@ const SND = (() => {
   // ---- effects ----
   S.shot = (x, y, w, mine) => {
     if (!ac || !pref.s) return;
-    const P = place(x, y); heat += (P.d < 1.2 ? 1 : 0.35) * (mine ? 1.2 : 1);
+    const P = place(x, y); heat += (P.d < 1.2 ? 1 : 0.5) * (mine ? 1.2 : 1); lastShot = performance.now();
     if (!budget()) return;
     const t = now() + Math.random() * 0.012, v = P.v * (G && G.attract ? 0.25 : 1);
     if (w > 2.3) { // base turret: heavy thump
@@ -1962,7 +1970,7 @@ const SND = (() => {
       for (const g of padNodes) { try { g.gain.cancelScheduledValues(t); g.gain.setTargetAtTime(0.0001, t, 0.6); } catch (e) {} }
       padNodes = [];
       const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 500 + tension * 1800; lp.Q.value = 0.5;
-      const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 1.2); g.gain.setTargetAtTime(0.0001, t + len, 0.8);
+      const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09 * (1 - 0.55 * tension) + 0.005, t + 1.2); g.gain.setTargetAtTime(0.0001, t + len, 0.8);
       lp.connect(g); g.connect(musBus); g.connect(wetSend(0.7));
       for (const s of ch) for (const det of [-6, 6]) {
         const o = ac.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz(s); o.detune.value = det;
@@ -1970,8 +1978,8 @@ const SND = (() => {
       }
       padNodes.push(g);
     }
-    function kick(t, v) { tone(t, "sine", 120, 40, 0.28, 0.55 * v, 0.003, 0, 0, musBus); nz(t, 0.02, "highpass", 3000, 0.7, 0.08 * v, 0.001, 0, 0, musBus); }
-    function snare(t, v) { nz(t, 0.16, "bandpass", 1800, 0.6, 0.22 * v, 0.002, 0, 0.35, musBus); tone(t, "triangle", 210, 160, 0.08, 0.12 * v, 0.002, 0, 0, musBus); }
+    function kick(t, v) { tone(t, "sine", 120, 40, 0.28, 0.75 * v, 0.003, 0, 0, musBus); nz(t, 0.02, "highpass", 3000, 0.7, 0.08 * v, 0.001, 0, 0, musBus); }
+    function snare(t, v) { nz(t, 0.16, "bandpass", 1800, 0.6, 0.32 * v, 0.002, 0, 0.35, musBus); tone(t, "triangle", 210, 160, 0.08, 0.12 * v, 0.002, 0, 0, musBus); }
     function hat(t, v) { nz(t, 0.03, "highpass", 8000, 0.7, 0.05 * v, 0.001, (Math.random() - 0.5) * 0.4, 0, musBus); }
     function tom(t, v, f) { tone(t, "sine", f, f * 0.55, 0.35, 0.4 * v, 0.003, 0, 0.3, musBus); nz(t, 0.08, "lowpass", 900, 0.6, 0.1 * v, 0.002, 0, 0.2, musBus); }
     function schedule() {
@@ -1980,8 +1988,13 @@ const SND = (() => {
       // enemies in sight put the music on edge even before shots fly
       let seen = 0;
       if (G && !G.attract && !G.over && G.units) for (const u of G.units) if (u.alive && u.owner !== G.human && isVis(u.x, u.y)) seen++;
-      const target = Math.max(clamp(heat / 7, 0, 1), seen ? clamp(0.3 + seen * 0.04, 0, 0.6) : 0) * (G && G.attract ? 0.55 : 1);
-      tension += (target - tension) * (target > tension ? 0.25 : 0.01);
+      // one shot = instantly on edge; a full firefight = climax
+      const pn = performance.now(), recent = pn - lastShot < 5000;
+      const target = Math.max(clamp(0.15 + heat / 9, 0, 1) * (heat > 0.3 ? 1 : 0), recent ? 0.45 : 0, seen ? clamp(0.3 + seen * 0.04, 0, 0.6) : 0) * (G && G.attract ? 0.55 : 1);
+      const before = tension;
+      tension += (target - tension) * (target > tension ? 0.35 : 0.008);
+      // first contact: a big drum hit and a swell, so you hear the fight start
+      if (before < 0.25 && tension >= 0.25 && pn - lastSting > 9000 && !(G && G.attract)) { lastSting = pn; const t = now() + 0.02; tom(t, 1.6, 95); tom(t + 0.18, 1.2, 80); nz(t, 1.4, "bandpass", 1200, 0.5, 0.18, 0.9, 0, 0.6, musBus, 5000); }
       heat *= 0.9;
       if (G && !G.attract && !G.over) {
         const hp = G.players[G.human].base.hp;
@@ -2008,7 +2021,7 @@ const SND = (() => {
         if (T > 0.12 && (st % 2 === 1 || T > 0.6)) hat(t, Math.min(1.3, T * 1.8));
         if (T > 0.18 && (st === 0 || st === 8 || (T > 0.45 && (st === 6 || st === 10 || st === 11)))) kick(t, Math.min(1.3, T * 1.8));
         if (T > 0.3 && (st === 4 || st === 12)) snare(t, Math.min(1.3, T * 1.7));
-        if (T > 0.5 && bar % 2 === 1 && st >= 12) tom(t, T * 1.2, [180, 160, 140, 120][st - 12]);
+        if (T > 0.5 && (bar % 2 === 1 || T > 0.85) && st >= 12) tom(t, T * 1.2, [180, 160, 140, 120][st - 12]);
         if (T > 0.55 && (st === 0 || st === 3 || st === 6 || st === 10)) { // string stabs
           for (const s of chords[cI]) tone(t, "sawtooth", hz(s + 12), hz(s + 12), six * 1.6, 0.05 * T, 0.006, 0, 0.4, musBus, 2400);
         }
@@ -2268,7 +2281,8 @@ $("nameOk").addEventListener("click", async () => {
     boardMine = saved; postedRow = saved;
     $("nameOk").disabled = false; $("nameOk").textContent = "See your rank";
   } catch (e) {
-    msg.className = "arcade-msg bad"; msg.textContent = "Couldn't reach the leaderboard. Check your connection and try again.";
+    msg.className = "arcade-msg bad";
+    msg.textContent = e.status >= 400 && e.status < 500 ? "The leaderboard turned this score down (" + e.status + (e.detail ? ": " + e.detail : "") + ")." : "Couldn't reach the leaderboard. Check your connection and try again.";
     $("nameOk").disabled = false; $("nameOk").textContent = "Try again";
   }
 });
@@ -2328,10 +2342,10 @@ async function lbSubmit(row) {
     try { localStorage.setItem("hr-board", JSON.stringify(b.slice(0, 200))); } catch (e) {}
     return r;
   }
-  const body = { name: row.name, diff: row.diff, enemies: row.enemies, army: row.army, secs: row.secs, kills: row.kills, win: row.win };
+  const body = { name: row.name, diff: row.diff, enemies: row.enemies, army: row.army, secs: Math.max(1, row.secs), kills: row.kills, win: row.win };
   if (row.my_army && row.my_army !== 30) body.my_army = row.my_army;
   const res = await fetch(LB.url + "/rest/v1/scores", { method: "POST", headers: { ...lbHead(), "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error("submit " + res.status);
+  if (!res.ok) { const e = new Error("submit " + res.status); e.status = res.status; try { e.detail = (await res.json()).message; } catch (x) {} throw e; }
   return (await res.json())[0];
 }
 async function lbTop(diff) {
@@ -2386,6 +2400,7 @@ function showOver() {
   setShareLinks();
   SND.sting(win); reportKills();
   startNameEntry({ score, diff: G.diff, enemies, army: G.enemyArmy, my_army: G.myArmy, secs, kills: me.kills, win });
+  if (G.slowmo) { $("nameEntry").hidden = true; }
   const rec = $("overRecord"); rec.hidden = true;
   if (G.over.win) {
     const best = loadBest(), r = { army: G.enemyArmy, me: G.myArmy, enemies: G.players.length - 1 };
@@ -2397,6 +2412,26 @@ function showOver() {
 $("startBtn").addEventListener("click", start);
 $("againBtn").addEventListener("click", start);
 $("pauseBtn").addEventListener("click", togglePause);
+// ---- time lapse: ¼× to 8× ----
+UI.speed = 1;
+const SPEEDS = [0.25, 0.5, 1, 2, 4, 8];
+function setSpeed(v) {
+  UI.speed = v; const b = $("spdBtn");
+  b.textContent = v === 0.25 ? "¼×" : v === 0.5 ? "½×" : v + "×";
+  b.classList.toggle("fast", v > 1); b.classList.toggle("slow", v < 1);
+  $("spdPop").querySelectorAll("button").forEach(x => x.classList.toggle("on", +x.dataset.s === v));
+}
+$("spdBtn").addEventListener("click", () => { $("spdPop").hidden = !$("spdPop").hidden; setSpeed(UI.speed); });
+$("spdPop").querySelectorAll("button").forEach(x => x.addEventListener("click", () => {
+  const v = +x.dataset.s; setSpeed(v); $("spdPop").hidden = true;
+  if (v < 1 && G && !G.tutorial && !G.slowmo) toast("Slow motion: this game's score stays on your device, not the public board");
+}));
+window.addEventListener("keydown", e => {
+  if (!G || G.attract || UI.paused) return;
+  const i = SPEEDS.indexOf(UI.speed);
+  if (e.key === "[" && i > 0) setSpeed(SPEEDS[i - 1]); else if (e.key === "]" && i < SPEEDS.length - 1) setSpeed(SPEEDS[i + 1]);
+  else if (e.key === "\\") setSpeed(1);
+});
 function refreshSnd() {
   document.querySelectorAll("[data-snd]").forEach(b => { const on = SND.pref[b.dataset.snd]; b.classList.toggle("off", !on); b.textContent = (b.dataset.snd === "m" ? "Music" : "Effects") + (on ? " on" : " off"); });
   $("sndBtn").classList.toggle("off", !SND.pref.m && !SND.pref.s);
@@ -2431,9 +2466,11 @@ function frame(now) {
     if (UI.keys.has("a") || UI.keys.has("arrowleft")) cam.x -= ps;
     if (UI.keys.has("d") || UI.keys.has("arrowright")) cam.x += ps;
     clampCam();
-    acc += dtReal;
-    let steps = 0;
-    while (acc >= CFG.dt && steps < 5) { step(); acc -= CFG.dt; steps++; if (G.over) break; }
+    acc += dtReal * UI.speed;
+    let steps = 0; const maxSteps = Math.max(5, Math.ceil(UI.speed * 3));
+    while (acc >= CFG.dt && steps < maxSteps) { step(); acc -= CFG.dt; steps++; if (G.over) break; }
+    if (acc > CFG.dt * maxSteps) acc = 0; // device can't keep up at this speed: drop the backlog
+    if (UI.speed < 1 && !G.tutorial) G.slowmo = true;
     for (const pg of UI.pings) pg.t -= dtReal;
     UI.pings = UI.pings.filter(p => p.t > 0);
     updateFog();
@@ -2444,7 +2481,7 @@ function frame(now) {
   const skip = G && G.attract && now - lastAttractDraw < 28;
   if (G && !skip) {
     if (G.attract) { render(Math.min(0.1, (now - lastAttractDraw) / 1000)); lastAttractDraw = now; } else
-    render(!UI.paused ? dtReal : 0);
+    render(!UI.paused ? dtReal * Math.min(UI.speed, 3) : 0);
     miniT -= dtReal; if (miniT <= 0) { miniT = 0.1; renderMini(); }
   } else if (!G) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#07090a"; ctx.fillRect(0, 0, cvs.width, cvs.height); }
   requestAnimationFrame(frame);
