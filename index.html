@@ -118,6 +118,7 @@ h1 span{color:var(--khaki)}
 h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:800}
 .lede{font-size:17px;line-height:1.35;color:var(--ink-dim);margin:0;font-weight:500;max-width:38ch}
 .opt{display:flex;flex-direction:column;gap:6px}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:6px}.chips button{height:40px;border:1px solid var(--line);border-radius:4px;background:rgba(6,8,6,.45);font-size:14px;font-weight:700;text-align:left;padding:0 10px;display:flex;align-items:center;gap:8px}.chips button::before{content:"";width:14px;height:14px;border:1.5px solid var(--ink-dim);border-radius:3px;flex:none}.chips button.on{border-color:var(--khaki);color:#fff}.chips button.on::before{background:var(--khaki);border-color:var(--khaki);box-shadow:inset 0 0 0 2px #1a1a12}.chips.off{opacity:.4;pointer-events:none}
 .opt label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:4px;overflow:hidden}
 .seg button{background:rgba(6,8,6,.45);border:0;border-right:1px solid var(--line);height:44px;font-size:17px;font-weight:700}
@@ -258,10 +259,6 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
       <div class="seg" id="optPlayers"><button data-v="2" class="on">1</button><button data-v="3">2</button><button data-v="4">3</button></div></div>
     <div class="opt"><label>Game pace (army upgrades)</label>
       <div class="seg" id="optUp"><button data-v="25">Quick</button><button data-v="50">Medium</button><button data-v="100" class="on">Slow</button></div></div>
-    <div class="opt"><label>Supply crates</label>
-      <div class="seg" id="optCrates"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div></div>
-    <div class="opt"><label>Missions</label>
-      <div class="seg" id="optMissions"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div></div>
     <div class="opt"><label>Enemy skill</label>
       <div class="seg" id="optDiff"><button data-v="1">Recruit</button><button data-v="2" class="on">Veteran</button><button data-v="3">Elite</button><button data-v="4">Invincible</button></div></div>
     <div class="opt"><label>Army sizes (soldiers, 1 to 100)</label>
@@ -274,7 +271,23 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <div class="sndrow"><button class="go ghost" id="howBtn">How to play</button><button class="go ghost" id="tutBtn">Tutorial</button></div>
     <button class="go ghost" id="boardBtn">Leaderboard</button>
     <button class="go ghost" id="statsBtn">Service record</button>
-    <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button><button class="go ghost" data-snd="v">Voices</button></div>
+    <button class="go ghost" id="setBtn">Settings</button>
+  </div>
+</div>
+
+<div class="screen" id="settings" hidden>
+  <div class="card">
+    <div class="eyebrow">Field manual · saved on this device</div>
+    <h2>Settings</h2>
+    <div class="opt"><label>Supply crates</label>
+      <div class="seg" id="optCrates"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div></div>
+    <div class="opt"><label>Missions</label>
+      <div class="seg" id="optMissions"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div>
+      <div class="chips" id="misTypes"></div>
+      <p class="fine" id="misNote"></p></div>
+    <div class="opt"><label>Sound</label>
+      <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button><button class="go ghost" data-snd="v">Voices</button></div></div>
+    <button class="go" id="setBack">Done</button>
   </div>
 </div>
 
@@ -324,7 +337,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li><b>RUN &amp; GUN</b> moves and shoots on the way. <b>ENGAGE</b> stops to chase anything it sees. Tap the button to switch.</li></ul></section>
     <section><h3>Picking exactly who you want</h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, a medkit, rapid fire, sniper rounds, a recon flare that lifts the fog, camouflage, or an airstrike you aim with <b>STRIKE</b>). Some are bad (plague that spreads between soldiers standing close, a booby trap, a jammed radio, a flare that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
-    <section><h3>Missions</h3><p>Every couple of minutes a radio call hands you a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Cargo:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply truck drives home only while your soldiers walk next to it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it, for 30 seconds.</li><li><b>Rescue:</b> find the downed pilot in the marked area, then walk him home.</li><li><b>Assassinate:</b> an officer with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> blow up the supply depot near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p></section>
+    <section><h3>Missions</h3><p>Every couple of minutes a radio call hands you a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Cargo:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply truck drives home only while your soldiers walk next to it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it, for 30 seconds.</li><li><b>Rescue:</b> find the downed pilot in the marked area, then walk him home.</li><li><b>Assassinate:</b> an officer with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> blow up the supply depot near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
     <section><h3>Spread out</h3><p>Tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, airstrikes and booby traps. The general always gets right of way through his own soldiers.</p></section>
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b> twice to remove the selected soldiers yourself. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
@@ -851,7 +864,8 @@ function missionsInit() { G.mis = null; G.misT = rr(MIS.first[0], MIS.first[1]);
 function startMission() {
   const me = G.players[G.human], foes = G.players.filter(q => q.id !== G.human && !q.out);
   if (me.out || !foes.length) return;
-  const keys = Object.keys(MIS.types).filter(k => k !== G.misLast);
+  const pool = (G.misTypes && G.misTypes.length ? G.misTypes : Object.keys(MIS.types));
+  const keys = pool.length > 1 ? pool.filter(k => k !== G.misLast) : pool;
   const type = keys[Math.floor(G.rng() * keys.length)], T = MIS.types[type];
   const spot = crateSpot(true) || { x: G.S / 2, y: G.S / 2 };
   const m = { type, t0: G.time, until: G.time + T.life, x: spot.x, y: spot.y, prog: 0, foe: foes[Math.floor(G.rng() * foes.length)].id, id: ++G.misN };
@@ -2244,10 +2258,31 @@ function seg(id, key) {
 }
 UI.opts.army = 30; UI.opts.me = 30; UI.opts.crates = 1; UI.opts.missions = 1;
 try { const v = localStorage.getItem("hr-missions"); if (v !== null) UI.opts.missions = +v ? 1 : 0; } catch (e) {}
+UI.opts.misTypes = Object.keys(MIS.types);
+try { const v = JSON.parse(localStorage.getItem("hr-mistypes") || "null"); if (Array.isArray(v)) UI.opts.misTypes = v.filter(k => MIS.types[k]); } catch (e) {}
 try { const v = localStorage.getItem("hr-crates"); if (v !== null) UI.opts.crates = +v ? 1 : 0; } catch (e) {}
 try { const a = JSON.parse(localStorage.getItem("hr-army") || "{}"); if (a.me) UI.opts.me = clamp(a.me | 0, 1, 100); if (a.army) UI.opts.army = clamp(a.army | 0, 1, 100); } catch (e) {}
 seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optCrates", "crates"); seg("optMissions", "missions");
-$("optMissions").addEventListener("click", () => { try { localStorage.setItem("hr-missions", String(UI.opts.missions)); } catch (e) {} });
+$("optMissions").addEventListener("click", () => { try { localStorage.setItem("hr-missions", String(UI.opts.missions)); } catch (e) {} renderMisTypes(); });
+function renderMisTypes() {
+  const box = $("misTypes");
+  if (!box.children.length) for (const k of Object.keys(MIS.types)) {
+    const b = document.createElement("button"); b.dataset.k = k; b.textContent = MIS.types[k].name; box.appendChild(b);
+    b.addEventListener("click", () => {
+      const on = UI.opts.misTypes.includes(k);
+      UI.opts.misTypes = on ? UI.opts.misTypes.filter(x => x !== k) : [...UI.opts.misTypes, k];
+      try { localStorage.setItem("hr-mistypes", JSON.stringify(UI.opts.misTypes)); } catch (e) {}
+      SND.ui(); renderMisTypes();
+    });
+  }
+  for (const b of box.children) b.classList.toggle("on", UI.opts.misTypes.includes(b.dataset.k));
+  box.classList.toggle("off", !UI.opts.missions);
+  const n = UI.opts.misTypes.length;
+  $("misNote").textContent = !UI.opts.missions ? "Missions are off." : !n ? "No mission types picked, so no missions will come." : n === 6 ? "All six mission types are in the mix." : n + " of 6 mission types are in the mix.";
+}
+renderMisTypes();
+$("setBtn").addEventListener("click", () => { $("menu").hidden = true; $("settings").hidden = false; renderMisTypes(); });
+$("setBack").addEventListener("click", () => { $("settings").hidden = true; $("menu").hidden = false; });
 $("optCrates").addEventListener("click", () => { try { localStorage.setItem("hr-crates", String(UI.opts.crates)); } catch (e) {} });
 function setArmy(k, v) {
   UI.opts[k] = clamp(Math.round(v), 1, 100);
@@ -2317,7 +2352,7 @@ function start() {
   TUT.stop(); setTimeout(resize, 0);
   document.body.classList.remove("attract");
   initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me));
-  G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions;
+  G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions && UI.opts.misTypes.length > 0; G.misTypes = UI.opts.misTypes.slice();
   const b = G.players[G.human].base, p = G.players[G.human];
   cam.z = Math.min(W, H) < 600 ? 0.9 : 1.05;
   cam.x = b.x + p.fwd.x * 160; cam.y = b.y + p.fwd.y * 160; clampCam();
@@ -3039,7 +3074,7 @@ const TUT = (() => {
     try { localStorage.setItem("hr-tut", "1"); } catch (e) {}
     stop();
     if (keepPlaying) {
-      const R = red(); R.ai = true; G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions;
+      const R = red(); R.ai = true; G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions && UI.opts.misTypes.length > 0; G.misTypes = UI.opts.misTypes.slice();
       for (const u of G.units) if (u.owner === 1 && !u.alive) u.respawn = 2 + Math.random() * 6;
       toast("Practice battle: take their base!", "gold");
     } else toMenu();
