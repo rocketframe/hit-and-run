@@ -136,7 +136,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
 .seg button:last-child{border-right:0}
 .seg button.on{background:var(--khaki);color:#1a1a12}
 .go{height:56px;border:0;border-radius:4px;background:var(--khaki);color:#17170f;font-size:22px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-.go.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-size:18px;height:48px}
+#startBtn{background:#b8322a;color:#fff6e8;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 18px rgba(184,50,42,.45)}.go.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-size:18px;height:48px}
 .brief{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px;line-height:1.3;color:var(--ink-dim);margin:0;font-weight:500}
 .brief dt{font-family:var(--mono);font-size:11px;color:var(--khaki);padding-top:3px;letter-spacing:.08em}
 .brief dd{margin:0}
@@ -248,7 +248,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <button class="cb" data-sel="2">C<small>10</small></button>
     <button class="cb" data-sel="3">D<small>0</small></button>
     <button class="cb" data-sel="gen">GEN<small>ok</small></button>
-    <button class="cb" data-sel="all">ALL<small>31</small></button>
+    <button class="cb" data-sel="army">ARMY<small>30</small></button><button class="cb" data-sel="all">ALL<small>31</small></button>
     <button class="cb" data-sel="idle">IDLE<small>0</small></button>
     <button class="cb more" id="moreBtn" aria-label="More orders">⋯<small>orders</small></button>
   </div>
@@ -357,7 +357,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <section><h3>Your army</h3><p>Your soldiers come in squads A, B and C, plus one general (the star). Fallen soldiers respawn at your base after a few seconds, and the general takes longer. Out of combat, everyone slowly patches up.</p></section>
     <section><h3>The general</h3><p>He sees and shoots much further than infantry, is a little faster, and has ten times the health. Soldiers near him hit 30% harder. Use him for sneaky long-range shots, and don't lose him.</p></section>
     <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
-    <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li><b>RUN &amp; GUN</b> moves and shoots on the way. <b>ENGAGE</b> stops to chase anything it sees. Tap the button to switch.</li></ul></section>
+    <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li><b>ALL</b> picks everyone, general included. <b>ARMY</b> picks every soldier but leaves the general where he is.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li><b>RUN &amp; GUN</b> moves and shoots on the way. <b>ENGAGE</b> stops to chase anything it sees. Tap the button to switch.</li></ul></section>
     <section><h3>Picking exactly who you want</h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, a medkit, rapid fire, sniper rounds, a recon flare that lifts the fog, camouflage, or an airstrike you aim with <b>STRIKE</b>). Some are bad (plague that spreads between soldiers standing close, a booby trap, a jammed radio, a flare that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
     <section><h3>Missions</h3><p>Every couple of minutes a radio call hands you a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Cargo:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply truck drives home only while your soldiers walk next to it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it, for 30 seconds.</li><li><b>Rescue:</b> find the downed pilot in the marked area, then walk him home.</li><li><b>Assassinate:</b> an officer with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> blow up the supply depot near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
@@ -367,7 +367,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b> twice to remove the selected soldiers yourself. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
-    <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: [ and ] to slow down or speed up time, \ for normal speed, shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
+    <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: [ and ] to slow down or speed up time, \ for normal speed, shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, Z army (all but the general), I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
     <button class="go ghost" id="howBack">Back</button>
   </div>
 </div>
@@ -2115,7 +2115,7 @@ const isIdle = u => u.alive && u.idleT > 1.5;
 function myUnits(filter) { return G.units.filter(u => u.owner === G.human && !u.mis && filter(u)); }
 function selectKey(k) {
   UI.selKey = k; UI.sel.clear(); UI.combo = null;
-  const list = k === "all" ? myUnits(() => true) : k === "gen" ? myUnits(u => u.kind === "gen") : k === "idle" ? myUnits(isIdle) : myUnits(u => u.squad === +k);
+  const list = k === "all" ? myUnits(() => true) : k === "army" ? myUnits(u => u.kind !== "gen") : k === "gen" ? myUnits(u => u.kind === "gen") : k === "idle" ? myUnits(isIdle) : myUnits(u => u.squad === +k);
   for (const u of list) UI.sel.add(u.id);
   if (k === "idle" && !list.length) toast("Nobody is idle");
   else if (list.length && G && !G.attract) SND.say("select", k === "gen");
@@ -2135,7 +2135,7 @@ function refreshBar() {
     }
     let txt;
     if (k === "gen") { const g = G.gens[G.human]; txt = g.alive ? Math.ceil(g.hp / maxHp(g) * 100) + "%" : Math.ceil(g.respawn) + "s"; }
-    else { const list = k === "all" ? myUnits(u => u.alive) : k === "idle" ? myUnits(isIdle) : myUnits(u => u.alive && u.squad === +k); txt = String(list.length); }
+    else { const list = k === "all" ? myUnits(u => u.alive) : k === "army" ? myUnits(u => u.alive && u.kind !== "gen") : k === "idle" ? myUnits(isIdle) : myUnits(u => u.alive && u.squad === +k); txt = String(list.length); }
     const sm = b.querySelector("small"); if (sm.textContent !== txt) sm.textContent = txt;
   }
   const fb = $("formBtn").lastChild, fn = curForm(); if (fb.textContent !== fn) fb.textContent = fn;
@@ -2160,8 +2160,8 @@ function assignSquad(sq) {
   refreshBar();
 }
 const isSqKey = k => /^[0-3]$/.test(k);
-const keyUnits = k => k === "all" ? myUnits(() => true) : k === "gen" ? myUnits(u => u.kind === "gen") : k === "idle" ? myUnits(isIdle) : myUnits(u => u.squad === +k);
-const keyName = k => k === "gen" ? "GEN" : k === "all" ? "ALL" : "ABCD"[+k];
+const keyUnits = k => k === "all" ? myUnits(() => true) : k === "army" ? myUnits(u => u.kind !== "gen") : k === "gen" ? myUnits(u => u.kind === "gen") : k === "idle" ? myUnits(isIdle) : myUnits(u => u.squad === +k);
+const keyName = k => k === "gen" ? "GEN" : k === "all" ? "ALL" : k === "army" ? "ARMY" : "ABCD"[+k];
 function mergeSquad(from, to) {
   const list = keyUnits(from).filter(u => u.kind === "inf"); if (!list.length) return;
   for (const u of list) u.squad = to;
@@ -2212,7 +2212,8 @@ document.querySelectorAll("[data-sel]").forEach(b => {
     UI.boxMode = false;
     const now = performance.now(), last = UI.lastSq;
     // tap two buttons quickly to command both together (A then B, or a squad then GEN)
-    if (last && last.k !== k && now - last.t < 550 && (isSqKey(k) || k === "gen") && (isSqKey(last.k) || last.k === "gen") && UI.sel.size) {
+    const pairOk = (a, c) => isSqKey(a) || a === "gen";
+    if (last && last.k !== k && now - last.t < 550 && pairOk(k, last.k) && pairOk(last.k, k) && UI.sel.size) {
       for (const u of keyUnits(k)) UI.sel.add(u.id);
       UI.combo = (UI.selKey !== null ? [UI.selKey] : (UI.combo || [])).concat(k); UI.selKey = null; UI.lastSq = { k, t: now }; SND.ui(); refreshBar(); return;
     }
@@ -2250,12 +2251,12 @@ function closeTray() { if (TUT.on) return; $("trayRow").hidden = true; $("moreBt
 function layoutBar(compact) {
   const put = (box, ids) => ids.forEach(id => $(box).appendChild(id.startsWith("[") ? document.querySelector(id) : $(id)));
   document.body.classList.toggle("classic", !compact);
-  if (compact) { put("squads", ['[data-sel="0"]', '[data-sel="1"]', '[data-sel="2"]', '[data-sel="3"]', '[data-sel="gen"]', '[data-sel="all"]', "moreBtn"]); put("tray", ['[data-sel="idle"]', "boxBtn", "formBtn", "spreadBtn", "regroupBtn", "guardBtn", "killBtn"]); put("side", ["strikeBtn", "rallyBtn", "homeBtn", "modeBtn"]); $("grp2").hidden = true; $("moreBtn").hidden = false; setTimeout(fitSide, 0); }
-  else { setTimeout(fitSide, 0); put("squads", ['[data-sel="0"]', '[data-sel="1"]', '[data-sel="2"]', '[data-sel="3"]', '[data-sel="gen"]', '[data-sel="all"]', '[data-sel="idle"]']); put("grp2", ["boxBtn", "formBtn", "spreadBtn", "regroupBtn", "guardBtn", "strikeBtn", "modeBtn", "killBtn", "rallyBtn", "homeBtn"]); $("grp2").hidden = false; $("moreBtn").hidden = true; $("trayRow").hidden = true; document.body.classList.remove("tray"); }
+  if (compact) { put("squads", ['[data-sel="0"]', '[data-sel="1"]', '[data-sel="2"]', '[data-sel="3"]', '[data-sel="gen"]', '[data-sel="army"]', '[data-sel="all"]', "moreBtn"]); put("tray", ['[data-sel="idle"]', "boxBtn", "formBtn", "spreadBtn", "regroupBtn", "guardBtn", "killBtn"]); put("side", ["strikeBtn", "rallyBtn", "homeBtn", "modeBtn"]); $("grp2").hidden = true; $("moreBtn").hidden = false; setTimeout(fitSide, 0); }
+  else { setTimeout(fitSide, 0); put("squads", ['[data-sel="0"]', '[data-sel="1"]', '[data-sel="2"]', '[data-sel="3"]', '[data-sel="gen"]', '[data-sel="army"]', '[data-sel="all"]', '[data-sel="idle"]']); put("grp2", ["boxBtn", "formBtn", "spreadBtn", "regroupBtn", "guardBtn", "strikeBtn", "modeBtn", "killBtn", "rallyBtn", "homeBtn"]); $("grp2").hidden = false; $("moreBtn").hidden = true; $("trayRow").hidden = true; document.body.classList.remove("tray"); }
 }
 // new soldiers (mercenaries) join whatever selection their squad is part of
 function onHumanSpawn(u) {
-  if (UI.selKey === "all" || UI.selKey === String(u.squad) || (UI.selKey === null && [...UI.sel].some(id => { const v = G.unitById.get(id); return v && v.squad === u.squad && v.kind === "inf"; }))) UI.sel.add(u.id);
+  if (UI.selKey === "all" || UI.selKey === "army" || UI.selKey === String(u.squad) || (UI.selKey === null && [...UI.sel].some(id => { const v = G.unitById.get(id); return v && v.squad === u.squad && v.kind === "inf"; }))) UI.sel.add(u.id);
 }
 $("strikeBtn").addEventListener("click", () => { UI.strikeMode = !UI.strikeMode; SND.ui(); refreshBar(); });
 function spreadOut() {
@@ -2420,6 +2421,7 @@ window.addEventListener("keydown", e => {
   else if (k === "b") { UI.boxMode = !UI.boxMode; refreshBar(); }
   else if (k === "g") selectKey("gen");
   else if (k === "q" || k === "`") selectKey("all");
+  else if (k === "z") selectKey("army");
   else if (k === "e") { UI.mode = UI.mode === "move" ? "attack" : "move"; refreshBar(); }
   else if (k === " ") { e.preventDefault(); centerOnSelection(); }
   else if (k === "h") $("homeBtn").click();
@@ -3210,7 +3212,7 @@ const TUT = (() => {
     { t: "Back to base", b: "Lost? Tap BASE to jump back home.", el: "#homeBtn", hand: "tap", ok: () => flags.home },
     { t: "Pick a squad", b: "Tap A to select squad A. Selected soldiers get a ring.", el: '[data-sel="0"]', hand: "tap", ok: () => UI.selKey === "0" },
     { t: "Give an order", b: "Now tap open ground where you want them to go. A tap on the same squad button twice finds them on the map.", hand: "tap", at: () => front(330), enter() { base0 = UI.orderN || 0; }, ok: () => (UI.orderN || 0) > base0 },
-    { t: "Whole army", b: "Tap ALL to select everyone, general included.", el: '[data-sel="all"]', hand: "tap", ok: () => UI.selKey === "all" },
+    { t: "Whole army", b: "Tap ALL to select everyone, general included. ARMY picks every soldier but leaves the general where he is.", el: '[data-sel="all"]', hand: "tap", ok: () => UI.selKey === "all" },
     { t: "Two kinds of orders", b: "RUN & GUN moves to the spot and shoots on the way. ENGAGE stops to chase and fight anything it sees. Tap it to switch to ENGAGE.", el: "#modeBtn", hand: "tap", ok: () => UI.mode === "attack" },
     { t: "Enemy scouts!", b: "Red soldiers ahead. With your army selected, tap right on them to attack.", hand: "tap",
       enter() { const a = myAlive().filter(u => u.kind === "inf"), f = G.players[G.human].fwd, cx = a.reduce((s, u) => s + u.x, 0) / a.length, cy = a.reduce((s, u) => s + u.y, 0) / a.length;
