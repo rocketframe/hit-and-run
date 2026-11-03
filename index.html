@@ -1911,7 +1911,7 @@ const SND = (() => {
   const dbgEl = /[?&]musdebug\b/.test(location.search) ? Object.assign(document.createElement("div"), { style: "position:fixed;left:8px;bottom:8px;z-index:99;background:#000;color:#9fe07a;font:12px monospace;padding:4px 6px" }) : null;
   if (dbgEl) setTimeout(() => document.body.appendChild(dbgEl), 0);
   let tension = 0, heat = 0, lastShot = -1e9, lastSting = -1e9, lastHp = null, duck = 1, voices = 0, voiceT = 0;
-  const S = { get on() { return !!ac; }, get pref() { return pref; }, style: urlStyle || "march", force: null };
+  const S = { get on() { return !!ac; }, get pref() { return pref; }, style: urlStyle || "fm", force: null };
 
   function init() {
     if (ac) { if (ac.state === "suspended") ac.resume(); return; }
@@ -2145,6 +2145,38 @@ const SND = (() => {
     }
     const pluck = (t, s, lv, pan = (rnd() - 0.5) * 0.6, type = "triangle", len = 0.9, wet = 0.6, cut) => tone(t, type, hz(s), hz(s), len, lv, 0.004, pan, wet, musBus, cut);
 
+    // ---- FM synth voices: a sine carrier bent by a modulator, the sound of early-90s sound cards ----
+    let fmBattle = false, fmI = 0;
+    function fm(t, f, dur, lv, o = {}) {
+      const c = ac.createOscillator(), m = ac.createOscillator(), mg = ac.createGain(), g = ac.createGain();
+      c.type = o.ct || "sine"; c.frequency.value = f; m.frequency.value = f * (o.r || 1);
+      mg.gain.setValueAtTime(f * (o.i0 != null ? o.i0 : 2), t); mg.gain.exponentialRampToValueAtTime(Math.max(0.5, f * (o.i1 != null ? o.i1 : 0.5)), t + (o.id || dur));
+      m.connect(mg); mg.connect(c.frequency);
+      if (o.vib) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 5.6; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f * o.vib, t + Math.min(0.35, dur)); l.connect(lg); lg.connect(c.frequency); l.start(t); l.stop(t + dur + 0.4); }
+      const a = o.a || 0.004, rel = o.rel || 0.08;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(lv, t + a); g.gain.setValueAtTime(lv, t + Math.max(a, dur - rel * 0.5)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + rel);
+      c.connect(g); out(g, o.pan || 0, o.wet || 0, musBus);
+      c.start(t); m.start(t); c.stop(t + dur + rel + 0.05); m.stop(t + dur + rel + 0.05);
+    }
+    function fmDrum(t, k, v) {
+      if (k === "kick") { tone(t, "sine", 180, 42, 0.2, 0.45 * v, 0.002, 0, 0, musBus); fm(t, 90, 0.03, 0.12 * v, { r: 1.4, i0: 6, i1: 1, id: 0.03 }); }
+      else if (k === "snare") { nz(t, 0.16, "bandpass", 2600, 0.6, 0.6 * v, 0.001, 0, 0.25, musBus); fm(t, 190, 0.07, 0.16 * v, { r: 1.6, i0: 4, i1: 0.5, id: 0.06 }); }
+      else nz(t, 0.03, "highpass", 8000, 0.7, 0.1 * v, 0.001, 0.15, 0, musBus);
+    }
+    // tunes, as [16th step in a 2-bar phrase, note in semitones from D3, length in 16ths]
+    const FM_LEAD = [
+      [[0, 24, 6], [6, 22, 2], [8, 24, 4], [12, 27, 4], [16, 26, 6], [22, 24, 2], [24, 22, 4], [28, 19, 4]],   // Dm
+      [[0, 20, 6], [6, 22, 2], [8, 24, 4], [12, 22, 4], [16, 20, 4], [20, 19, 4], [24, 17, 8]],                // Bb
+      [[0, 19, 4], [4, 22, 4], [8, 26, 6], [14, 24, 2], [16, 22, 4], [20, 26, 4], [24, 29, 8]],                // C
+      [[0, 26, 6], [6, 24, 2], [8, 23, 4], [12, 19, 4], [16, 23, 4], [20, 26, 4], [24, 31, 6], [30, 29, 2]]    // A
+    ];
+    const FM_CALM = [
+      [[0, 24, 8], [8, 26, 4], [12, 27, 4], [16, 24, 12], [28, 19, 4]],   // Dm
+      [[0, 22, 8], [8, 20, 4], [12, 19, 4], [16, 17, 12], [28, 15, 4]],   // Gm
+      [[0, 17, 8], [8, 20, 4], [12, 22, 4], [16, 24, 8], [24, 27, 8]],    // Bb
+      [[0, 26, 8], [8, 24, 4], [12, 23, 4], [16, 19, 16]]                 // A
+    ];
+
     // ---- the styles: each sets its chords and tempo and plays one 16th step ----
     const STY = {
       march: { // the original: driving bass ostinato, kit drums, string stabs, brass at the top
@@ -2223,9 +2255,44 @@ const SND = (() => {
             tone(t, "sawtooth", hz(n), hz(n), six * 1.3, 0.12 * v, 0.004, 0.2, 0.25, musBus, 1200 + T * 1200); }
           if (T > 0.5 && st === 0 && bar % 2 === 0) choir(t, ch.map(s => s + 12), beat * 7.5, 0.035 * T);
           if (T > 0.8 && st === 8 && bar % 2 === 1) brass(t, [root, root + 7], beat * 2, 0.08 * T, 400, 1800);
-        } }
+        } },
+      fm: { // early-90s FM synth strategy score: a calm exploration theme, and a separate battle theme once shots fly
+        name: "FM command", chords: [[0, 3, 7], [-4, 0, 3], [-2, 2, 5], [-5, -1, 2]], roots: [0, -4, -2, -5], bpm: [96, 0],
+        tempo: T => fmBattle ? 132 + 18 * clamp((T - 0.25) / 0.75, 0, 1) : 96,
+        step(t, st0, bar0, T) {
+          const want = fmBattle ? T > 0.15 : T >= 0.25;
+          if (want !== fmBattle) { fmBattle = want; fmI = 0; if (want) { cymbal(t, 1.2, 1.4); fmDrum(t, "kick", 1.3); } }
+          const st = fmI % 16, bar = Math.floor(fmI / 16), pos = fmI % 32, blk = Math.floor(fmI / 32) % 4, cyc = Math.floor(fmI / 128); fmI++;
+          if (!fmBattle) { // ---- exploration: bell arpeggio, soft bass, a slow lead tune every other pass ----
+            const CH = [[0, 3, 7], [5, 8, 12], [-4, 0, 3], [-5, -1, 2]], RT = [0, -7, -4, -5], ch = CH[blk], rt = RT[blk];
+            if (st % 2 === 0) { const a = [0, 1, 2, 1, 2, 0, 1, 2][(st >> 1)], s = ch[a] + 24 + (st === 8 ? 12 : 0);
+              fm(t, hz(s), six * 3, 0.05, { r: 3.5, i0: 2.2, i1: 0.2, id: 0.25, pan: st % 4 ? 0.35 : -0.35, wet: 0.5 }); }
+            if (pos === 0 || pos === 16) fm(t, hz(rt - 12), six * 14, 0.16, { r: 1, i0: 1.6, i1: 0.4, id: 0.4, rel: 0.4 });
+            if (pos === 8 || pos === 24) fm(t, hz(rt - 5), six * 7, 0.08, { r: 1, i0: 1.2, i1: 0.3, id: 0.3 });
+            if (st === 4 || st === 12) fmDrum(t, "hat", 0.5);
+            if (cyc % 2 === 1 || T > 0.08) for (const [s0, n, len] of FM_CALM[blk]) if (pos === s0) fm(t, hz(n), six * len, 0.1, { r: 1, i0: 1.4, i1: 0.6, id: 0.3, vib: 0.012, a: 0.03, rel: 0.2, wet: 0.45 });
+            return;
+          }
+          // ---- battle: galloping FM bass, march snare, a lead tune you can hum, brass stabs at the peak ----
+          const ch = [[0, 3, 7], [-4, 0, 3], [-2, 2, 5], [-5, -1, 2]][blk], rt = [0, -4, -2, -5][blk], hot = clamp((T - 0.25) / 0.75, 0, 1);
+          const gal = [0, null, 0, 0, 12, null, 0, 0, 0, null, 0, 0, 12, null, 10, 7][st];
+          if (gal !== null) fm(t, hz(rt - 12 + gal), six * 0.9, 0.2, { r: 1, i0: 3.2, i1: 0.5, id: six * 0.8, rel: 0.03, ct: "sine" });
+          if (st === 0 || st === 8 || (hot > 0.4 && st === 10)) fmDrum(t, "kick", 1.2);
+          if (st === 4 || st === 12) fmDrum(t, "snare", 1);
+          if (hot > 0.55 && (st === 14 || st === 15 || (bar % 2 === 1 && st === 13))) fmDrum(t, "snare", 0.45);
+          if (st % 2 === 0 || hot > 0.5) fmDrum(t, "hat", st % 4 === 2 ? 1 : 0.6);
+          const leadOn = cyc % 2 === 0 || hot > 0.45;
+          if (leadOn) for (const [s0, n, len] of FM_LEAD[blk]) if (pos === s0) {
+            fm(t, hz(n), six * len, 0.13, { r: 1, i0: 2.6, i1: 0.9, id: 0.18, vib: 0.014, a: 0.006, rel: 0.06, wet: 0.3, pan: -0.1 });
+            fm(t, hz(n - 12), six * len, 0.05, { r: 2, i0: 1.2, i1: 0.4, id: 0.2, a: 0.006, rel: 0.06, wet: 0.2, pan: 0.1 });
+            const SC = blk === 3 ? [0, 2, 3, 5, 7, 8, 11] : [0, 2, 3, 5, 7, 8, 10], hn = [3, 4].map(d => n - d).find(x => SC.includes(((x % 12) + 12) % 12)) || n - 3;
+            if (hot > 0.75) fm(t, hz(hn), six * len, 0.05, { r: 1, i0: 1.6, i1: 0.6, id: 0.2, a: 0.006, rel: 0.06, wet: 0.3, pan: 0.4 });
+          }
+          if (!leadOn && st % 2 === 0) { const s = ch[[0, 1, 2, 1, 0, 2, 1, 2][st >> 1]] + 24; fm(t, hz(s), six * 1.6, 0.06, { r: 3, i0: 2, i1: 0.3, id: 0.15, pan: st % 4 ? 0.4 : -0.4, wet: 0.3 }); }
+          if (hot > 0.3 && (pos === 0 || pos === 16 || pos === 22)) for (const s of ch) fm(t, hz(s + 12), six * (pos === 22 ? 2 : 3), 0.05, { r: 1, i0: 0.8, i1: 3.5, id: 0.12, a: 0.03, rel: 0.1, wet: 0.35 });
+        } },
     };
-    const styleKey = () => (STY[S.style] ? S.style : "march");
+    const styleKey = () => (STY[S.style] ? S.style : "fm");
 
     // ---- victory and defeat: the battle music stops and a theme takes over until you leave the screen ----
     const END = {
@@ -2244,6 +2311,29 @@ const SND = (() => {
           const mel = [[7, 5, 3, 2], [3, 2, 0, -2], [2, 0, -2, -4], [1, 0, -1, -3]][bar % 4];
           if (st % 4 === 0 && bar < 8) tone(t, "triangle", hz(mel[st / 4] + 12), hz(mel[st / 4] + 12), beat * 1.1, 0.09, 0.08, 0, 0.6, musBus, 2200);
           if (st === 0 && bar % 2 === 0 && bar < 8) choir(t, ch.map(s => s + 12), beat * 3.8, 0.025);
+        } }
+    };
+    // FM versions of the end themes
+    const END_FM = {
+      win: { bpm: 120, chords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]],
+        step(t, st, bar, ch) {
+          const pos = (bar % 2) * 16 + st;
+          if (st === 0) fm(t, hz(ch[0] - 12), six * 14, 0.17, { r: 1, i0: 2, i1: 0.4, id: 0.3, rel: 0.3 });
+          if (st % 2 === 0) fm(t, hz(ch[[0, 1, 2, 1][(st >> 1) % 4]] + 24), six * 2, 0.05, { r: 3.5, i0: 2, i1: 0.2, id: 0.2, pan: st % 4 ? 0.4 : -0.4, wet: 0.4 });
+          if (st === 0 || st === 8) fmDrum(t, "kick", 1);
+          if (st === 4 || st === 12) fmDrum(t, "snare", 0.8);
+          const mel = bar < 2 ? [[0, 12, 3], [3, 12, 1], [4, 19, 4], [8, 16, 3], [11, 19, 1], [12, 24, 4], [16, 23, 6], [22, 21, 2], [24, 19, 8]]
+            : bar < 4 ? [[0, 21, 3], [3, 19, 1], [4, 21, 4], [8, 23, 4], [12, 26, 4], [16, 24, 16]] : [];
+          for (const [s0, n, len] of mel) if (pos === s0) { fm(t, hz(n), six * len, 0.13, { r: 1, i0: 0.8, i1: 3, id: 0.1, a: 0.02, vib: 0.01, wet: 0.35 }); fm(t, hz(n - 12), six * len, 0.06, { r: 1, i0: 0.8, i1: 2.5, id: 0.1, a: 0.02, wet: 0.3 }); }
+          if (st === 0 && bar % 4 === 0) cymbal(t, 1, 2);
+        } },
+      lose: { bpm: 70, chords: [[0, 3, 7], [-4, 0, 3], [-7, -3, 0], [-5, -1, 2]],
+        step(t, st, bar, ch) {
+          if (bar >= 8) return;
+          if (st === 0) { fm(t, hz(ch[0] - 12), six * 15, 0.15, { r: 1, i0: 1.5, i1: 0.3, id: 0.5, rel: 0.5 }); for (const s of ch) fm(t, hz(s + 12), six * 15, 0.025, { r: 1, i0: 0.6, i1: 1.2, id: 1, a: 0.4, rel: 0.6, wet: 0.6 }); }
+          if (st === 0 && bar % 2 === 0) fmDrum(t, "kick", 0.7);
+          const mel = [[19, 17, 15, 14], [15, 14, 12, 10], [14, 12, 10, 8], [13, 12, 11, 7]][bar % 4];
+          if (st % 4 === 0) fm(t, hz(mel[st / 4] + 12), beat * 1.05, 0.1, { r: 1, i0: 1.2, i1: 0.5, id: 0.4, vib: 0.016, a: 0.05, rel: 0.3, wet: 0.55 });
         } }
     };
     function schedule() {
@@ -2269,13 +2359,13 @@ const SND = (() => {
       while (next < now() + 0.25) {
         const t = next;
         if (endMode) {
-          const E = END[endMode], bar = Math.floor(endIdx / 16), st = endIdx % 16;
+          const E = (styleKey() === "fm" ? END_FM : END)[endMode], bar = Math.floor(endIdx / 16), st = endIdx % 16;
           beat = 60 / E.bpm; six = beat / 4;
           E.step(t, st, bar, E.chords[bar % 4]);
           next += six; endIdx++; idx = 0; continue;
         }
         const Y = STY[styleKey()], bar = Math.floor(idx / 16), st = idx % 16, cI = Math.floor(bar / 2) % 4, T = tension;
-        beat = 60 / (Y.bpm[0] + Y.bpm[1] * T); six = beat / 4; // tempo rises with the fight
+        beat = 60 / (Y.tempo ? Y.tempo(T) : Y.bpm[0] + Y.bpm[1] * T); six = beat / 4; // tempo rises with the fight
         Y.step(t, st, bar, T, Y.chords[cI], Y.roots[cI]);
         next += six; idx++;
       }
