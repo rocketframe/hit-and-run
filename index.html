@@ -2349,7 +2349,7 @@ if (/[?&]lbcheck\b/.test(location.search) && LB.url) (async () => {
   try {
     const res = await fetch(LB.url + "/rest/v1/scores", { method: "POST", headers: { ...lbHead(), "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify({ name: "TEST", diff: 2, enemies: 1, army: 30, my_army: 50, secs: 12, kills: 3, win: false }) });
     const j = await res.json().catch(() => null);
-    out = res.ok ? "LEADERBOARD OK. Test score posted: " + (j && j[0] ? j[0].score + " points (expected 2). Delete the TEST row in Supabase." : "") : "LEADERBOARD ERROR " + res.status + ": " + (j && (j.message || j.hint) || "");
+    out = res.ok ? "LEADERBOARD OK. Test score posted: " + (j && j[0] ? j[0].score + " points (expected 5). Delete the TEST row in Supabase." : "") : "LEADERBOARD ERROR " + res.status + ": " + (j && (j.message || j.hint) || "");
   } catch (e) { out = "LEADERBOARD UNREACHABLE: " + e.message; }
   const d = document.createElement("div"); d.textContent = out;
   d.style.cssText = "position:fixed;left:12px;right:12px;top:12px;z-index:99;background:#111;color:#fff;border:2px solid #e8c05a;padding:14px;font:15px/1.4 monospace;border-radius:6px";
