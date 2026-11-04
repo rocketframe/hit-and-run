@@ -430,7 +430,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Chara Design 01 by SheeroChana (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Chara Design 01 by SheeroChana (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -935,7 +935,7 @@ function damage(t, amount, by) {
 }
 
 // extra numbers for the end of the battle
-function gStats() { return G.st || (G.st = { dealt: 0, taken: 0, genKills: 0, genLost: 0, bases: 0, crates: 0, misWon: 0, misLost: 0, strikes: 0, low: Infinity, walk: 0, spawned: 0, taps: 0 }); }
+function gStats() { return G.st || (G.st = { dealt: 0, taken: 0, genKills: 0, genLost: 0, bases: 0, crates: 0, misWon: 0, misLost: 0, strikes: 0, low: Infinity, walk: 0, spawned: 0, taps: 0, ups: [] }); }
 // every tap or click during a battle counts
 document.addEventListener("pointerdown", () => { if (G && !G.attract && !G.over && !G.tutorial) gStats().taps++; }, true);
 function addPoints(p, n) {
@@ -1027,7 +1027,7 @@ function killQuiet(u) { // no points for anyone
   u.alive = false; u.respawn = u.temp ? Infinity : (u.kind === "gen" ? CFG.genRespawn : CFG.respawn) * G.players[u.owner].respawnMult; u.seen = u.tgt = null;
   pushFx({ k: "death", x: u.x, y: u.y, a: u.face, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" });
 }
-function onLevel(p, before) {
+function onLevel(p, before) { if (p.id === G.human && !G.attract) gStats().ups.push(Math.round(G.time));
   if (eraOfLevel(p.level) !== eraOfLevel(before) && G.eraFix == null && URL_ERA == null) pushFx({ k: "era", owner: p.id, e: eraOfLevel(p.level), x: p.base.x, y: p.base.y });
   if (p.level >= DOOM.lvl) doomArm(p);
 }
@@ -1735,6 +1735,7 @@ const ERAS = [
   { n: "Future", w: "lasers, a hover bike and a dome", at: 6, s: "laser" },
   { n: "Space Age", w: "plasma guns, a mech walker and a shield dome", at: 7, s: "space", fly: [760, 840, 0] }
 ];
+const eraLabel = p => G.eraFix == null && URL_ERA == null && p.level >= DOOM.lvl ? "Endgame" : ERAS[eraOf(p.id)].n;
 const eraS = e => ERAS[e] ? ERAS[e].s : "ww";
 let PIXEL = false; // easter egg: Konami code
 // 3D view (Settings): the world renders flat into a bigger offscreen canvas, then gets drawn tilted in thin strips.
@@ -1757,10 +1758,11 @@ const MODEL3 = {
        gen: { src: "sprites/ww-gen.png", S: 160, fx: 80, fy: 137.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 23 } },
   0: { gen: { src: "sprites/st-gen.png", ring: true, ringR: 11, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 23.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } }, // Chara Design 01 by SheeroChana (CC-BY), Mixamo-rigged
        inf: { src: "sprites/cv-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Caveman by iRahulRajput (CC-BY), Mixamo-rigged, with a spear
-  1: { gen: { src: "sprites/br-gen.png", S: 200, fx: 100, fy: 183.5, wpp: 0.026, k: 12.5, dirs: 8, clips: { walk: [0, 6] }, ring: true, ringR: 22 }, // Ancient Horse Chariot (Mauryan era) by EqualizerX, CC-BY
+  1: { gen: { src: "sprites/br-gen2.png", S: 200, fx: 100, fy: 183.5, wpp: 0.026, k: 12.5, dirs: 8, clips: { walk: [0, 6] }, ring: true, ringR: 22 }, // Ancient Horse Chariot (Mauryan era) by EqualizerX, CC-BY
        inf: { src: "sprites/br-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } },
   2: { gen: { src: "sprites/me-gen.png", S: 160, fx: 80, fy: 139.6, wpp: 0.02375, k: 19, dirs: 8, clips: { walk: [0, 8] }, ring: true, ringR: 20 }, // 1964.88 Armor for Man and Horse, Cleveland Museum of Art (CC0)
        inf: { src: "sprites/me-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Mixamo Erika Archer
+  3: { inf: { src: "sprites/mu-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Redcoat by avishka1shinwa (Sketchfab), Mixamo-rigged, with a musket
   5: { inf: { src: "sprites/md-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/md-gen.png", S: 160, fx: 80, fy: 142.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 24 } }, // Tank by Quaternius
   6: { gen: { src: "sprites/fu-gen.png", S: 160, fx: 80, fy: 114, wpp: 0.0325, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // HoverBikeTVS by Vijaysarathi, CC-BY, ridden by Cyborg Grid by CAPTAAINR, CC-BY
@@ -2469,9 +2471,9 @@ function drawBaseBar(g, [x, y], k, f, gh, hot) {
   g.restore();
 }
 // team flags in the 3D view: a cloth on a pole built and waved in three.js, 8 frames per team colour, pole at the centre
-const RALLY3 = { src: "sprites/flag9.png", w: 80, h: 72, N: 8, ay: 69.9 / 72, bw: 47, bh: 42.2, cv: [] }; // rows = teams, 8 waving frames
+const RALLY3 = { src: "sprites/flag10.png", w: 88, h: 72, N: 12, ay: 69.9 / 72, bw: 51.7, bh: 42.2, cv: [] }; // rows = teams, 12 waving frames
 function rally3(t, ph = 0) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
-  const f = Math.floor(performance.now() / 110 + ph) % R.N, key = t * R.N + f;
+  const f = Math.floor(performance.now() / 105 + ph) % R.N, key = t * R.N + f;
   if (!R.cv[key]) { const cv = document.createElement("canvas"); cv.width = R.w; cv.height = R.h; cv.getContext("2d").drawImage(R.img, f * R.w, t * R.h, R.w, R.h, 0, 0, R.w, R.h); cv.bw = R.bw; cv.bh = R.bh; cv.ay = R.ay; R.cv[key] = cv; }
   return R.cv[key]; }
 // whole-base models for some eras (3D view): one baked view, ground centre at (gx, gy), footprint radius 1 = r world units
@@ -4510,7 +4512,7 @@ function renderScore() {
   for (const p of G.players) {
     const lvlBase = (p.level - (p.bonus || 0)) * G.upEvery, prog = clamp((p.points - lvlBase) / G.upEvery, 0, 1);
     html += `<div class="row${p.out ? " out" : ""}"><span class="sw" style="background:${p.team.c}"></span><span class="nm">${p.id === G.human ? "You" : p.team.name}</span>` +
-      `<span class="st"><span class="lv">L${p.level + 1}</span><span>${p.points}</span><span class="prog"><i style="width:${(prog * 100).toFixed(0)}%"></i></span>` +
+      `<span class="st"><span class="lv" title="Army level ${p.level + 1}">${eraLabel(p)}</span><span>${p.points}</span><span class="prog"><i style="width:${(prog * 100).toFixed(0)}%"></i></span>` +
       `<span class="hpb" title="Base health"><i style="width:${(p.base.hp / (p.base.max || CFG.base.hp) * 100).toFixed(0)}%"></i></span></span></div>`;
   }
   if (G.mis && !G.attract) {
@@ -5820,6 +5822,7 @@ function statLines(me) {
   if (st.bases) L.push(["Bases destroyed", st.bases]);
   if (st.low !== Infinity) L.push(["Fewest soldiers left", st.low]);
   if (st.crates) L.push(["Crates opened", st.crates]); if (st.misWon || st.misLost) L.push(["Missions", st.misWon + " won, " + st.misLost + " lost"]);
+  if (st.ups.length) { const g = st.ups.map((x, i) => x - (i ? st.ups[i - 1] : 0)); L.push(["Upgrade pace", "every " + fmtT(Math.round(st.ups[st.ups.length - 1] / st.ups.length))], ["Fastest upgrade", fmtT(Math.min(...g))], ["Upgraded at", st.ups.map(fmtT).join(", ")]); }
   if (st.strikes) L.push(["Air strikes", st.strikes]); L.push(["Orders given", n]);
   return L;
 }
@@ -5845,7 +5848,7 @@ function showOver() {
   const enemies = G.players.length - 1, secs = t, win = !!G.over.win;
   const score = gameScore(win, me.kills, secs, G.diff, enemies, G.enemyArmy, G.myArmy);
   const log = loadLog(), prevHi = log.reduce((m, g) => Math.max(m, g.score), 0);
-  log.push({ at: Date.now(), win, diff: G.diff, enemies, army: G.enemyArmy, me: G.myArmy, secs, kills: me.kills, losses: me.losses, level: me.level + 1, score, expert: EXP() ? 1 : 0, use: UI.use || {} });
+  log.push({ at: Date.now(), win, diff: G.diff, enemies, army: G.enemyArmy, me: G.myArmy, secs, kills: me.kills, losses: me.losses, level: me.level + 1, score, expert: EXP() ? 1 : 0, use: UI.use || {}, ups: gStats().ups.slice() });
   saveLog(log);
   const newHi = win && score > prevHi && score > 0;
   $("overScore").innerHTML = `<small>${newHi ? "New high score" : "Score · best " + fmtN(prevHi)}</small>${fmtN(score)}`;

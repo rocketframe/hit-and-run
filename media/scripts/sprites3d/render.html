@@ -22,7 +22,8 @@ window.renderAtlas = async (opts) => {
   // optional prop held between the hands (rifle): origin at the right hand, barrel pointing at the left hand
   let prop = null, rH = null, lH = null;
   if (opts.hide) root.traverse(o => { if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; if (ms.some(m => new RegExp(opts.hide).test(m.name))) o.visible = false; } });
-  if (opts.attach) { const a = opts.attach.proc === "spear" ? { scene: spear() } : await load(opts.attach.file), pr = a.scene || a; const pb = new THREE.Box3().setFromObject(pr), ps = pb.getSize(new THREE.Vector3()), pk = opts.attach.len / ps.x; pr.scale.multiplyScalar(pk);
+  if (opts.flipV) root.traverse(o => { if (o.isMesh && o.geometry.attributes.uv) { const u = o.geometry.attributes.uv; for (let i = 0; i < u.count; i++) u.setY(i, 1 - u.getY(i)); u.needsUpdate = true; } });
+  if (opts.attach) { const a = opts.attach.proc === "spear" ? { scene: spear() } : opts.attach.proc === "musket" ? { scene: musket() } : await load(opts.attach.file), pr = a.scene || a; const pb = new THREE.Box3().setFromObject(pr), ps = pb.getSize(new THREE.Vector3()), pk = opts.attach.len / ps.x; pr.scale.multiplyScalar(pk);
     const pb2 = new THREE.Box3().setFromObject(pr), gx = pb2.min.x + (pb2.max.x - pb2.min.x) * (opts.attach.grip ?? 0.3), gy = (pb2.min.y + pb2.max.y) / 2 + (opts.attach.dy || 0); pr.position.x -= gx; pr.position.y -= gy; pr.position.z -= (pb2.min.z + pb2.max.z) / 2;
     prop = new THREE.Group(); prop.add(pr); scene.add(prop); root.traverse(o => { if (o.isBone && /RightHand$/.test(o.name)) rH = o; if (o.isBone && /LeftHand$/.test(o.name)) lH = o; }); console.log("hands", rH && rH.name, lH && lH.name); }
   // props parented to a bone: { bone: regex, proc: "helmet" | "shield", at: [x, y, z] in metres along the bone's axes }
@@ -42,9 +43,20 @@ window.renderAtlas = async (opts) => {
     if (cl) { root.updateMatrixWorld(true); const pos = cl.geometry.attributes.position, bb = new THREE.Box3().setFromBufferAttribute(pos), sz = bb.getSize(new THREE.Vector3());
       const ax = sz.x >= sz.z ? "x" : "z", nx = ax === "x" ? "z" : "x", pc = po ? cl.worldToLocal(new THREE.Box3().setFromObject(po).getCenter(new THREE.Vector3())) : bb.min, near = Math.abs(pc[ax] - bb.min[ax]) < Math.abs(pc[ax] - bb.max[ax]) ? bb.min[ax] : bb.max[ax], len = sz[ax] || 1;
       wave = { cl, pos, orig: pos.array.slice(), ax: "xyz".indexOf(ax), nx: "xyz".indexOf(nx), near, len, amp: (W.amp || 0.12) * len, waves: W.waves || 1.5 }; console.log("wave", cl.name, ax, len); } }
-  const doWave = ph => { if (!wave) return; const { pos, orig, ax, nx, near, len, amp, waves } = wave, a = pos.array;
+  const doWave = ph => { if (!wave) return; if (opts.wave.natural) return natWave(ph); const { pos, orig, ax, nx, near, len, amp, waves } = wave, a = pos.array;
     for (let i = 0; i < a.length; i += 3) { const d = Math.abs(orig[i + ax] - near) / len, y = orig[i + 1]; a[i] = orig[i]; a[i + 1] = orig[i + 1]; a[i + 2] = orig[i + 2];
       const e = Math.pow(d, 0.8); a[i + nx] += amp * e * Math.sin(d * waves * Math.PI * 2 - ph) + amp * 0.05 * e * Math.sin(y * 6 + ph); a[i + 1] -= amp * 0.35 * d * d; a[i + ax] -= (a[i + ax] - near) * 0.04 * e * (1 + Math.cos(d * waves * Math.PI * 2 - ph)); }
+    pos.needsUpdate = true; wave.cl.geometry.computeVertexNormals(); };
+  const natWave = ph => { const { pos, orig, ax, nx, near, len } = wave, a = pos.array, A = (opts.wave.amp || 0.1) * len; let ymax = -1e9, ymin = 1e9;
+    for (let i = 0; i < a.length; i += 3) { ymax = Math.max(ymax, orig[i + 1]); ymin = Math.min(ymin, orig[i + 1]); }
+    const hh = (ymax - ymin) || 1;
+    for (let i = 0; i < a.length; i += 3) { const u = Math.abs(orig[i + ax] - near) / len, v = (orig[i + 1] - ymin) / hh, sg = Math.sign(orig[i + ax] - near) || 1;
+      const e = Math.pow(u, 1.15), th = u * 9 - ph + v * 2.2, th2 = u * 15 - 2 * ph - v * 3.1, th3 = u * 4 - ph + 0.7;
+      const dz = A * e * (Math.sin(th) * 0.85 + 0.1 * Math.sin(th2) * u) + A * 0.2 * u * u * Math.sin(th3) * (v - 0.5) * 2;
+      const fold = A * 0.9 * e * Math.cos(th); // where the cloth bends out, it pulls in along its length
+      a[i + nx] = orig[i + nx] + dz;
+      a[i + ax] = near + sg * (u * len - 0.18 * len * u * u - 0.06 * Math.abs(fold) * u);
+      a[i + 1] = orig[i + 1] - len * (0.16 * u * u + 0.05 * u * (1 - v)) + A * 0.25 * u * Math.sin(th - 0.8); }
     pos.needsUpdate = true; wave.cl.geometry.computeVertexNormals(); };
   const placeProp = () => { if (!prop || !rH || !lH) return; scene.updateMatrixWorld(true); const a = new THREE.Vector3().setFromMatrixPosition(rH.matrixWorld), b = new THREE.Vector3().setFromMatrixPosition(lH.matrixWorld);
     const dir = b.clone().sub(a); if (dir.length() < 1e-4) return; dir.normalize(); const up = new THREE.Vector3(0, 1, 0); up.sub(dir.clone().multiplyScalar(up.dot(dir))).normalize(); const side = new THREE.Vector3().crossVectors(dir, up);
@@ -81,15 +93,26 @@ window.renderAtlas = async (opts) => {
   return { mask: maskAtlas ? maskAtlas.toDataURL("image/png") : null, png: atlas.toDataURL("image/png"), cols, rows, size: S, foot: [fx, fy], clips: opts.clips.map(c => ({ name: c.name, frames: c.frames })), dirs: opts.dirs, worldPerPx: ext * 2 / S };
 };
 // a flag on a pole: cloth hangs from the top of the pole along its left edge (map: cloth spans +x, normal z)
-function flagModel(col) { const g = new THREE.Group(), H = 3, W = 1.25, CH = 0.8;
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.034, H, 10), new THREE.MeshStandardMaterial({ color: 0xd8d2c0, roughness: 0.5, metalness: 0.3 })); pole.name = "pole"; pole.position.y = H / 2; g.add(pole);
-  const fin = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), new THREE.MeshStandardMaterial({ color: 0xd9b45a, roughness: 0.35, metalness: 0.7 })); fin.position.y = H + 0.04; g.add(fin);
-  const cv = document.createElement("canvas"); cv.width = 128; cv.height = 80; const x = cv.getContext("2d"); x.fillStyle = col; x.fillRect(0, 0, 128, 80);
-  for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(${Math.random() < 0.5 ? "0,0,0" : "255,255,255"},${Math.random() * 0.06})`; x.fillRect(Math.random() * 128, Math.random() * 80, 2, 1); }
-  x.fillStyle = "rgba(0,0,0,.18)"; x.fillRect(0, 0, 6, 80); // hem along the pole
-  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
-  const geo = new THREE.PlaneGeometry(W, CH, 32, 12); geo.translate(W / 2 + 0.03, H - 0.05 - CH / 2, 0);
-  const cloth = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.85 })); cloth.name = "cloth"; g.add(cloth);
+function flagModel(col) { const g = new THREE.Group(), H = 3, W = 1.3, CH = 0.86;
+  // weathered wooden staff with a darker grain and an iron cap
+  const pc = document.createElement("canvas"); pc.width = 16; pc.height = 128; const px = pc.getContext("2d"); px.fillStyle = "#7a5a3a"; px.fillRect(0, 0, 16, 128);
+  for (let i = 0; i < 60; i++) { px.fillStyle = `rgba(${Math.random() < 0.6 ? "40,25,12" : "160,125,85"},${0.08 + Math.random() * 0.15})`; px.fillRect(Math.random() * 16, Math.random() * 128, 1, 6 + Math.random() * 30); }
+  const ptx = new THREE.CanvasTexture(pc); ptx.colorSpace = THREE.SRGBColorSpace;
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.04, H, 10), new THREE.MeshStandardMaterial({ map: ptx, roughness: 0.85 })); pole.name = "pole"; pole.position.y = H / 2; g.add(pole);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.12, 10), new THREE.MeshStandardMaterial({ color: 0x5c5a55, roughness: 0.5, metalness: 0.6 })); cap.position.y = H + 0.06; g.add(cap);
+  for (const y of [H - 0.07, H - 0.05 - CH + 0.03]) { const tie = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.012, 6, 12), new THREE.MeshStandardMaterial({ color: 0xcdbb94, roughness: 0.95 })); tie.rotation.x = Math.PI / 2; tie.position.y = y; g.add(tie); }
+  // dyed wool: slightly muted team colour, woven noise, sun-faded fly end, double hem and a frayed edge
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 160; const x = cv.getContext("2d"), c = new THREE.Color(col), grey = (c.r + c.g + c.b) / 3;
+  c.lerp(new THREE.Color(grey, grey, grey), 0.06); x.fillStyle = "#" + c.getHexString(); x.fillRect(0, 0, 256, 160);
+  for (let yy = 0; yy < 160; yy += 2) { x.fillStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.03})`; x.fillRect(0, yy, 256, 1); }
+  for (let xx = 0; xx < 256; xx += 2) { x.fillStyle = `rgba(255,255,255,${0.01 + Math.random() * 0.012})`; x.fillRect(xx, 0, 1, 160); }
+  for (let i = 0; i < 2500; i++) { x.fillStyle = `rgba(${Math.random() < 0.5 ? "0,0,0" : "255,255,255"},${Math.random() * 0.07})`; x.fillRect(Math.random() * 256, Math.random() * 160, 3, 1); }
+  const fade = x.createLinearGradient(0, 0, 256, 0); fade.addColorStop(0, "rgba(255,250,235,0)"); fade.addColorStop(1, "rgba(255,250,235,.06)"); x.fillStyle = fade; x.fillRect(0, 0, 256, 160);
+  x.fillStyle = "rgba(0,0,0,.25)"; x.fillRect(0, 0, 10, 160); x.fillStyle = "rgba(0,0,0,.14)"; x.fillRect(0, 0, 256, 3); x.fillRect(0, 157, 256, 3);
+  x.globalCompositeOperation = "destination-out"; for (let yy = 0; yy < 160; yy += 3) x.fillRect(256 - Math.random() * 7, yy, 8, 2 + Math.random() * 2);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const geo = new THREE.PlaneGeometry(W, CH, 48, 16); geo.translate(W / 2 + 0.035, H - 0.05 - CH / 2, 0);
+  const cloth = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.95, alphaTest: 0.5 })); cloth.name = "cloth"; g.add(cloth);
   return g; }
 function procProp(k) { const bronze = new THREE.MeshStandardMaterial({ color: 0xb07a3a, roughness: 0.45, metalness: 0.6 }), g = new THREE.Group();
   if (k === "helmet") { const cap = new THREE.Mesh(new THREE.SphereGeometry(0.125, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), bronze); g.add(cap);
@@ -99,6 +122,13 @@ function procProp(k) { const bronze = new THREE.MeshStandardMaterial({ color: 0x
     const boss = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd8a45a, roughness: 0.35, metalness: 0.7 })); boss.position.y = 0.015; g.add(boss);
     const rim = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.018, 6, 28), bronze); rim.rotation.x = Math.PI / 2; g.add(rim); }
   return g; }
+function musket() { // Brown Bess style: walnut stock, long steel barrel, bayonet, lying along +x (muzzle at +x)
+  const g = new THREE.Group(), wood = new THREE.MeshStandardMaterial({ color: 0x5a3820, roughness: 0.7 }), steel = new THREE.MeshStandardMaterial({ color: 0x8c8f94, roughness: 0.35, metalness: 0.8 });
+  const stock = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.07, 0.045), wood); stock.position.set(-0.42, -0.035, 0); stock.rotation.z = -0.12; g.add(stock);
+  const fore = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.035, 0.035), wood); fore.position.set(0.15, 0, 0); g.add(fore);
+  const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.013, 1.05, 8), steel); bar.rotation.z = Math.PI / 2; bar.position.set(0.3, 0.022, 0); g.add(bar);
+  const lock = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.03, 0.05), steel); lock.position.set(-0.2, 0.01, 0); g.add(lock);
+  const bay = new THREE.Mesh(new THREE.ConeGeometry(0.009, 0.3, 4), steel); bay.rotation.z = -Math.PI / 2; bay.position.set(0.97, 0.0, 0.015); g.add(bay); return g; }
 function spear() { // a wooden spear with a stone tip, lying along +x
   const g = new THREE.Group(), sh = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 1.7, 10), new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.9 })); sh.rotation.z = Math.PI / 2; g.add(sh);
   const tip = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.2, 5), new THREE.MeshStandardMaterial({ color: 0x8a8578, roughness: 0.8, flatShading: true })); tip.rotation.z = -Math.PI / 2; tip.position.x = 0.95; g.add(tip);
