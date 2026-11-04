@@ -74,6 +74,7 @@ body.attract #alertArrow{display:none!important}
 #side{right:max(8px,env(safe-area-inset-right,0px));bottom:calc(var(--barH,70px) + 8px);display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 #side .cb{background:var(--panel);border-color:var(--line);min-width:64px}
 body.classic #side{display:none}
+body.classic #grp2{flex-wrap:wrap;justify-content:center;max-width:100%;gap:3px}body.classic #grp2 .cb{font-size:12px;padding:0 5px;min-width:0;letter-spacing:.02em}body.classic #grp2 .cb small{font-size:9px}body.classic #grp2 .cb.mode{min-width:74px}
 .cb.more{min-width:46px;font-size:20px}.cb.more.on{border-color:var(--khaki)}
 .cb[data-sel]{position:relative}
 .cb .hb{position:absolute;left:5px;right:5px;bottom:3px;height:3px;background:rgba(0,0,0,.5);border-radius:2px;overflow:hidden}.cb .hb b{display:block;height:100%;background:#9fe07a}
@@ -139,7 +140,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
 #startBtn{background:#b8322a;color:#fff6e8;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 18px rgba(184,50,42,.45)}.xp{display:inline-block;margin-left:6px;padding:1px 6px;border:1px solid var(--khaki);border-radius:3px;color:var(--khaki);font-size:10px;letter-spacing:.1em;text-transform:uppercase;vertical-align:middle}
 .custom{border:1px solid var(--line);border-radius:4px;padding:0 12px}.custom summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}.custom summary::-webkit-details-marker{display:none}.custom summary span::before{content:"▸ ";color:var(--khaki)}.custom[open] summary span::before{content:"▾ "}.custom summary em{font-style:normal;letter-spacing:.04em;text-transform:none;color:var(--khaki);font-size:13px;text-align:right}.custom[open]{padding-bottom:10px}.custom .opt{margin-top:0}
 .expoffer{border:1px solid var(--khaki);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.35}.expoffer .go{height:42px;font-size:15px}
-body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn,body.basic [data-sel="idle"],body.basic #boxBtn,body.basic #formBtn,body.basic #spreadBtn,body.basic #regroupBtn,body.basic #guardBtn,body.basic #killBtn{display:none!important}
+body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn,body.basic [data-sel="idle"],body.basic #boxBtn,body.basic #formBtn,body.basic #spreadBtn,body.basic #regroupBtn,body.basic #guardBtn{display:none!important}
 .go.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-size:18px;height:48px}
 .brief{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px;line-height:1.3;color:var(--ink-dim);margin:0;font-weight:500}
 .brief dt{font-family:var(--mono);font-size:11px;color:var(--khaki);padding-top:3px;letter-spacing:.08em}
@@ -254,7 +255,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <button class="cb" data-sel="gen">GEN<small>ok</small></button>
     <button class="cb" data-sel="army">ARMY<small>30</small></button><button class="cb" data-sel="all">ALL<small>31</small></button>
     <button class="cb" data-sel="idle">IDLE<small>0</small></button>
-    <button class="cb more" id="moreBtn" aria-label="More orders">⋯<small>orders</small></button>
+    <button class="cb more" id="moreBtn" aria-label="Show all orders">⋯<small>all orders</small></button>
   </div>
   <div class="grp" id="grp2">
     <button class="cb" id="boxBtn">SELECT<small>box</small></button>
@@ -315,9 +316,6 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
       <p class="fine" id="misNote"></p></div>
     <div class="opt"><label>Squads at the start</label>
       <div class="seg" id="optSplit"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3" class="on">3</button><button data-v="4">4</button></div></div>
-    <div class="opt"><label>Button layout</label>
-      <div class="seg" id="optLayout"><button data-v="1" class="on">Compact</button><button data-v="0">Classic</button></div>
-      <p class="fine">Compact keeps one row of squad buttons and tucks the expert orders behind ⋯. Classic shows every button.</p></div>
     <div class="opt"><label>Anonymous game stats</label>
       <div class="seg" id="optTel"><button data-v="1">Send</button><button data-v="0" class="on">Don't send</button></div>
       <p class="fine">Sends skill level, result, time and which orders you used after each battle, to help balance the game. No names, nothing about your device.</p></div>
@@ -371,14 +369,14 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <section><h3>The general</h3><p>He sees and shoots much further than infantry, is a little faster, and has ten times the health. Soldiers near him hit 30% harder. Use him for sneaky long-range shots, and don't lose him.</p></section>
     <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
     <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li><b>ALL</b> picks everyone, general included. <b>ARMY</b> picks every soldier but leaves the general where he is.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li>Soldiers always shoot back on the way. With Expert controls you can also switch <b>RUN &amp; GUN</b> (move and shoot on the way) to <b>ENGAGE</b> (stop to chase anything they see).</li></ul></section>
-    <section><h3>Basic and Expert controls</h3><p>The game starts with <b>Basic</b> controls: squads, GEN, ARMY, ALL, BASE and STRIKE. That is all you need to win. Soldiers spread out on their own when plague hits, and missions join after your first 3 battles.</p><p>Turn on <b>Expert</b> in Settings for formations, drawn routes, rally points, guard duty, merging squads, SELECT, IDLE, KILL and the order modes. Sections marked <span class="xp">Expert</span> below need it.</p></section>
+    <section><h3>Basic and Expert controls</h3><p>The game starts with <b>Basic</b> controls: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. That is all you need to win. Soldiers spread out on their own when plague hits, and missions join after your first 3 battles.</p><p>Turn on <b>Expert</b> in Settings for formations, drawn routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. Sections marked <span class="xp">Expert</span> below need it.</p></section>
     <section><h3>Picking exactly who you want <span class="xp">Expert</span></h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, a medkit, rapid fire, sniper rounds, a recon flare that lifts the fog, camouflage, or an airstrike you aim with <b>STRIKE</b>). Some are bad (plague that spreads between soldiers standing close, a booby trap, a jammed radio, a flare that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
     <section><h3>Missions</h3><p>Every couple of minutes a radio call hands you a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Cargo:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply truck drives home only while your soldiers walk next to it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it, for 30 seconds.</li><li><b>Rescue:</b> find the downed pilot in the marked area, then walk him home.</li><li><b>Assassinate:</b> an officer with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> blow up the supply depot near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
-    <section><h3>Squads <span class="xp">Expert</span></h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation between box, line, wedge and column. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> makes the selected soldiers escort the general.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with, and Compact or Classic buttons, in <b>Settings</b>. In Compact, the extra orders are behind <b>⋯</b>.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
+    <section><h3>Squads <span class="xp">Expert</span></h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation between box, line, wedge and column. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> makes the selected soldiers escort the general.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
     <section><h3>Spread out <span class="xp">Expert</span></h3><p>With Basic controls this happens on its own when plague hits. In Expert, tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, airstrikes and booby traps. The general always gets right of way through his own soldiers.</p></section>
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
-    <section><h3>Kill selected <span class="xp">Expert</span></h3><p>Trapped and outnumbered? Tap <b>KILL</b> twice to remove the selected soldiers yourself. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
+    <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b> twice to remove the selected soldiers yourself. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
     <section><h3>Marks on your soldiers</h3><ul><li><b>Pale ring</b>: selected.</li><li><b>Bar underneath</b>: health, shown once a soldier is hurt.</li><li><b>Gold ring and arc</b>: mercenary. The arc shows how long they stay.</li><li><b>Green bubbles and dashed ring</b>: plague. It jumps to soldiers close by, so SPREAD out.</li><li><b>Dot above the head</b>: a crate effect. <b style="color:#ff9a3c">Orange</b> rapid fire, <b style="color:#6fd3ff">blue</b> sniper rounds, <b style="color:#9a9a9a">grey</b> radio jammed, blinking <b style="color:#ff3b30">red</b> flare gun (the enemy can see you).</li><li>Your army level is the <b>L</b> number at the top left.</li></ul></section>
@@ -2295,18 +2293,23 @@ $("guardBtn").addEventListener("click", () => {
   issue({ p: G.human, t: "escort", ids }); SND.say("move"); toast(ids.length + " soldiers now guard the general", "gold"); closeTray();
 });
 $("rallyBtn").addEventListener("click", () => { UI.rallyMode = !UI.rallyMode; UI.strikeMode = false; SND.ui(); refreshBar(); });
-$("moreBtn").addEventListener("click", () => { if ($("trayRow").hidden) openTray(); else closeTray(); SND.ui(); });
+function setMore(open) { const b = $("moreBtn"); b.firstChild.textContent = open ? "▾" : "⋯"; b.lastChild.textContent = open ? "fewer" : "all orders"; b.classList.toggle("on", open); b.setAttribute("aria-label", open ? "Show fewer buttons" : "Show all orders"); }
+$("moreBtn").addEventListener("click", () => {
+  if (TUT.on) { if ($("trayRow").hidden) openTray(); else closeTray(); SND.ui(); return; }
+  UI.opts.layout = UI.opts.layout ? 0 : 1; try { localStorage.setItem("hr-layout", String(UI.opts.layout)); } catch (e) {}
+  layoutBar(!!UI.opts.layout); SND.ui();
+});
 // keep the side buttons just above the bar, however tall it is
 const fitSide = () => document.documentElement.style.setProperty("--barH", $("bar").offsetHeight + "px");
 window.addEventListener("resize", fitSide); try { new ResizeObserver(fitSide).observe($("bar")); } catch (e) {}
-function openTray() { $("trayRow").hidden = false; $("moreBtn").classList.add("on"); document.body.classList.add("tray"); fitSide(); }
-function closeTray() { if (TUT.on) return; $("trayRow").hidden = true; $("moreBtn").classList.remove("on"); document.body.classList.remove("tray"); fitSide(); }
+function openTray() { $("trayRow").hidden = false; document.body.classList.add("tray"); fitSide(); }
+function closeTray() { if (TUT.on) return; $("trayRow").hidden = true; document.body.classList.remove("tray"); fitSide(); }
 // compact: one row of squads, extra orders in a tray, map buttons on the side. classic: everything in the bar
 function layoutBar(compact) {
   const put = (box, ids) => ids.forEach(id => $(box).appendChild(id.startsWith("[") ? document.querySelector(id) : $(id)));
   document.body.classList.toggle("classic", !compact);
-  if (compact) { put("squads", ['[data-sel="0"]', '[data-sel="1"]', '[data-sel="2"]', '[data-sel="3"]', '[data-sel="gen"]', '[data-sel="army"]', '[data-sel="all"]', "moreBtn"]); put("tray", ['[data-sel="idle"]', "boxBtn", "formBtn", "spreadBtn", "regroupBtn", "guardBtn", "killBtn"]); put("side", ["strikeBtn", "rallyBtn", "homeBtn", "modeBtn"]); $("grp2").hidden = true; $("moreBtn").hidden = false; setTimeout(fitSide, 0); }
-  else { setTimeout(fitSide, 0); put("squads", ['[data-sel="0"]', '[data-sel="1"]', '[data-sel="2"]', '[data-sel="3"]', '[data-sel="gen"]', '[data-sel="army"]', '[data-sel="all"]', '[data-sel="idle"]']); put("grp2", ["boxBtn", "formBtn", "spreadBtn", "regroupBtn", "guardBtn", "strikeBtn", "modeBtn", "killBtn", "rallyBtn", "homeBtn"]); $("grp2").hidden = false; $("moreBtn").hidden = true; $("trayRow").hidden = true; document.body.classList.remove("tray"); }
+  if (compact) { put("squads", ['[data-sel="0"]', '[data-sel="1"]', '[data-sel="2"]', '[data-sel="3"]', '[data-sel="gen"]', '[data-sel="army"]', '[data-sel="all"]', "moreBtn"]); put("tray", ['[data-sel="idle"]', "boxBtn", "formBtn", "spreadBtn", "regroupBtn", "guardBtn"]); put("side", ["strikeBtn", "rallyBtn", "homeBtn", "modeBtn", "killBtn"]); $("grp2").hidden = true; $("moreBtn").hidden = false; setMore(false); setTimeout(fitSide, 0); }
+  else { setTimeout(fitSide, 0); put("squads", ['[data-sel="0"]', '[data-sel="1"]', '[data-sel="2"]', '[data-sel="3"]', '[data-sel="gen"]', '[data-sel="army"]', '[data-sel="all"]', '[data-sel="idle"]']); put("grp2", ["boxBtn", "formBtn", "spreadBtn", "regroupBtn", "guardBtn", "strikeBtn", "modeBtn", "killBtn", "rallyBtn", "homeBtn", "moreBtn"]); $("grp2").hidden = false; $("moreBtn").hidden = false; setMore(true); $("trayRow").hidden = true; document.body.classList.remove("tray"); }
 }
 // new soldiers (mercenaries) join whatever selection their squad is part of
 function onHumanSpawn(u) {
@@ -2468,7 +2471,7 @@ window.addEventListener("keydown", e => {
   const k = e.key.toLowerCase();
   UI.keys.add(k);
   const xk = EXP();
-  if (!xk && "ifrxbe".includes(k) && k.length === 1) return;
+  if (!xk && "ifrbe".includes(k) && k.length === 1) return;
   if ("1234".includes(k) && k.length === 1) { if ((e.ctrlKey || e.metaKey) && xk) { e.preventDefault(); assignSquad(+k - 1); } else selectKey(String(+k - 1)); }
   else if (k === "i") selectKey("idle");
   else if (k === "f") $("formBtn").click();
@@ -2516,7 +2519,7 @@ const EXP = () => !!UI.opts.expert;
 function applyExpert() {
   document.body.classList.toggle("basic", !EXP());
   if (!EXP()) { UI.mode = "move"; UI.boxMode = false; UI.rallyMode = false; if (G) closeTray(); }
-  const n = $("expNote"); if (n) n.textContent = EXP() ? "Everything is on: formations, routes, rally points, guard duty, merging squads, SELECT, IDLE, KILL and the order modes." : "Just the essentials: squads, GEN, ARMY, ALL, BASE and STRIKE. Soldiers spread out on their own when plague hits. Missions join after your first 3 battles.";
+  const n = $("expNote"); if (n) n.textContent = EXP() ? "Everything is on: formations, routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. In battle, tap ⋯ to show every order and ▾ to fold them away." : "Just the essentials: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. Soldiers spread out on their own when plague hits. Missions join after your first 3 battles.";
   if (G) refreshBar();
 }
 function customSummary() {
@@ -2572,9 +2575,8 @@ try { const v = localStorage.getItem("hr-expert"); if (v !== null) UI.opts.exper
 seg("optExpert", "expert");
 $("optExpert").addEventListener("click", () => { try { localStorage.setItem("hr-expert", String(UI.opts.expert)); } catch (e) {} applyExpert(); });
 try { const v = localStorage.getItem("hr-split"); if (v) UI.opts.split = clamp(+v | 0, 1, 4); const l = localStorage.getItem("hr-layout"); if (l !== null) UI.opts.layout = +l ? 1 : 0; } catch (e) {}
-seg("optSplit", "split"); seg("optLayout", "layout");
+seg("optSplit", "split");
 $("optSplit").addEventListener("click", () => { try { localStorage.setItem("hr-split", String(UI.opts.split)); } catch (e) {} });
-$("optLayout").addEventListener("click", () => { try { localStorage.setItem("hr-layout", String(UI.opts.layout)); } catch (e) {} layoutBar(!!UI.opts.layout); });
 layoutBar(!!UI.opts.layout); applyExpert();
 $("expOn").addEventListener("click", () => { UI.opts.expert = 1; try { localStorage.setItem("hr-expert", "1"); } catch (e) {} $("optExpert").querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.v === "1")); applyExpert(); $("expOffer").hidden = true; toast("Expert controls on. The extra orders live behind ⋯", "gold"); });
 try { if (localStorage.getItem("hr-custom") === "1") $("custom").open = true; } catch (e) {}
