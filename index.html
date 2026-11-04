@@ -2455,6 +2455,25 @@ const HUT3 = { src: "sprites/huts.png", S: 160, H: 183, N: 3, gx: 80, gy: 125.8,
 function hut3(i) { const R = HUT3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
   if (!R.cv[i]) { const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, (i % R.N) * R.S, 0, R.S, R.H, 0, 0, R.S, R.H); const f = R.wpp * R.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; R.cv[i] = cv; }
   return R.cv[i]; }
+// the base's health in the 3D view: a framed, glossy bar with a fading "damage taken" trail and tick marks
+function drawBaseBar(g, [x, y], k, f, gh, fl, now) {
+  const w = Math.max(84, 132 * k), h = Math.max(8, 10 * k), x0 = x - w / 2, r = h / 2 + 2;
+  const col = f > 0.6 ? ["#9cf08a", "#3fae4c", "#1d5e27"] : f > 0.35 ? ["#ffe08a", "#e0a630", "#7a4e10"] : ["#ff9a8a", "#e23b2e", "#6a1410"];
+  g.save(); g.shadowColor = "rgba(0,0,0,.55)"; g.shadowBlur = 6; g.shadowOffsetY = 2;
+  const fr = g.createLinearGradient(0, y - 3, 0, y + h + 3); fr.addColorStop(0, "#5b5a52"); fr.addColorStop(0.5, "#2a2a26"); fr.addColorStop(1, "#151513");
+  g.fillStyle = fr; g.beginPath(); g.roundRect(x0 - 3, y - 3, w + 6, h + 6, r); g.fill(); g.restore();
+  g.strokeStyle = "rgba(233,210,140,.75)"; g.lineWidth = 1; g.beginPath(); g.roundRect(x0 - 2.5, y - 2.5, w + 5, h + 5, r - 0.5); g.stroke();
+  g.save(); g.beginPath(); g.roundRect(x0, y, w, h, h / 2); g.clip();
+  g.fillStyle = "#0b0c0b"; g.fillRect(x0, y, w, h);
+  if (gh > f) { g.fillStyle = "rgba(255,240,210,.85)"; g.fillRect(x0 + w * f, y, w * (gh - f), h); }
+  const fill = g.createLinearGradient(0, y, 0, y + h); fill.addColorStop(0, col[0]); fill.addColorStop(0.45, col[1]); fill.addColorStop(1, col[2]);
+  g.fillStyle = fill; g.fillRect(x0, y, w * f, h);
+  if (f <= 0.35) { g.globalAlpha = 0.25 + 0.25 * Math.sin(now * 8); g.fillStyle = "#fff"; g.fillRect(x0, y, w * f, h); g.globalAlpha = 1; }
+  if (fl) { g.globalAlpha = 0.45; g.fillStyle = "#fff"; g.fillRect(x0, y, w * f, h); g.globalAlpha = 1; }
+  const gl = g.createLinearGradient(0, y, 0, y + h * 0.5); gl.addColorStop(0, "rgba(255,255,255,.45)"); gl.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gl; g.fillRect(x0, y, w, h * 0.5);
+  g.fillStyle = "rgba(0,0,0,.35)"; for (let i = 1; i < 10; i++) g.fillRect(x0 + w * i / 10 - 0.5, y + 1, 1, h - 2);
+  g.restore();
+}
 // rally flag in the 3D view: Flag in the Wind by YouniqueIdeaStudio (CC-BY), one baked view per team colour, pole at the centre
 const RALLY3 = { src: "sprites/rally.png", w: 80, h: 64, ay: 62 / 64, bw: 47, bh: 37.5, cv: [] };
 function rally3(t) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
@@ -3428,8 +3447,9 @@ function render(dtReal) {
     if (!inView(b.x, b.y)) continue;
     const E = SPR.team[p.id].eras[eraOf(p.id)], BB = c !== ctx && E.bb, S = BB ? BB.ground : E.fort;
     c.globalAlpha = ghost ? 0.5 : 1;
-    c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
-    const B3 = BB && base3(eraOf(p.id)); if (B3) STAND.push({ bb: B3, x: b.x, y: b.y, al: c.globalAlpha, fog: true });
+    const B3 = BB && base3(eraOf(p.id)); if (!B3) c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
+    if (B3) STAND.push({ bb: B3, x: b.x, y: b.y, al: c.globalAlpha, fog: true });
+    if (BB) { const F3 = rally3(TEAM.indexOf(p.team)); if (F3) STAND.push({ bb: F3, sc: 1.7, x: b.x - 72, y: b.y + 8, al: c.globalAlpha }); } // the team colour flies on a flag
     else if (BB) for (const v of BB.pieces) STAND.push({ bb: (v.hut != null && hut3(v.hut)) || v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
     if (!ghost) {
       // turret (the 3D village has no gun to show)
@@ -3448,16 +3468,12 @@ function render(dtReal) {
       const f = b.hp / (b.max || CFG.base.hp);
       if (f < 0.6 && rnd() < (0.6 - f) * 0.6) addPart({ k: "smoke", x: b.x + (rnd() - 0.5) * 60, y: b.y + (rnd() - 0.5) * 60, vx: 4, vy: -14, life: 2.5, max: 2.5, s: 14, g: 20 });
       if (f < 0.35 && rnd() < 0.3) addPart({ k: "glow", x: b.x + (rnd() - 0.5) * 50, y: b.y + (rnd() - 0.5) * 50, life: 0.25, max: 0.25, s: 26 });
-      // hp ring
-      c.globalAlpha = 1; c.lineWidth = 4; c.strokeStyle = "rgba(0,0,0,.45)"; c.beginPath(); c.arc(b.x, b.y, 64, 0, TAU); c.stroke();
-      c.strokeStyle = f > 0.35 ? "rgba(233,229,211,.9)" : "#ff6b5e"; c.beginPath(); c.arc(b.x, b.y, 64, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.stroke();
+      // hp ring (flat view; the 3D view has a bar instead)
+      if (!TILT.on) { c.globalAlpha = 1; c.lineWidth = 4; c.strokeStyle = "rgba(0,0,0,.45)"; c.beginPath(); c.arc(b.x, b.y, 64, 0, TAU); c.stroke();
+      c.strokeStyle = f > 0.35 ? "rgba(233,229,211,.9)" : "#ff6b5e"; c.beginPath(); c.arc(b.x, b.y, 64, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.stroke(); }
       // health bar under the base (3D view), like a strategy game
-      if (TILT.on) { const tc = p.team.c, fl = b.flash > 0; STAND.push({ x: b.x, y: b.y + 80, al: 1, draw: (g, P, k) => { const [x, y] = P(b.x, b.y + 66, 0), w = Math.max(70, 118 * k), h = Math.max(6, 8 * k), x0 = x - w / 2;
-        g.fillStyle = "rgba(8,10,10,.78)"; g.beginPath(); g.roundRect(x0 - 2, y - 2, w + 4, h + 4, 3); g.fill();
-        const col = f > 0.6 ? "#5fd16a" : f > 0.35 ? "#f2c14e" : "#ff5b4f", gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, fl ? "#fff" : col); gr.addColorStop(1, fl ? col : "rgba(0,0,0,.35)");
-        g.fillStyle = col; g.fillRect(x0, y, w * f, h); g.globalAlpha = 0.5; g.fillStyle = gr; g.fillRect(x0, y, w * f, h); g.globalAlpha = 1;
-        g.fillStyle = "rgba(0,0,0,.45)"; for (let i = 1; i < 10; i++) g.fillRect(x0 + w * i / 10 - 0.5, y, 1, h);
-        g.fillStyle = tc; g.fillRect(x0 - 2, y - 2, 4, h + 4); } }); }
+      if (TILT.on) { b.ghost = b.ghost == null || b.ghost < f ? f : b.ghost + (f - b.ghost) * 0.04; const gh = b.ghost, fl = b.flash > 0;
+        STAND.push({ x: b.x, y: b.y + 80, al: 1, draw: (g, P, k) => drawBaseBar(g, P(b.x, b.y + 64, 0), k, f, gh, fl, now) }); }
     }
     c.globalAlpha = 1;
   }
