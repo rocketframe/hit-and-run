@@ -6,5 +6,5 @@ const root = __dirname, srv = http.createServer((q, r) => { const f = path.join(
   p.on('console', m => console.log('page:', m.text())); p.on('pageerror', e => console.log('ERR', e.message));
   await p.goto(`http://127.0.0.1:${srv.address().port}/render.html`); await p.waitForFunction(() => window.ready);
   const r = await p.evaluate(o => window.renderAtlas(o), opts);
-  fs.writeFileSync(out, Buffer.from(r.png.split(',')[1], 'base64')); delete r.png; fs.writeFileSync(out.replace(/\.png$/, '.atlas.json'), JSON.stringify(r)); console.log(JSON.stringify(r));
+  fs.writeFileSync(out, Buffer.from(r.png.split(',')[1], 'base64')); delete r.png; if (r.mask) fs.writeFileSync(out.replace(/\.png$/, '-mask.png'), Buffer.from(r.mask.split(',')[1], 'base64')); delete r.mask; fs.writeFileSync(out.replace(/\.png$/, '.atlas.json'), JSON.stringify(r)); console.log(JSON.stringify(r));
   await b.close(); srv.close(); });

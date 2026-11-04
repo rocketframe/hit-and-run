@@ -18,6 +18,14 @@ window.renderAtlas = async (opts) => {
   root.traverse(o => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; const ms = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of ms) { if (opts.tint) for (const [rx, hex] of Object.entries(opts.tint)) if (new RegExp(rx, "i").test(m.name) || new RegExp(rx, "i").test(o.name)) { m.color = new THREE.Color(hex); if (m.map && opts.tintMap === false) m.map = null; } } } });
   const scene = new THREE.Scene(), holder = new THREE.Group(); holder.add(root); scene.add(holder);
+  // optional prop held between the hands (rifle): origin at the right hand, barrel pointing at the left hand
+  let prop = null, rH = null, lH = null;
+  if (opts.attach) { const a = await load(opts.attach.file), pr = a.scene || a; const pb = new THREE.Box3().setFromObject(pr), ps = pb.getSize(new THREE.Vector3()), pk = opts.attach.len / ps.x; pr.scale.multiplyScalar(pk);
+    const pb2 = new THREE.Box3().setFromObject(pr), gx = pb2.min.x + (pb2.max.x - pb2.min.x) * (opts.attach.grip ?? 0.3), gy = (pb2.min.y + pb2.max.y) / 2 + (opts.attach.dy || 0); pr.position.x -= gx; pr.position.y -= gy; pr.position.z -= (pb2.min.z + pb2.max.z) / 2;
+    prop = new THREE.Group(); prop.add(pr); scene.add(prop); root.traverse(o => { if (o.isBone && /RightHand$/.test(o.name)) rH = o; if (o.isBone && /LeftHand$/.test(o.name)) lH = o; }); console.log("hands", rH && rH.name, lH && lH.name); }
+  const placeProp = () => { if (!prop || !rH || !lH) return; scene.updateMatrixWorld(true); const a = new THREE.Vector3().setFromMatrixPosition(rH.matrixWorld), b = new THREE.Vector3().setFromMatrixPosition(lH.matrixWorld);
+    const dir = b.clone().sub(a); if (dir.length() < 1e-4) return; dir.normalize(); const up = new THREE.Vector3(0, 1, 0); up.sub(dir.clone().multiplyScalar(up.dot(dir))).normalize(); const side = new THREE.Vector3().crossVectors(dir, up);
+    prop.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir, up, side)); prop.position.copy(a); };
   scene.add(new THREE.HemisphereLight(0xf4f0e4, 0x4a4a38, 1.6)); const sun = new THREE.DirectionalLight(0xfff2dc, 2.6); sun.position.set(-4, 8, 5); scene.add(sun); const rim = new THREE.DirectionalLight(0xb8d0ff, 0.8); rim.position.set(5, 3, -6); scene.add(rim);
   const S = opts.size, ext = opts.extent || opts.height * 0.75, cam = new THREE.OrthographicCamera(-ext, ext, ext * 1.15 + opts.height * 0.25, -ext * 1.15 + opts.height * 0.25, 0.1, 1000);
   const el = (opts.elev || 43) * Math.PI / 180, dist = 50; cam.position.set(0, Math.sin(el) * dist + opts.height * 0.4, Math.cos(el) * dist); cam.lookAt(0, opts.height * 0.4, 0);
@@ -25,6 +33,11 @@ window.renderAtlas = async (opts) => {
   const rnd = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); rnd.setPixelRatio(1); rnd.setSize(S, S); rnd.outputColorSpace = THREE.SRGBColorSpace; rnd.setClearColor(0, 0);
   const atlas = document.createElement("canvas"); atlas.width = cols * S; atlas.height = rows * S; const ag = atlas.getContext("2d");
   const mixer = new THREE.AnimationMixer(root);
+  // team-colour mask: meshes/materials matching opts.mask render white, everything else black
+  let maskAtlas = null, mg = null; const swaps = [];
+  if (opts.mask) { maskAtlas = document.createElement("canvas"); maskAtlas.width = atlas.width; maskAtlas.height = atlas.height; mg = maskAtlas.getContext("2d");
+    root.traverse(o => { if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material], mk = ms.map(m => { const hit = new RegExp(opts.mask, "i").test(m.name) || new RegExp(opts.mask, "i").test(o.name); const b = new THREE.MeshBasicMaterial({ color: hit ? 0xffffff : 0x000000 }); return b; }); swaps.push([o, o.material, Array.isArray(o.material) ? mk : mk[0]]); } });
+    if (prop) prop.traverse(o => { if (o.isMesh) swaps.push([o, o.material, Array.isArray(o.material) ? o.material.map(() => new THREE.MeshBasicMaterial({ color: 0 })) : new THREE.MeshBasicMaterial({ color: 0 })]); }); }
   // ground point: where the feet are in each cell (for anchoring in the game)
   cam.updateMatrixWorld(); cam.updateProjectionMatrix(); const foot = new THREE.Vector3(0, 0, 0).project(cam), fx = (foot.x + 1) / 2 * S, fy = (1 - foot.y) / 2 * S;
   let r = 0;
@@ -35,11 +48,13 @@ window.renderAtlas = async (opts) => {
       holder.rotation.y = -d / opts.dirs * Math.PI * 2 + Math.PI / 2; // dir 0 faces screen-right, counting clockwise on screen
       for (let f = 0; f < c.frames; f++) { if (act) { mixer.setTime(((c.t0 || 0) + (c.loop === false ? f / Math.max(1, c.frames - 1) : f / c.frames) * (c.span || 1)) * dur); }
         if (opts.inPlace !== false) root.traverse(o => { if (o.isBone && !o.parent.isBone) { o.position.x = o.userData.x0 ?? (o.userData.x0 = o.position.x); o.position.z = o.userData.z0 ?? (o.userData.z0 = o.position.z); } });
-        rnd.render(scene, cam); ag.drawImage(rnd.domElement, f * S, r * S); }
+        placeProp(); rnd.render(scene, cam); ag.drawImage(rnd.domElement, f * S, r * S);
+        if (mg) { for (const [o, , m] of swaps) o.material = m; rnd.render(scene, cam); mg.drawImage(rnd.domElement, f * S, r * S); for (const [o, m0] of swaps) o.material = m0; } }
       r++;
     }
   }
-  return { png: atlas.toDataURL("image/png"), cols, rows, size: S, foot: [fx, fy], clips: opts.clips.map(c => ({ name: c.name, frames: c.frames })), dirs: opts.dirs, worldPerPx: ext * 2 / S };
+  if (mg) { const id = mg.getImageData(0, 0, maskAtlas.width, maskAtlas.height), d = id.data; for (let i = 0; i < d.length; i += 4) { const l = d[i]; d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = d[i + 3] ? l : 0; } mg.putImageData(id, 0, 0); }
+  return { mask: maskAtlas ? maskAtlas.toDataURL("image/png") : null, png: atlas.toDataURL("image/png"), cols, rows, size: S, foot: [fx, fy], clips: opts.clips.map(c => ({ name: c.name, frames: c.frames })), dirs: opts.dirs, worldPerPx: ext * 2 / S };
 };
 function testModel(T) { const g = new T.Group(), m = c => new T.MeshStandardMaterial({ color: c, roughness: 0.7 });
   const body = new T.Mesh(new T.BoxGeometry(0.5, 0.7, 0.3), m(0x4ea8ff)); body.position.y = 1.15; g.add(body);
