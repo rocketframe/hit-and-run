@@ -270,6 +270,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
 .log .w{color:#9fe07a}.log .l{color:var(--danger)}
 .fine{font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--ink-dim);margin:0}
 .stats{font-family:var(--mono);font-size:13px;color:var(--ink-dim);line-height:1.7}
+#hero{position:absolute;right:-4px;top:-12px;height:clamp(200px,57vw,258px);pointer-events:none;filter:drop-shadow(0 8px 14px rgba(0,0,0,.7))}#menu .card>h1,#menu .card>.lede{position:relative;z-index:1}#menu .lede{max-width:min(38ch,60%)}#menu .card>.stamp{z-index:2;top:clamp(108px,29vw,150px);right:-6px;scale:.72;transform-origin:right top}
 </style>
 
 <canvas id="game"></canvas>
@@ -317,7 +318,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
   <button class="ib" id="menuSnd" aria-label="Sound on or off">♪</button>
   <button id="menuInfo" aria-label="About this game">i</button>
   <div class="card">
-    <h1>Hit<br>and <span>Run</span></h1>
+    <h1>Hit<br>and <span>Run</span></h1><img id="hero" src="sprites/hero.webp" alt="">
     <div class="stamp" id="stamp" hidden aria-live="polite"><div class="st-in"><span class="st-k">Battles fought</span><b id="stGames">0</b><span class="st-rule"></span><span class="st-k">Enemies killed</span><b id="stKills">0</b></div></div>
     <p class="lede">Find the enemy in the fog, shoot first, keep your general alive, and take their base.</p>
     <details class="custom" id="custom"><summary><span>Custom game</span><em id="customSum"></em></summary>
