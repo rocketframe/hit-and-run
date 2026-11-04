@@ -45,6 +45,8 @@ button:focus-visible{outline:2px solid var(--khaki);outline-offset:2px}
 .prog i{display:block;height:100%;background:var(--khaki)}
 
 #tr{top:calc(env(safe-area-inset-top,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.msglog{width:128px;max-height:96px;margin-top:4px;overflow-y:auto;overscroll-behavior:contain;pointer-events:auto;touch-action:pan-y;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:3px 5px;font-size:10px;line-height:1.3;color:var(--ink);scrollbar-width:thin}.msglog:empty{display:none}
+.msglog div{padding:2px 0;border-bottom:1px solid rgba(255,255,255,.06)}.msglog div:last-child{border-bottom:0}.msglog b{font-family:var(--mono);font-weight:500;color:var(--ink-dim);margin-right:4px}.msglog .bad{color:#ff9a8f}.msglog .gold{color:#f3d27a}
 #mini{width:128px;height:128px;border:1px solid var(--line);border-radius:4px;background:var(--fog);touch-action:none;display:block}
 .toprow{display:flex;gap:6px;align-items:center}
 #alertEdge{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;box-shadow:inset 0 0 0 4px rgba(255,60,40,.9),inset 0 0 90px rgba(255,40,20,.55)}
@@ -96,6 +98,7 @@ body.classic #grp2{flex-wrap:wrap;justify-content:center;max-width:100%;gap:3px}
 #toast{left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 150px);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;width:calc(100vw - 32px)}
 #toast div{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 12px;font-size:15px;font-weight:700;letter-spacing:.03em;animation:tin .25s ease-out;white-space:normal;text-align:center;max-width:calc(100vw - 32px);width:max-content}
 #toast div.gold{border-color:var(--khaki);color:var(--khaki)}
+@media (max-width:760px){#toast{left:10px;right:158px;width:auto;transform:none;top:calc(env(safe-area-inset-top,0px) + 96px)}#toast div{font-size:13px;padding:5px 10px;max-width:100%;box-sizing:border-box}}
 #toast div.bad{border-color:var(--danger);color:var(--danger)}
 @keyframes tin{from{opacity:0;transform:translateY(-6px)}}
 @media (prefers-reduced-motion:reduce){#toast div{animation:none}}
@@ -242,6 +245,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
   <div class="toprow"><span id="clock">00:00</span><button class="ib spd" id="spdBtn" aria-label="Game speed">1×</button><button class="ib" id="sndBtn" aria-label="Sound">♪</button><button class="ib" id="pauseBtn" aria-label="Pause">II</button></div>
   <div class="spdpop" id="spdPop" hidden><span>Speed</span><button data-s="0.25">¼×</button><button data-s="0.5">½×</button><button data-s="1">1×</button><button data-s="2">2×</button><button data-s="4">4×</button><button data-s="8">8×</button></div>
   <canvas id="mini" width="256" height="256" aria-label="Minimap"></canvas>
+  <div id="msgLog" class="msglog" aria-label="Message history" role="log"></div>
 </div>
 <div class="hud" id="toast"></div>
 <div id="alertEdge" aria-hidden="true"></div>
@@ -269,7 +273,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <button class="cb" id="guardBtn">GUARD<small>general</small></button>
     <button class="cb strike" id="strikeBtn" hidden>STRIKE<small>1 ready</small></button>
     <button class="cb mode" id="modeBtn">RUN &amp; GUN<small>tap to switch</small></button>
-    <button class="cb kill" id="killBtn">KILL<small>selected</small></button>
+    <button class="cb kill" id="killBtn">KILL<small>who?</small></button>
     <button class="cb" id="rallyBtn">RALLY<small>not set</small></button>
     <button class="cb" id="homeBtn">BASE<small>view</small></button>
   </div>
@@ -2168,6 +2172,10 @@ function toast(msg, cls) {
   if (G && G.attract) return;
   const el = document.createElement("div"); el.textContent = msg; if (cls) el.className = cls;
   const box = $("toast"); box.appendChild(el);
+  // keep a scrollable history under the minimap, newest on top, stamped with the battle clock
+  if (G) { const lg = $("msgLog"), row = document.createElement("div"), t = Math.floor(G.time || 0), st = document.createElement("b");
+    st.textContent = String(Math.floor(t / 60)).padStart(2, "0") + ":" + String(t % 60).padStart(2, "0"); row.appendChild(st); row.appendChild(document.createTextNode(msg)); if (cls) row.className = cls;
+    lg.prepend(row); while (lg.children.length > 80) lg.lastChild.remove(); lg.scrollTop = 0; }
   while (box.children.length > 3) box.firstChild.remove();
   setTimeout(() => el.remove(), 3200);
 }
@@ -2689,7 +2697,7 @@ function start() {
   UI.mode = "move"; UI.pings = []; UI.boxMode = false; applyExpert();
   selectKey("all");
   $("menu").hidden = true; $("over").hidden = true; $("pause").hidden = true;
-  $("toast").innerHTML = "";
+  $("toast").innerHTML = ""; $("msgLog").innerHTML = "";
   UI.paused = false; acc = 0; last = performance.now(); SND.reset(); setSpeed(1); $("spdPop").hidden = true;
   killsSent = 0; lbRpc("game_started");
   updateFog();
@@ -3400,7 +3408,7 @@ const TUT = (() => {
     cam.x = b.x + p.fwd.x * 160; cam.y = b.y + p.fwd.y * 160; clampCam();
     UI.mode = "move"; UI.pings = []; UI.boxMode = false; UI.sel.clear(); UI.selKey = null; refreshBar();
     ["menu", "over", "pause", "howto"].forEach(id => $(id).hidden = true);
-    $("toast").innerHTML = "";
+    $("toast").innerHTML = ""; $("msgLog").innerHTML = "";
     UI.paused = false; acc = 0; last = performance.now(); SND.reset();
     updateFog();
     on = true; i = 0; flags = {}; $t("tut").hidden = false; show();
