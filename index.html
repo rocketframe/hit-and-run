@@ -433,7 +433,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <section><h3>Picking exactly who you want <span class="xp">Expert</span></h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, healing, rapid fire, sharpshooters with longer range, scouts that lift the fog, camouflage, or a strike you aim with <b>STRIKE</b>: a boulder, a cannonball or an airstrike, depending on your era). Some are bad (plague that spreads between soldiers standing close, a trap, lost orders, a signal fire that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
     <section><h3>Missions</h3><p>Every couple of minutes new orders bring a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Supplies:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply cart (a sled, wagon, truck or drone, by era) moves home only while your soldiers walk next to it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it, for 30 seconds.</li><li><b>Rescue:</b> find the missing scout in the marked area, then walk him home.</li><li><b>Assassinate:</b> an enemy captain with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> destroy the supply camp near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
-    <section><h3>Squads <span class="xp">Expert</span></h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation between box, line, wedge and column. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> makes the selected soldiers escort the general.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
+    <section><h3>Squads <span class="xp">Expert</span></h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation. <b>Box</b> is plain. <b>Line</b> holds the line: 15% better aim while standing still. <b>Wedge</b> is the charge: 10% faster, and 25% harder hits for the first 3 seconds of a fight. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> makes the selected soldiers escort the general.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
     <section><h3>Spread out <span class="xp">Expert</span></h3><p>With Basic controls this happens on its own when plague hits. In Expert, tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, strikes and traps. The general always gets right of way through his own soldiers.</p></section>
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b>, then pick who goes: the selected soldiers, the ones on screen, or all of them. The general is only withdrawn if you pick him on his own. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
@@ -749,7 +749,7 @@ function applyCmd(c) {
   }
   const gid = G.grpN = (G.grpN || 0) + 1;
   us.forEach(u => {
-    let x, y; u.grp = gid;
+    let x, y; u.grp = gid; u.form = c.form === "line" || c.form === "wedge" ? c.form : "box";
     if (u.kind === "gen" && hasGen) ({ x, y } = genSlot); else ({ x, y } = pick.get(u));
     u.fdx = fx; u.fdy = fy;
     if (!c.keep || true) { u.escort = false; }
@@ -1368,7 +1368,7 @@ function step() {
       u.idleT = 0;
       const [vx, vy] = navDir(u.x, u.y, gx, gy, C.r + 2, dx / dist, dy / dist);
       const P = G.players[u.owner], runK = u.run && !P.tired ? 1.8 : 1; if (runK > 1) P.ran = true;
-      const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * runK * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : 1), dist - stopAt + 0.5);
+      const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * runK * (u.form === "wedge" ? FORM_FX.wedge.speed : 1) * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : 1), dist - stopAt + 0.5);
       u.x += vx * sp; u.y += vy * sp; u.moving = true; u.face = Math.atan2(vy, vx);
       if (G.island && !onLand(u.x, u.y, C.r + 2)) { const q = toLand(u.x, u.y, C.r + 2); u.x = q.x; u.y = q.y; }
     }
@@ -1417,7 +1417,10 @@ function step() {
     let dmg = C.dmg * (1 + CFG.upStep * p.level) * p.mult;
     const gnl = genAura(u.owner);
     if (u.kind === "inf" && gnl && d2(u, gnl) < CFG.auraR * CFG.auraR) dmg *= CFG.aura;
-    const hit = t.isBase || G.rng() < (u.moving ? CFG.hitMoving : CFG.hitStill);
+    if (u.form === "wedge" && G.time - (u.lastFire || -99) > 5) u.charge = G.time + FORM_FX.wedge.chargeT; // first contact after a lull: the charge
+    u.lastFire = G.time;
+    if (u.form === "wedge" && u.charge > G.time) dmg *= FORM_FX.wedge.dmg;
+    const hit = t.isBase || G.rng() < (u.moving ? CFG.hitMoving : Math.min(0.97, CFG.hitStill * (u.form === "line" ? FORM_FX.line.aim : 1)));
     const ox = hit ? 0 : (G.rng() - 0.5) * 30, oy = hit ? 0 : (G.rng() - 0.5) * 30;
     const era = eraOf(u.owner), st = eraS(era), FL = ERAS[era].fly;
     if (FL) { // stones, javelins, arrows and plasma fly for a moment and the hit lands with them
@@ -1710,6 +1713,8 @@ function warpFlat() {
   }
   const g = c.createLinearGradient(0, 0, 0, SH * 0.4); g.addColorStop(0, "rgba(14,30,40,.6)"); g.addColorStop(1, "rgba(14,30,40,0)"); c.fillStyle = g; c.fillRect(0, 0, SW, SH * 0.4);
 }
+// formation perks (Expert): line aims better standing still, wedge moves faster and charges; box is plain
+const FORM_FX = { line: { aim: 1.15 }, wedge: { speed: 1.1, dmg: 1.25, chargeT: 3 } };
 function eraOfLevel(l) { let e = 0; while (e < ERAS.length - 1 && l >= ERAS[e + 1].at) e++; return e; }
 const eraOf = pid => G.eraFix != null ? G.eraFix : eraOfLevel(G.players[pid].level);
 
@@ -3442,15 +3447,16 @@ document.querySelectorAll("[data-sel]").forEach(b => {
 $("boxBtn").classList.add("box");
 $("boxBtn").addEventListener("click", () => { UI.boxMode = !UI.boxMode; refreshBar(); closeTray(); });
 $("spreadBtn").addEventListener("click", () => { spreadOut(); closeTray(); });
-const FORMS = ["box", "line", "wedge", "column"];
+const FORMS = ["box", "line", "wedge"];
+const FORM_TXT = { box: "Formation: box. No bonus", line: "Hold the line: 15% better aim while standing still", wedge: "Wedge: 10% faster, and hits 25% harder for the first 3 seconds of a fight" };
 UI.forms = {};
 const formKey = () => UI.selKey !== null ? UI.selKey : "custom";
-const curForm = () => UI.forms[formKey()] || "box";
+const curForm = () => EXP() ? UI.forms[formKey()] || "box" : "box";
 const selIds = () => [...UI.sel].filter(id => G.unitById.get(id) && G.unitById.get(id).alive);
 $("formBtn").addEventListener("click", () => {
   const ids = selIds(); if (!ids.length) { toast("Pick a squad first"); return; }
   const f = FORMS[(FORMS.indexOf(curForm()) + 1) % FORMS.length]; UI.forms[formKey()] = f;
-  issue({ p: G.human, t: "reform", ids, form: f }); SND.ui(); toast("Formation: " + f); refreshBar();
+  issue({ p: G.human, t: "reform", ids, form: f }); SND.ui(); toast(FORM_TXT[f], f === "box" ? "" : "gold"); refreshBar();
 });
 $("regroupBtn").addEventListener("click", () => { const ids = selIds(); if (!ids.length) { toast("Pick a squad first"); return; } issue({ p: G.human, t: "regroup", ids, form: curForm() }); SND.order("move"); SND.say("move"); closeTray(); });
 $("guardBtn").addEventListener("click", () => {
