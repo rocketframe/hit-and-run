@@ -430,7 +430,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Flag in the Wind by YouniqueIdeaStudio (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Chara Design 01 by SheeroChana (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -2468,8 +2468,8 @@ function drawBaseBar(g, [x, y], k, f, gh, hot) {
   g.fillStyle = "rgba(255,255,255,.18)"; g.fillRect(x0, y, w * f, Math.max(1, h * 0.35));
   g.restore();
 }
-// rally flag in the 3D view: Flag in the Wind by YouniqueIdeaStudio (CC-BY), one baked view per team colour, pole at the centre
-const RALLY3 = { src: "sprites/flag8.png", w: 80, h: 72, N: 8, ay: 70 / 72, bw: 47, bh: 42.2, cv: [] }; // rows = teams, 8 waving frames
+// team flags in the 3D view: a cloth on a pole built and waved in three.js, 8 frames per team colour, pole at the centre
+const RALLY3 = { src: "sprites/flag9.png", w: 80, h: 72, N: 8, ay: 69.9 / 72, bw: 47, bh: 42.2, cv: [] }; // rows = teams, 8 waving frames
 function rally3(t, ph = 0) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
   const f = Math.floor(performance.now() / 110 + ph) % R.N, key = t * R.N + f;
   if (!R.cv[key]) { const cv = document.createElement("canvas"); cv.width = R.w; cv.height = R.h; cv.getContext("2d").drawImage(R.img, f * R.w, t * R.h, R.w, R.h, 0, 0, R.w, R.h); cv.bw = R.bw; cv.bh = R.bh; cv.ay = R.ay; R.cv[key] = cv; }

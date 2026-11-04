@@ -9,7 +9,7 @@ import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 // opts: { model, clips: [{name, file?, index?, frames, loop}], dirs, size (px per cell), elev (deg), height (world units the model should stand), tint: {matchName: hex} }
 window.renderAtlas = async (opts) => {
   const load = f => new Promise((res, rej) => (f.toLowerCase().endsWith(".fbx") ? new FBXLoader() : new GLTFLoader()).load(f, res, undefined, rej));
-  const base = opts.model === "__test__" ? testModel(THREE) : await load(opts.model), root = base.scene || base, anims = [...(base.animations || [])];
+  const base = opts.model === "__test__" ? testModel(THREE) : opts.model === "__flag__" ? flagModel(opts.flagColor || "#4ea8ff") : await load(opts.model), root = base.scene || base, anims = [...(base.animations || [])];
   for (const c of opts.clips) if (c.file) { const a = await load(c.file); c.clip = (a.animations || [])[0]; } else if (c.index != null) c.clip = anims[c.index]; else if (c.match) c.clip = anims.find(a => new RegExp(c.match, "i").test(a.name));
   // normalise size: feet on the ground, given height
   const box = new THREE.Box3().setFromObject(root), sz = box.getSize(new THREE.Vector3()), k = opts.height / (opts.dim === "len" ? Math.max(sz.x, sz.z) : sz.y);
@@ -44,7 +44,7 @@ window.renderAtlas = async (opts) => {
       wave = { cl, pos, orig: pos.array.slice(), ax: "xyz".indexOf(ax), nx: "xyz".indexOf(nx), near, len, amp: (W.amp || 0.12) * len, waves: W.waves || 1.5 }; console.log("wave", cl.name, ax, len); } }
   const doWave = ph => { if (!wave) return; const { pos, orig, ax, nx, near, len, amp, waves } = wave, a = pos.array;
     for (let i = 0; i < a.length; i += 3) { const d = Math.abs(orig[i + ax] - near) / len, y = orig[i + 1]; a[i] = orig[i]; a[i + 1] = orig[i + 1]; a[i + 2] = orig[i + 2];
-      a[i + nx] += amp * d * Math.sin(d * waves * Math.PI * 2 - ph + y * 0.0); a[i + 1] += amp * 0.06 * d * Math.cos(d * waves * Math.PI * 2 - ph); }
+      const e = Math.pow(d, 0.8); a[i + nx] += amp * e * Math.sin(d * waves * Math.PI * 2 - ph) + amp * 0.05 * e * Math.sin(y * 6 + ph); a[i + 1] -= amp * 0.35 * d * d; a[i + ax] -= (a[i + ax] - near) * 0.04 * e * (1 + Math.cos(d * waves * Math.PI * 2 - ph)); }
     pos.needsUpdate = true; wave.cl.geometry.computeVertexNormals(); };
   const placeProp = () => { if (!prop || !rH || !lH) return; scene.updateMatrixWorld(true); const a = new THREE.Vector3().setFromMatrixPosition(rH.matrixWorld), b = new THREE.Vector3().setFromMatrixPosition(lH.matrixWorld);
     const dir = b.clone().sub(a); if (dir.length() < 1e-4) return; dir.normalize(); const up = new THREE.Vector3(0, 1, 0); up.sub(dir.clone().multiplyScalar(up.dot(dir))).normalize(); const side = new THREE.Vector3().crossVectors(dir, up);
@@ -80,6 +80,17 @@ window.renderAtlas = async (opts) => {
   if (mg) { const id = mg.getImageData(0, 0, maskAtlas.width, maskAtlas.height), d = id.data; for (let i = 0; i < d.length; i += 4) { const l = d[i]; d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = d[i + 3] ? l : 0; } mg.putImageData(id, 0, 0); }
   return { mask: maskAtlas ? maskAtlas.toDataURL("image/png") : null, png: atlas.toDataURL("image/png"), cols, rows, size: S, foot: [fx, fy], clips: opts.clips.map(c => ({ name: c.name, frames: c.frames })), dirs: opts.dirs, worldPerPx: ext * 2 / S };
 };
+// a flag on a pole: cloth hangs from the top of the pole along its left edge (map: cloth spans +x, normal z)
+function flagModel(col) { const g = new THREE.Group(), H = 3, W = 1.25, CH = 0.8;
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.034, H, 10), new THREE.MeshStandardMaterial({ color: 0xd8d2c0, roughness: 0.5, metalness: 0.3 })); pole.name = "pole"; pole.position.y = H / 2; g.add(pole);
+  const fin = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), new THREE.MeshStandardMaterial({ color: 0xd9b45a, roughness: 0.35, metalness: 0.7 })); fin.position.y = H + 0.04; g.add(fin);
+  const cv = document.createElement("canvas"); cv.width = 128; cv.height = 80; const x = cv.getContext("2d"); x.fillStyle = col; x.fillRect(0, 0, 128, 80);
+  for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(${Math.random() < 0.5 ? "0,0,0" : "255,255,255"},${Math.random() * 0.06})`; x.fillRect(Math.random() * 128, Math.random() * 80, 2, 1); }
+  x.fillStyle = "rgba(0,0,0,.18)"; x.fillRect(0, 0, 6, 80); // hem along the pole
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  const geo = new THREE.PlaneGeometry(W, CH, 32, 12); geo.translate(W / 2 + 0.03, H - 0.05 - CH / 2, 0);
+  const cloth = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.85 })); cloth.name = "cloth"; g.add(cloth);
+  return g; }
 function procProp(k) { const bronze = new THREE.MeshStandardMaterial({ color: 0xb07a3a, roughness: 0.45, metalness: 0.6 }), g = new THREE.Group();
   if (k === "helmet") { const cap = new THREE.Mesh(new THREE.SphereGeometry(0.125, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), bronze); g.add(cap);
     const crest = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.09, 0.24), new THREE.MeshStandardMaterial({ color: 0x9a2a1e, roughness: 0.9 })); crest.position.y = 0.12; g.add(crest);
