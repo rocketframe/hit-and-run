@@ -269,6 +269,16 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
 .log th{color:var(--ink-dim);font-weight:500;position:sticky;top:0;background:#0b0e0b}
 .log .w{color:#9fe07a}.log .l{color:var(--danger)}
 .fine{font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--ink-dim);margin:0}
+body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #alertArrow,body.ended #alertEdge,body.ended #killMenu,body.ended #score,body.ended #spdBtn,body.ended #pauseBtn,body.ended #spdPop,body.ended #msgLog{display:none!important}
+#endPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:30;width:min(560px,calc(100vw - 20px));background:rgba(12,16,18,.82);border:1px solid rgba(233,229,211,.18);border-radius:12px;padding:10px 12px;display:flex;gap:12px;align-items:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#endPanel[hidden]{display:none}
+#endPanel .ep-t{flex:0 1 38%;min-width:0;font-family:var(--title,inherit);font-size:20px;letter-spacing:.04em;color:#e9e5d3;line-height:1.1}
+#endPanel .ep-t small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:0;color:var(--ink-dim);margin-top:2px}
+#endPanel .ep-s{flex:1;font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.5;min-width:0}
+#endPanel .ep-s b{color:#e9e5d3;font-weight:600}
+#endPanel .ep-hint{font-size:10px;opacity:.7}
+#endPanel button{flex:none}
+@media (max-width:520px){#endPanel{flex-wrap:wrap}#endPanel .ep-s{flex-basis:100%;order:3}#endPanel .ep-t{flex:1}}
 .stats{font-family:var(--mono);font-size:13px;color:var(--ink-dim);line-height:1.7}
 #hero{position:absolute;right:-4px;top:-12px;height:clamp(200px,57vw,258px);pointer-events:none;filter:drop-shadow(0 8px 14px rgba(0,0,0,.7))}#menu .card>h1,#menu .card>.lede{position:relative;z-index:1}#menu .lede{max-width:min(38ch,60%)}#menu .card>.stamp{z-index:2;top:clamp(108px,29vw,150px);right:-6px;scale:.72;transform-origin:right top}
 </style>
@@ -464,6 +474,11 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
   </div>
 </div>
 
+<div id="endPanel" hidden role="region" aria-label="Battle over">
+  <div class="ep-t" id="epTitle">Defeated<small id="epSub"></small></div>
+  <div class="ep-s" id="epStats"></div>
+  <button class="go" id="epScore">See score ▸</button>
+</div>
 <div class="screen" id="over" hidden>
   <div class="card">
     <div class="eyebrow" id="overEyebrow">After action report</div>
@@ -702,7 +717,7 @@ function rejoin(u, p) {
 }
 function applyCmd(c) {
   const p = G.players[c.p]; if (p.out) return;
-  if (c.t === "strike") { if (p.strikes > 0) { p.strikes--; strikeAt(c.p, c.x, c.y); } return; }
+  if (c.t === "strike") { if (p.strikes > 0) { p.strikes--; strikeAt(c.p, c.x, c.y); if (c.p === G.human && !G.attract) gStats().strikes++; } return; }
   if (c.t === "rally") { p.rally = c.clear ? null : { x: clamp(c.x, 10, G.S - 10), y: clamp(c.y, 10, G.S - 10) }; return; }
   const us = c.ids.map(id => G.unitById.get(id)).filter(u => u && u.alive && u.owner === c.p && !(u.jam > G.time));
   if (!us.length) return;
@@ -899,6 +914,7 @@ function damage(t, amount, by) {
   if (!t.alive) return;
   if (t.kind === "truck") amount *= 0.35; // armoured
   if (t.escort) { const g = G.gens[t.owner]; if (g && g.alive && d2(t, g) < GUARD_R * GUARD_R) amount *= 0.85; } // guards in the ring hold firm
+  if (!G.attract) { const st = gStats(), a = Math.min(amount, Math.max(0, t.hp)); if (by === G.human) st.dealt += a; else if (t.owner === G.human) st.taken += a; }
   t.hp -= amount; t.flash = 0.12; t.hitAt = G.time;
   if (t.owner === G.human && by !== G.human && !G.attract) alertHit(t.x, t.y);
   if (t.hp > 0) return;
@@ -908,6 +924,8 @@ function damage(t, amount, by) {
   G.players[t.owner].losses++;
   const killer = G.players[by];
   killer.kills++; addPoints(killer, 1);
+  if (t.kind === "gen" && !G.attract) { const st = gStats(); if (by === G.human) st.genKills++; if (t.owner === G.human) st.genLost++; }
+  if (t.owner === G.human && !G.attract) { const st = gStats(), al = G.units.filter(u => u.alive && u.owner === G.human && u.kind === "inf").length; if (al < st.low) st.low = al; }
   if (t.kind === "gen") {
     const dm = G.players[t.owner].doom; if (dm && dm.on) dm.by = by;
     const op = G.players[t.owner]; op.genDeaths = (op.genDeaths || 0) + 1; if (op.genDeaths >= 10) t.oldie = true; // easter egg: he comes back bandaged
@@ -916,6 +934,8 @@ function damage(t, amount, by) {
   }
 }
 
+// extra numbers for the end of the battle
+function gStats() { return G.st || (G.st = { dealt: 0, taken: 0, genKills: 0, genLost: 0, bases: 0, crates: 0, misWon: 0, misLost: 0, strikes: 0, low: Infinity }); }
 function addPoints(p, n) {
   p.points += n;
   while (p.points >= (p.level - (p.bonus || 0) + 1) * G.upEvery) {
@@ -936,6 +956,7 @@ function eliminate(owner, by) {
     u.alive = false; u.respawn = Infinity;
   }
   pushFx({ k: "boom", base: true, x: p.base.x, y: p.base.y, owner, c: p.team.c });
+  if (by === G.human && owner !== G.human && !G.attract) gStats().bases++;
   if (owner === G.human) toast("Your base has fallen", "bad");
   else toast(p.team.name + " base destroyed" + (by === G.human ? " by you" : ""), by === G.human ? "gold" : "");
   const alive = G.players.filter(q => !q.out);
@@ -1018,7 +1039,7 @@ function levelUp(p) {
 // Kill the general and it resets (the killer gets mercenaries and a heal); it starts again when he respawns.
 // If it fires, every other army is wiped out and its owner wins.
 const DOOM = { lvl: 8, charge: 20, show: 10, baseAt: 3, // the finale runs 10s; the target base falls 3s before the end
-  names: ["Giant rubber duck", "Black hole", "Alien mothership", "Chicken rain"], pick: [1, 2] }; // T cut the duck and the chickens: only the black hole and the mothership fire
+  names: ["Giant rubber duck", "Endgame", "Alien mothership", "Chicken rain"], pick: [1] }; // T cut the duck, the chickens and the mothership: the black hole ("Endgame") always fires
 function doomArm(p) {
   if (p.doom || G.attract || G.tutorial || p.out || G.doomFire) return;
   p.doom = { t: DOOM.charge, on: false, w: DOOM.pick[Math.floor(G.rng() * DOOM.pick.length)], by: null, armT: G.time };
@@ -1118,6 +1139,7 @@ function openCrate(c, u) {
   const p = G.players[u.owner], me = u.owner === G.human, T = G.time;
   const group = G.units.filter(v => v.alive && v.owner === u.owner && d2(v, u) < 160 * 160);
   const kinds = c.mission ? ["upgrade", "mercs", "medkit"] : [c.kind];
+  if (me && !G.attract) gStats().crates++;
   pushFx({ k: "open", x: c.x, y: c.y, owner: u.owner, bad: CRATE.bad.includes(c.kind) && !c.mission, mission: c.mission });
   if (!G.attract) {
     if (c.mission) { if (me) toast("Supplies secured! Army upgraded, mercenaries and healers on the way", "gold"); }
@@ -1245,6 +1267,7 @@ function missionReward(x, y) {
 }
 function endMission(win, why) {
   const m = G.mis; if (!m) return;
+  if (!G.attract) gStats()[win ? "misWon" : "misLost"]++;
   G.mis = null; G.misLast = m.type; G.misT = rr(MIS.gap[0], MIS.gap[1]);
   if (m.crate) { const i = G.crates.indexOf(m.crate); if (i >= 0) G.crates.splice(i, 1); }
   const pos = m.unit && m.unit.alive ? m.unit : m;
@@ -3849,6 +3872,29 @@ function drawDoomMarks(c, z, now) {
     }
   }
 }
+// the black hole's collapse: a flash, a thick pressure ring racing across the ground, a second ring, flying dust and a hard shake
+function drawShock(c, bx, by, t, M, R) {
+  const D = 1.8; if (t < 0 || t > D + 0.4) { cvs.style.transform = ""; return; }
+  const sk = clamp(t / D, 0, 1), eo = 1 - Math.pow(1 - sk, 3), far = Math.hypot(Math.max(bx, SW - bx), Math.max(by, SH - by)) * 1.25, flat = Math.cos(TILT.on ? TILT.th : 0) * 0.55 + 0.25;
+  // shake, strongest at the start
+  const sh = 16 * Math.pow(1 - sk, 2); cvs.style.transform = sh > 0.3 ? `translate(${(Math.random() - 0.5) * sh}px,${(Math.random() - 0.5) * sh}px)` : "";
+  // core flash
+  const cf = Math.pow(1 - clamp(t / 0.6, 0, 1), 2); if (cf > 0) { const g = c.createRadialGradient(bx, by, 0, bx, by, M * 0.35); g.addColorStop(0, `rgba(255,255,255,${cf})`); g.addColorStop(0.3, `rgba(200,220,255,${0.7 * cf})`); g.addColorStop(1, "rgba(120,160,255,0)"); c.fillStyle = g; c.fillRect(bx - M * 0.35, by - M * 0.35, M * 0.7, M * 0.7); }
+  const ring = (r, w, a, col, dark) => { if (r < 2 || a <= 0) return; c.save(); c.translate(bx, by); c.scale(1, flat);
+    const g = c.createRadialGradient(0, 0, Math.max(0, r - w), 0, 0, r + w * 0.25); g.addColorStop(0, "rgba(0,0,0,0)");
+    if (dark) g.addColorStop(0.45, `rgba(10,8,6,${0.35 * a})`); g.addColorStop(0.82, `rgba(${col},${a})`); g.addColorStop(1, `rgba(${col},0)`);
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, r + w * 0.25, 0, TAU); c.fill(); c.restore(); };
+  // main pressure wave: a bright front with a dark band behind it, like the air being squeezed
+  ring(far * eo, M * (0.22 - 0.12 * sk), Math.pow(1 - sk, 1.2), "255,244,225", true);
+  // a fainter blue echo just behind
+  const s2 = clamp((t - 0.18) / D, 0, 1), e2 = 1 - Math.pow(1 - s2, 3); ring(far * 0.82 * e2, M * 0.06, 0.6 * (1 - s2), "170,200,255", false);
+  // dust and debris thrown out along the ground
+  for (let i = 0; i < 90; i++) { const a = R() * TAU, sp = 0.35 + R() * 0.65, dl = R() * 0.15, k = clamp((t - dl) / (D * 0.9), 0, 1); if (k <= 0) continue;
+    const ek = 1 - Math.pow(1 - k, 2.2), d = far * 0.75 * sp * ek, x = bx + Math.cos(a) * d, y = by + Math.sin(a) * d * flat - Math.sin(k * Math.PI) * M * 0.05 * sp, sz = (2 + R() * 5) * (1 - k * 0.6);
+    c.fillStyle = i % 3 ? `rgba(120,100,80,${0.75 * (1 - k)})` : `rgba(255,210,150,${0.9 * (1 - k)})`; c.beginPath(); c.arc(x, y, sz, 0, TAU); c.fill(); }
+  // a low dust cloud rolling out behind the wave
+  { const r = far * 0.55 * eo, g = c.createRadialGradient(bx, by, r * 0.4, bx, by, r + 1); g.addColorStop(0, "rgba(90,80,70,0)"); g.addColorStop(0.8, `rgba(110,95,80,${0.35 * (1 - sk)})`); g.addColorStop(1, "rgba(110,95,80,0)"); c.save(); c.translate(bx, by); c.scale(1, flat); c.translate(-bx, -by); c.fillStyle = g; c.beginPath(); c.arc(bx, by, r + 1, 0, TAU); c.fill(); c.restore(); }
+}
 // screen space: the countdown banner and the finale
 function drawDoom() {
   if (!G || G.attract) return;
@@ -3869,6 +3915,7 @@ function drawDoom() {
     if (!drawDoom.last || drawDoom.last !== Math.ceil(urgent ? (1 - urgent) * DOOM.charge : 99)) { drawDoom.last = Math.ceil(urgent ? (1 - urgent) * DOOM.charge : 99); if (urgent && drawDoom.last <= 10 && !UI.paused) SND.doom("tick", drawDoom.last); }
     return;
   }
+  if (G.review) { cvs.style.transform = ""; return; }
   // 10 s scene on sim time: the target base falls at hit = show - baseAt (7 s)
   const e = DOOM.show - F.t + (G.over ? 0 : Math.min(acc, CFG.dt)), M = Math.min(SW, SH), R = mulberry32(7), hit = DOOM.show - DOOM.baseAt;
   if (e > DOOM.show + 3) return;
@@ -3900,7 +3947,7 @@ function drawDoom() {
     c.setTransform(DPR, 0, 0, DPR, 0, 0);
     if (e > hit + 0.2 ? e < hit + 2.4 : Math.sin(e * 3) > 0.4) { const big = e > hit; c.font = `900 ${M * (big ? 0.13 : 0.07)}px "Big Shoulders Display",system-ui,sans-serif`; c.fillStyle = "#fff38a"; c.strokeStyle = "#3a2600"; c.lineWidth = 6; c.strokeText("QUACK!", x + s * 0.45, y - s * 0.6); c.fillText("QUACK!", x + s * 0.45, y - s * 0.6); }
   } else if (F.w === 1) { // black hole opens on the base, eats it, then collapses with a shockwave
-    const grow = clamp(e / (hit - 0.5), 0, 1), shrink = clamp((e - hit - 0.6) / 1.6, 0, 1), r = M * 0.2 * (0.03 + 0.97 * grow * grow) * (1 - shrink), k = clamp(e / 1.2, 0, 1) * (1 - shrink);
+    const grow = clamp(e / (hit - 0.5), 0, 1), shrink = clamp((e - hit - 0.2) / 0.9, 0, 1), r = M * 0.2 * (0.03 + 0.97 * grow * grow) * (1 - shrink), k = clamp(e / 1.2, 0, 1) * (1 - shrink);
     const gd = c.createRadialGradient(bx, by, r * 0.5, bx, by, Math.max(SW, SH)); gd.addColorStop(0, `rgba(0,0,0,${0.85 * k})`); gd.addColorStop(1, `rgba(0,0,0,${(0.15 + 0.5 * grow) * k})`); c.fillStyle = gd; c.fillRect(0, 0, SW, SH);
     c.translate(bx, by);
     for (let i = 0; i < 60; i++) { const ph = (e * (0.35 + (i % 5) * 0.08) + R()) % 1, a = R() * TAU + ph * (4 + i % 3), d = r * (1.15 + 3.2 * (1 - ph)); if (r < 2) break;
@@ -3909,7 +3956,7 @@ function drawDoom() {
     c.scale(1, 0.32); const ga = c.createRadialGradient(0, 0, r * 0.9, 0, 0, r * 2.1 + 1); ga.addColorStop(0, "rgba(255,220,140,.95)"); ga.addColorStop(0.4, "rgba(255,120,40,.6)"); ga.addColorStop(1, "rgba(255,60,20,0)"); c.fillStyle = ga; c.beginPath(); c.arc(0, 0, r * 2.1 + 1, 0, TAU); c.fill();
     c.setTransform(DPR, 0, 0, DPR, 0, 0); c.fillStyle = "#000"; c.beginPath(); c.arc(bx, by, r, 0, TAU); c.fill();
     c.strokeStyle = "rgba(255,230,180,.8)"; c.lineWidth = 2; c.beginPath(); c.arc(bx, by, r * 1.03, 0, TAU); c.stroke();
-    if (shrink > 0.95) { const sk = clamp((e - hit - 2.2) / 1.2, 0, 1); c.strokeStyle = `rgba(255,240,210,${1 - sk})`; c.lineWidth = 10 * (1 - sk) + 1; c.beginPath(); c.ellipse(bx, by, M * 0.9 * sk, M * 0.5 * sk, 0, 0, TAU); c.stroke(); }
+    if (shrink > 0.95) drawShock(c, bx, by, e - hit - 1.1, M, R);
   } else if (F.w === 2) { // alien mothership: arrives, scans, one big beam on the base, then leaves
     const sw = Math.min(SW * 0.85, M * 1.3), sh = M * 0.2, hy = by - M * 0.3, x = bx;
     let y = e < 2.5 ? -sh + (hy + sh) * eo(e / 2.5) : hy; if (e > hit + 1.4) { const k = (e - hit - 1.4) / 1.6; y = hy - (hy + sh * 2) * k * k; }
@@ -3943,7 +3990,6 @@ function drawDoom() {
   const ca = clamp(e / 0.4, 0, 1) * clamp((hit - 0.3 - e) / 0.5, 0, 1);
   const who = F.owner === G.human ? "Your" : G.players[F.owner].team.name + "'s", cy = F.w === 2 ? Math.min(SH * 0.66, by + M * 0.12) : SH * 0.12;
   if (ca > 0) { c.globalAlpha = ca; c.font = `800 ${Math.max(12, M * 0.03)}px system-ui,sans-serif`; c.fillStyle = "#ffd24a"; c.strokeStyle = "rgba(0,0,0,.85)"; c.lineWidth = 5;
-    const l1 = who + " mystery weapon:"; c.strokeText(l1, SW / 2, cy); c.fillText(l1, SW / 2, cy);
     c.font = `900 ${Math.max(30, M * 0.1)}px "Big Shoulders Display",system-ui,sans-serif`; c.fillStyle = "#fff6e0"; const l2 = DOOM.names[F.w].toUpperCase();
     c.strokeText(l2, SW / 2, cy + M * 0.085, SW - 30); c.fillText(l2, SW / 2, cy + M * 0.085, SW - 30); }
   const la = clamp((e - hit - 0.5) / 0.4, 0, 1);
@@ -4316,7 +4362,7 @@ cvs.addEventListener("pointerdown", e => {
     // long-press on your selected soldiers, then drag them onto a squad letter to move them into that squad
     const w = s2w(e.clientX, e.clientY), hr = Math.max(16, 22 / cam.z);
     const g1 = gesture;
-    if (!UI.boxMode && !UI.rallyMode && !UI.strikeMode && e.button === 0) { UI.hold = { x: e.clientX, y: e.clientY, t0: performance.now(), on: false, enemy: !!holdEnemy(e.clientX, e.clientY) }; g1.holdT = setTimeout(() => { if (gesture === g1 && g1.type === "pending") { g1.type = "held"; UI.hold.on = true; if (navigator.vibrate) try { navigator.vibrate(12); } catch (er) {} } }, HOLD_MS); }
+    if (!G.over && !UI.boxMode && !UI.rallyMode && !UI.strikeMode && e.button === 0) { UI.hold = { x: e.clientX, y: e.clientY, t0: performance.now(), on: false, enemy: !!holdEnemy(e.clientX, e.clientY) }; g1.holdT = setTimeout(() => { if (gesture === g1 && g1.type === "pending") { g1.type = "held"; UI.hold.on = true; if (navigator.vibrate) try { navigator.vibrate(12); } catch (er) {} } }, HOLD_MS); }
     if (EXP() && !UI.boxMode && UI.sel.size && G.units.some(u => u.alive && u.owner === G.human && UI.sel.has(u.id) && d2(u, w) < hr * hr)) {
       clearTimeout(g1.holdT); UI.hold = null;
       const g0 = gesture; g0.carryT = setTimeout(() => { if (gesture === g0 && g0.type === "pending") { g0.type = "carry"; UI.carry = { x: e.clientX, y: e.clientY, n: selIds().filter(id => G.unitById.get(id).kind === "inf").length }; if (navigator.vibrate) try { navigator.vibrate(12); } catch (er) {} } }, 380);
@@ -4359,7 +4405,8 @@ function endPtr(e) {
     if (t && isSqKey(t.dataset.sel)) assignSquad(+t.dataset.sel);
     UI.carry = null;
   } else if (gesture.type === "pending" && e.type === "pointerup") {
-    if (gesture.mouse && gesture.btn === 2) { const w = s2w(e.clientX, e.clientY); orderTo(w.x, w.y); }
+    if (G.over) { /* looking around after the battle: taps do nothing */ }
+    else if (gesture.mouse && gesture.btn === 2) { const w = s2w(e.clientX, e.clientY); orderTo(w.x, w.y); }
     else if (gesture.btn === 0) handleTap(e.clientX, e.clientY, gesture.shift);
   } else if (gesture.type === "box") {
     const a = s2w(UI.box.x0, UI.box.y0), b = s2w(UI.box.x1, UI.box.y1);
@@ -4392,6 +4439,7 @@ window.addEventListener("keydown", e => {
   if (!G || UI.paused) { if (e.key === "Escape" && G && !G.over && !G.attract) togglePause(); return; }
   const k = e.key.toLowerCase();
   UI.keys.add(k);
+  if (G.over) return; // after the battle only the camera keys work
   const xk = EXP();
   if (!xk && "ifrbe".includes(k) && k.length === 1) return;
   if ("1234".includes(k) && k.length === 1) { if ((e.ctrlKey || e.metaKey) && xk) { e.preventDefault(); assignSquad(+k - 1); } else selectKey(String(+k - 1)); }
@@ -4552,7 +4600,7 @@ function initGame(g) {
 }
 // a live AI battle plays behind the menu
 function startAttract() {
-  AC.vx = AC.vy = 0; AC.pickT = 0;
+  AC.vx = AC.vy = 0; AC.pickT = 0; leaveReview();
   setTimeout(resize, 0);
   initGame(newGame(4, 50, (Math.random() * 1e9) >>> 0, 3, 30, 30, (Math.random() * MAPS.length) | 0));
   G.attract = true; G.players[0].ai = true; G.players[0].smart = true; G.players[0].mult = 1.3;
@@ -4588,7 +4636,7 @@ addEventListener("popstate", () => {
   if (G && !G.attract && !G.over && $("menu").hidden) { if (!UI.paused) togglePause(); guardBack(); }
 });
 function start() {
-  TUT.stop(); setTimeout(resize, 0); guardBack();
+  TUT.stop(); setTimeout(resize, 0); guardBack(); leaveReview();
   document.body.classList.remove("attract");
   initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me, UI.opts.map));
   G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions && UI.opts.misTypes.length > 0 && (EXP() || loadLog().length >= 3); G.misTypes = UI.opts.misTypes.slice();
@@ -5720,14 +5768,37 @@ function boardHome() { if ($("boardShare").contains($("sharebox"))) $("againBtn"
 $("boardBack").addEventListener("click", () => { boardHome(); $("board").hidden = true; if (boardFrom === "over") $("over").hidden = false; else $("menu").hidden = false; });
 $("boardAgain").addEventListener("click", () => { boardHome(); $("board").hidden = true; $("againBtn").click(); });
 
+// after the battle: the whole map is revealed and the player can look around before the score screen
+function statLines(me) {
+  const st = gStats(), t = Math.floor(G.time), n = Object.values(UI.use || {}).reduce((a, b) => a + b, 0), L = [];
+  L.push(["Time", fmtT(t)], ["Kills", me.kills], ["Losses", me.losses], ["Army level", me.level + 1]);
+  L.push(["Damage dealt", fmtN(Math.round(st.dealt))], ["Damage taken", fmtN(Math.round(st.taken))]);
+  if (st.genKills) L.push(["Generals killed", st.genKills]); L.push(["Your general fell", st.genLost ? st.genLost + "×" : "never"]);
+  if (st.bases) L.push(["Bases destroyed", st.bases]);
+  if (st.low !== Infinity) L.push(["Fewest soldiers left", st.low]);
+  if (st.crates) L.push(["Crates opened", st.crates]); if (st.misWon || st.misLost) L.push(["Missions", st.misWon + " won, " + st.misLost + " lost"]);
+  if (st.strikes) L.push(["Air strikes", st.strikes]); L.push(["Orders given", n]);
+  return L;
+}
+function enterReview() {
+  G.review = true; G.reviewAt = performance.now(); UI.sel.clear(); UI.rallyMode = UI.strikeMode = UI.boxMode = false; closeTray(); disarmKill();
+  const me = G.players[G.human];
+  $("epTitle").firstChild.textContent = G.over.win ? "Victory" : "Defeated";
+  $("epSub").textContent = (G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen") + " · map revealed";
+  $("epStats").innerHTML = statLines(me).slice(0, 8).map(([k, v]) => `${k} <b>${v}</b>`).join(" · ") + `<div class="ep-hint">Drag to look around the battlefield.</div>`;
+  document.body.classList.add("ended"); $("endPanel").hidden = false;
+}
+function leaveReview() { cvs.style.transform = ""; document.body.classList.remove("ended"); $("endPanel").hidden = true; }
+$("epScore").addEventListener("click", () => { SND.ui(); leaveReview(); showOver(); });
 function showOver() {
+  leaveReview();
   if (G.tutorial) { toMenu(); return; }
   UI.paused = true;
   const me = G.players[G.human];
   $("overTitle").textContent = G.over.win ? "Victory" : "Defeated";
-  $("overEyebrow").textContent = G.over.doom != null ? (G.over.win ? "Mystery weapon: " + DOOM.names[G.over.doom] : "Wiped out by " + G.players[G.over.by].team.name + "'s " + DOOM.names[G.over.doom].toLowerCase()) : G.over.win ? "All enemy bases destroyed" : "Your base has fallen";
+  $("overEyebrow").textContent = G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen";
   const t = Math.floor(G.time);
-  $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your ${G.myArmy}<br>Time ${Math.floor(t / 60)}m ${t % 60}s<br>Kills ${me.kills} · Losses ${me.losses}<br>Army level ${me.level + 1} (${me.points} points)`;
+  $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your ${G.myArmy}<br>` + statLines(me).map(([k, v]) => `${k} ${v}`).join(" · ");
   const enemies = G.players.length - 1, secs = t, win = !!G.over.win;
   const score = gameScore(win, me.kills, secs, G.diff, enemies, G.enemyArmy, G.myArmy);
   const log = loadLog(), prevHi = log.reduce((m, g) => Math.max(m, g.score), 0);
@@ -5826,18 +5897,19 @@ function frame(now) {
     if (UI.keys.has("s") || UI.keys.has("arrowdown")) cam.y += ps;
     if (UI.keys.has("a") || UI.keys.has("arrowleft")) cam.x -= ps;
     if (UI.keys.has("d") || UI.keys.has("arrowright")) cam.x += ps;
-    if (G.doomFire) { const F = G.doomFire, k = Math.min(1, dtReal * 2.5), zt = Math.min(SW, SH) < 600 ? 0.75 : 0.9; cam.x += (F.tx - cam.x) * k; cam.y += (F.ty - cam.y) * k; cam.z += (zt - cam.z) * k; }
+    if (G.doomFire && !G.review) { const F = G.doomFire, k = Math.min(1, dtReal * 2.5), zt = Math.min(SW, SH) < 600 ? 0.75 : 0.9; cam.x += (F.tx - cam.x) * k; cam.y += (F.ty - cam.y) * k; cam.z += (zt - cam.z) * k; }
     clampCam();
     acc += dtReal * UI.speed;
     let steps = 0; const maxSteps = Math.max(5, Math.ceil(UI.speed * 3));
-    while (acc >= CFG.dt && steps < maxSteps) { step(); acc -= CFG.dt; steps++; if (G.over) break; }
+    while (!G.over && acc >= CFG.dt && steps < maxSteps) { step(); acc -= CFG.dt; steps++; if (G.over) break; }
     if (acc > CFG.dt * maxSteps) acc = 0; // device can't keep up at this speed: drop the backlog
     if (UI.speed < 1 && !G.tutorial) G.slowmo = true;
     for (const pg of UI.pings) pg.t -= dtReal;
     UI.pings = UI.pings.filter(p => p.t > 0);
     updateFog();
     hudT -= dtReal; if (hudT <= 0) { hudT = 0.2; renderScore(); refreshBar(); }
-    if (G.over) { SND.sting(G.over.win); updateFog(); renderScore(); setTimeout(showOver, 1400); UI.paused = true; }
+    if (G.over && !G.review) { SND.sting(G.over.win); updateFog(); renderScore();
+      if (G.tutorial) { setTimeout(showOver, 1400); UI.paused = true; } else enterReview(); }
   }
   // the menu backdrop draws at a steady ~30fps so the menu itself stays smooth
   if (G) {
