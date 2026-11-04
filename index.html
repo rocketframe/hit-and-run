@@ -270,9 +270,10 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
 .log .w{color:#9fe07a}.log .l{color:var(--danger)}
 .fine{font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--ink-dim);margin:0}
 body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #alertArrow,body.ended #alertEdge,body.ended #killMenu,body.ended #score,body.ended #spdBtn,body.ended #pauseBtn,body.ended #spdPop,body.ended #msgLog{display:none!important}
-#endPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:30;width:min(560px,calc(100vw - 20px));background:rgba(12,16,18,.82);border:1px solid rgba(233,229,211,.18);border-radius:12px;padding:10px 12px;display:flex;gap:12px;align-items:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#endPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:30;width:min(780px,calc(100vw - 20px));background:rgba(12,16,18,.82);border:1px solid rgba(233,229,211,.18);border-radius:12px;padding:10px 12px;display:flex;gap:12px;align-items:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #endPanel[hidden]{display:none}
-#endPanel .ep-t{flex:0 1 38%;min-width:0;font-family:var(--title,inherit);font-size:20px;letter-spacing:.04em;color:#e9e5d3;line-height:1.1}
+.stt{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));column-gap:14px;margin:2px 0 4px;text-align:left}.stt div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid rgba(233,229,211,.08);padding:1px 0;min-width:0}.stt dt{opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stt dd{margin:0;color:#e9e5d3;font-weight:600;text-align:right}
+#endPanel .ep-t{flex:0 1 26%;min-width:0;font-family:var(--title,inherit);font-size:20px;letter-spacing:.04em;color:#e9e5d3;line-height:1.1}
 #endPanel .ep-t small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:0;color:var(--ink-dim);margin-top:2px}
 #endPanel .ep-s{flex:1;font-family:var(--mono);font-size:11px;color:var(--ink-dim);line-height:1.5;min-width:0}
 #endPanel .ep-s b{color:#e9e5d3;font-weight:600}
@@ -477,7 +478,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
 <div id="endPanel" hidden role="region" aria-label="Battle over">
   <div class="ep-t" id="epTitle">Defeated<small id="epSub"></small></div>
   <div class="ep-s" id="epStats"></div>
-  <button class="go" id="epScore">See score ▸</button>
+  <button class="go" id="epScore">Enter score ▸</button>
 </div>
 <div class="screen" id="over" hidden>
   <div class="card">
@@ -3366,6 +3367,24 @@ function ruinOf(p) {
   const fires = []; for (let i = 0; i < 6; i++) { const a = R() * TAU, d = 10 + R() * 55; fires.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, s: 0.6 + R() * 0.7, ph: R() * 9 }); }
   b.ruin = { era, cv, fires }; return cv;
 }
+// a damaged base smokes (orange bar) and then burns (red bar). P(wx, wy, h) -> screen point, k = pixels per world unit
+const SMOKE_L = sprite(64, g => { const gr = g.createRadialGradient(0, 0, 0, 0, 0, 32); gr.addColorStop(0, "rgba(215,212,205,.95)"); gr.addColorStop(0.55, "rgba(185,182,175,.5)"); gr.addColorStop(1, "rgba(150,150,145,0)"); g.fillStyle = gr; g.fillRect(-32, -32, 64, 64); }, 1),
+  SMOKE_D = sprite(64, g => { const gr = g.createRadialGradient(0, 0, 0, 0, 0, 32); gr.addColorStop(0, "rgba(45,43,40,.95)"); gr.addColorStop(0.55, "rgba(60,58,55,.55)"); gr.addColorStop(1, "rgba(80,78,75,0)"); g.fillStyle = gr; g.fillRect(-32, -32, 64, 64); }, 1);
+function baseBurn(g, b, now, P, k) {
+  const f = b.hp / (b.max || CFG.base.hp); if (f > 0.6) return;
+  if (!b.dmg) { let sd = Math.abs(Math.floor(b.x * 7 + b.y * 13)) || 1; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647; b.dmg = []; for (let i = 0; i < 5; i++) { const a = R() * TAU, d = 12 + R() * 38; b.dmg.push({ x: Math.cos(a) * d, y: Math.sin(a) * d * 0.8, s: 0.7 + R() * 0.6, ph: R() * 9 }); } }
+  const sm = clamp((0.6 - f) / 0.6, 0.25, 1), fire = f <= 0.35 ? 0.45 + 0.55 * clamp((0.35 - f) / 0.35, 0, 1) : 0, nS = f <= 0.35 ? 5 : 2;
+  g.save();
+  for (let i = 0; i < nS; i++) { const d = b.dmg[i], N = 8;
+    for (let j = 0; j < N; j++) { const t = (now * 0.22 * (0.8 + d.s * 0.3) + j / N + d.ph) % 1, [sx, sy] = P(b.x + d.x + t * 26 + Math.sin(t * 5 + d.ph) * 4, b.y + d.y, 6 + t * 70 * d.s);
+      const r = (8 + t * 30) * d.s * k * (0.7 + 0.3 * sm); g.globalAlpha = (1 - t) * Math.min(1, t * 5) * (0.5 + 0.45 * sm);
+      g.drawImage(fire ? SMOKE_D : SMOKE_L, sx - r, sy - r, r * 2, r * 2); } }
+  if (fire) { g.globalCompositeOperation = "lighter";
+    for (let i = 0; i < nS; i++) { const d = b.dmg[i], fl = 0.75 + 0.25 * Math.sin(now * 9 + d.ph) * Math.sin(now * 13.7 + d.ph * 2), [x, y] = P(b.x + d.x, b.y + d.y, 3), r = 11 * d.s * fire * fl * k;
+      const gd = g.createRadialGradient(x, y, 0, x, y, r * 1.4); gd.addColorStop(0, `rgba(255,170,70,${0.55 * fire})`); gd.addColorStop(0.4, `rgba(255,90,20,${0.3 * fire})`); gd.addColorStop(1, "rgba(255,60,10,0)"); g.globalAlpha = 1; g.fillStyle = gd; g.beginPath(); g.ellipse(x, y, r * 1.4, r * 0.8, 0, 0, TAU); g.fill();
+      for (let q = 0; q < 6; q++) { const t = (now * 1.9 + d.ph + q / 6) % 1, [fx, fy] = P(b.x + d.x + Math.sin(now * 6 + q * 2.3 + d.ph) * 3 * d.s * t, b.y + d.y, 2 + t * 26 * d.s * fire), rr = ((4.5 - 3.6 * t) * d.s * fire + 0.5) * k; g.fillStyle = `rgba(255,${120 + 110 * (1 - t)},${40 + 40 * (1 - t)},${0.75 * (1 - t * t) * fire})`; g.beginPath(); g.ellipse(fx, fy, rr * 0.75, rr * 1.35, 0, 0, TAU); g.fill(); } } }
+  g.restore();
+}
 function drawRuin(c, p, now) {
   const b = p.base, cv = ruinOf(p), age = G.time - (b.diedAt != null ? b.diedAt : G.time - 60), burn = clamp(1 - age / 45, 0.15, 1), vis = isVis(b.x, b.y) || !!(G.attract || G.doomFire);
   c.globalAlpha = 1; c.drawImage(cv, b.x - 110, b.y - 110, 220, 220);
@@ -3446,6 +3465,7 @@ function render(dtReal) {
     const B3 = BB && base3(eraOf(p.id)); if (!B3) c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
     if (B3) STAND.push({ bb: B3, x: b.x, y: b.y, al: c.globalAlpha, fog: true });
     if (BB) { const F3 = rally3(TEAM.indexOf(p.team), p.id * 3); if (F3) STAND.push({ bb: F3, sc: 1.7, x: b.x - 72, y: b.y + 8, al: c.globalAlpha }); } // the team colour flies on a flag
+    if (!ghost && b.hp < (b.max || CFG.base.hp) * 0.6) { if (BB) STAND.push({ draw: (g, P, k) => baseBurn(g, b, now, P, k), x: b.x, y: b.y + 40, al: 1 }); else baseBurn(c, b, now, (x, y, h) => [x, y - h], 1); }
     else if (BB) for (const v of BB.pieces) STAND.push({ bb: (v.hut != null && hut3(v.hut)) || v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
     if (!ghost) {
       // turret (the 3D village has no gun to show)
@@ -5815,6 +5835,7 @@ $("boardBack").addEventListener("click", () => { boardHome(); $("board").hidden 
 $("boardAgain").addEventListener("click", () => { boardHome(); $("board").hidden = true; $("againBtn").click(); });
 
 // after the battle: the whole map is revealed and the player can look around before the score screen
+const statTable = L => `<dl class="stt">${L.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
 function statLines(me) {
   const st = gStats(), t = Math.floor(G.time), n = Object.values(UI.use || {}).reduce((a, b) => a + b, 0), L = [];
   const wm = st.walk / 15.5; // 15.5 map units = 1 m at the soldiers' scale
@@ -5833,7 +5854,7 @@ function enterReview() {
   const me = G.players[G.human];
   $("epTitle").firstChild.textContent = G.over.win ? "Victory" : "Defeated";
   $("epSub").textContent = (G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen") + " · map revealed";
-  $("epStats").innerHTML = statLines(me).slice(0, 9).map(([k, v]) => `${k} <b>${v}</b>`).join(" · ") + `<div class="ep-hint">Drag to look around the battlefield.</div>`;
+  $("epStats").innerHTML = statTable(statLines(me).slice(0, 10)) + `<div class="ep-hint">Drag to look around the battlefield.</div>`;
   document.body.classList.add("ended"); $("endPanel").hidden = false;
 }
 function leaveReview() { cvs.style.transform = ""; document.body.classList.remove("ended"); $("endPanel").hidden = true; }
@@ -5846,7 +5867,7 @@ function showOver() {
   $("overTitle").textContent = G.over.win ? "Victory" : "Defeated";
   $("overEyebrow").textContent = G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen";
   const t = Math.floor(G.time);
-  $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your ${G.myArmy}<br>` + statLines(me).map(([k, v]) => `${k} ${v}`).join(" · ");
+  $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your ${G.myArmy}<br>` + statTable(statLines(me));
   const enemies = G.players.length - 1, secs = t, win = !!G.over.win;
   const score = gameScore(win, me.kills, secs, G.diff, enemies, G.enemyArmy, G.myArmy);
   const log = loadLog(), prevHi = log.reduce((m, g) => Math.max(m, g.score), 0);
@@ -5982,7 +6003,7 @@ if (URL_ERA != null) setTimeout(() => {
 }, 400);
 
 // test hook
-window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue };
+window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
 })();
 </script>
 
