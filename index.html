@@ -410,7 +410,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b>, then pick who goes: the selected soldiers, the ones on screen, or all of them. The general is only withdrawn if you pick him on his own. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
-    <section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> and moves up one age with each level: L1 <b>Stone Age</b> (slings), L2 <b>Bronze Age</b> (javelins, a chariot), L3 <b>Middle Ages</b> (bows, a castle, a horseman), L4 <b>Musket Age</b> (muskets, a star fort), L5 <b>World Wars</b> (rifles, a jeep, trenches), L6 <b>Modern Age</b> (assault rifles, a tank), L7 <b>Future</b> (lasers, a hover bike) and L8 <b>Space Age</b> (plasma, a mech walker).</li><li>The era is the look of each army's upgrades: stones, javelins, arrows and plasma fly for a moment before they land, bullets and lasers hit at once. So an enemy in a later age is an army several upgrades ahead of you.</li></ul></section>
+    <section><h3>Level 9: the mystery weapon</h3><ul><li>The first army to reach <b>L9</b> gets a mystery weapon. It charges for 20 seconds while that army's general is alive, and then that army wins.</li><li>Everyone sees the countdown and where the general is. Kill him and the charge resets, and you get mercenaries and healers. It starts again when he is back from base. If he is already down when L9 is reached, it waits for him.</li><li>What the weapon is stays a surprise until it fires.</li></ul></section><section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> and moves up one age with each level: L1 <b>Stone Age</b> (slings), L2 <b>Bronze Age</b> (javelins, a chariot), L3 <b>Middle Ages</b> (bows, a castle, a horseman), L4 <b>Musket Age</b> (muskets, a star fort), L5 <b>World Wars</b> (rifles, a jeep, trenches), L6 <b>Modern Age</b> (assault rifles, a tank), L7 <b>Future</b> (lasers, a hover bike) and L8 <b>Space Age</b> (plasma, a mech walker).</li><li>The era is the look of each army's upgrades: stones, javelins, arrows and plasma fly for a moment before they land, bullets and lasers hit at once. So an enemy in a later age is an army several upgrades ahead of you.</li></ul></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
     <section><h3>Marks on your soldiers</h3><ul><li><b>Pale ring</b>: selected.</li><li><b>Bar underneath</b>: health, shown once a soldier is hurt.</li><li><b>Gold ring and arc</b>: mercenary. The arc shows how long they stay.</li><li><b>Green bubbles and dashed ring</b>: plague. It jumps to soldiers close by, so SPREAD out.</li><li><b>Dot above the head</b>: a crate effect. <b style="color:#ff9a3c">Orange</b> rapid fire, <b style="color:#6fd3ff">blue</b> sharpshooters, <b style="color:#9a9a9a">grey</b> orders lost, blinking <b style="color:#ff3b30">red</b> signal fire (the enemy can see you).</li><li>Your army level is the <b>L</b> number at the top left.</li></ul></section>
     <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: [ and ] to slow down or speed up time, \ for normal speed, shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, Z army (all but the general), I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
@@ -868,6 +868,7 @@ function damage(t, amount, by) {
   const killer = G.players[by];
   killer.kills++; addPoints(killer, 1);
   if (t.kind === "gen") {
+    const dm = G.players[t.owner].doom; if (dm && dm.on) dm.by = by;
     if (t.owner === G.human) toast("Your general is down. Back at base in " + CFG.genRespawn + "s", "bad");
     else if (by === G.human) toast(G.players[t.owner].team.name + " general eliminated", "gold");
   }
@@ -876,7 +877,7 @@ function damage(t, amount, by) {
 function addPoints(p, n) {
   p.points += n;
   while (p.points >= (p.level - (p.bonus || 0) + 1) * G.upEvery) {
-    const before = p.level; p.level++; pushFx({ k: "level", owner: p.id, x: p.base.x, y: p.base.y });
+    const before = p.level; p.level++; pushFx({ k: "level", owner: p.id, x: p.base.x, y: p.base.y }); onLevel(p, before);
     for (const u of G.units) if (u.owner === p.id && u.alive) {
       const C = CFG[u.kind].hp; u.hp *= (1 + CFG.upStep * p.level) / (1 + CFG.upStep * before);
     }
@@ -961,10 +962,59 @@ function killQuiet(u) { // no points for anyone
   u.alive = false; u.respawn = u.temp ? Infinity : (u.kind === "gen" ? CFG.genRespawn : CFG.respawn) * G.players[u.owner].respawnMult; u.seen = u.tgt = null;
   pushFx({ k: "death", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" });
 }
+function onLevel(p, before) {
+  if (eraOfLevel(p.level) !== eraOfLevel(before) && G.eraFix == null) pushFx({ k: "era", owner: p.id, e: eraOfLevel(p.level), x: p.base.x, y: p.base.y });
+  if (p.level >= DOOM.lvl) doomArm(p);
+}
 function levelUp(p) {
   const before = p.level; p.level++;
-  if (eraOfLevel(p.level) !== eraOfLevel(before) && G.eraFix == null) pushFx({ k: "era", owner: p.id, e: eraOfLevel(p.level), x: p.base.x, y: p.base.y }); p.bonus = (p.bonus || 0) + 1; pushFx({ k: "level", owner: p.id, x: p.base.x, y: p.base.y });
+  onLevel(p, before); p.bonus = (p.bonus || 0) + 1; pushFx({ k: "level", owner: p.id, x: p.base.x, y: p.base.y });
   for (const u of G.units) if (u.owner === p.id && u.alive) u.hp *= (1 + CFG.upStep * p.level) / (1 + CFG.upStep * before);
+}
+// ---- level 9: the mystery weapon ("carry the bomb") ----
+// Reaching L9 arms it. It charges for DOOM.charge seconds while that army's general is alive; everyone sees it.
+// Kill the general and it resets (the killer gets mercenaries and a heal); it starts again when he respawns.
+// If it fires, every other army is wiped out and its owner wins.
+const DOOM = { lvl: 8, charge: 20, show: 4.5, names: ["Giant rubber duck", "Black hole", "Alien mothership", "Chicken rain"] };
+function doomArm(p) {
+  if (p.doom || G.attract || G.tutorial || p.out || G.doomFire) return;
+  p.doom = { t: DOOM.charge, on: false, w: Math.floor(G.rng() * DOOM.names.length), by: null, armT: G.time };
+  pushFx({ k: "doomArm", owner: p.id });
+}
+function doomReward(pid, x, y) {
+  const q = G.players[pid]; if (!q || q.out) return;
+  const n = clamp(Math.round((pid === G.human ? G.myArmy : G.enemyArmy) * 0.25), 3, 10);
+  let near = null; for (const v of G.units) if (v.alive && v.owner === pid && v.kind === "inf" && !v.temp && (!near || d2(v, { x, y }) < d2(near, { x, y }))) near = v;
+  const at = near || q.base;
+  for (let i = 0; i < n; i++) { const a = i / n * TAU2; tempUnit(pid, at.x + Math.cos(a) * 26, at.y + Math.sin(a) * 26, near ? near.squad : 0, 60).merc = true; }
+  for (const v of G.units) if (v.alive && v.owner === pid && d2(v, at) < 260 * 260) { v.hp = maxHp(v); v.plague = 0; }
+}
+function stepDoom(dt) {
+  const F = G.doomFire;
+  if (F) {
+    F.t -= dt;
+    const end = F.t <= 0.6;
+    for (const u of G.units) if (u.alive && u.owner !== F.owner && (end || G.rng() < dt * 0.9)) { u.alive = false; u.respawn = Infinity; u.seen = u.tgt = null; pushFx({ k: "death", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" }); }
+    if (end && !G.over) {
+      for (const q of G.players) if (q.id !== F.owner && !q.out) { q.out = true; q.base.alive = false; q.base.hp = 0; pushFx({ k: "boom", x: q.base.x, y: q.base.y, owner: q.id, c: q.team.c }); }
+      G.over = { win: F.owner === G.human, doom: F.w, by: F.owner };
+    }
+    return;
+  }
+  for (const p of G.players) {
+    const d = p.doom; if (!d) continue;
+    if (p.out) { p.doom = null; continue; }
+    const gen = G.gens[p.id], up = gen && gen.alive;
+    if (!d.on) { if (up) { d.on = true; d.t = DOOM.charge; pushFx({ k: "doomGo", owner: p.id, fresh: G.time - d.armT < 0.5 }); } continue; }
+    if (!up) { // the general fell or was withdrawn: the charge fizzles
+      d.on = false; d.t = DOOM.charge;
+      pushFx({ k: "doomStop", owner: p.id, by: d.by, x: gen ? gen.x : p.base.x, y: gen ? gen.y : p.base.y });
+      if (d.by != null && d.by !== p.id) doomReward(d.by, gen.x, gen.y);
+      d.by = null; continue;
+    }
+    d.t -= dt;
+    if (d.t <= 0) { G.doomFire = { owner: p.id, w: d.w, t: DOOM.show, t0: G.time, x: gen.x, y: gen.y }; pushFx({ k: "doomFire", owner: p.id, w: d.w }); return; }
+  }
 }
 function strikeAt(owner, x, y) {
   G.strikes.push({ owner, x: clamp(x, 0, G.S), y: clamp(y, 0, G.S), t: 1.8 });
@@ -1195,7 +1245,7 @@ function step() {
   // apply orders
   for (const c of G.cmds) applyCmd(c);
   G.cmds.length = 0;
-  stepCrates(dt); stepMissions(dt);
+  stepCrates(dt); stepMissions(dt); stepDoom(dt);
   // AI thinking
   for (const p of G.players) if (p.ai && !p.out) { p.aiState.t -= dt; if (p.aiState.t <= 0) { p.aiState.t = p.thinkEvery; (p.think || aiThink)(p); } }
 
@@ -1383,6 +1433,13 @@ function aiThink(p) {
   const gen = G.gens[me];
   const order = (list, x, y, mode) => { if (list.length) issue({ p: me, ids: list.map(u => u.id), x: clamp(x, 30, G.S - 30), y: clamp(y, 30, G.S - 30), mode }); };
   const rally = { x: b.x + p.fwd.x * 300, y: b.y + p.fwd.y * 300 };
+  // the mystery weapon overrides everything: hunt a charging general, or guard our own
+  if (!G.doomFire) {
+    const all = G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive && !u.mis);
+    let hunt = null; for (const q of G.players) if (q.id !== me && !q.out && q.doom && q.doom.on && G.gens[q.id].alive && (!hunt || d2(G.gens[q.id], b) < d2(hunt, b))) hunt = G.gens[q.id];
+    if (hunt && !(p.doom && p.doom.on)) { order(all, hunt.x, hunt.y, "attack"); if (gen.alive && gen.hp > maxHp(gen) * 0.5) order([gen], hunt.x, hunt.y, "attack"); return; }
+    if (p.doom && p.doom.on && gen.alive) { const hx = b.x + p.fwd.x * 40, hy = b.y + p.fwd.y * 40; order([gen], hx, hy, "move"); order(all, (gen.x + hx) / 2, (gen.y + hy) / 2, "attack"); return; }
+  }
 
   // target the strongest player (most points), nudged by distance: everyone hunts the leader
   if (!A.retarget || G.time > A.retarget || !A.target || !A.target.alive) {
@@ -2409,6 +2466,7 @@ function consumeFx() {
       if (e.owner === me && !G.attract && performance.now() - (consumeFx.hzT || 0) > 6000) { consumeFx.hzT = performance.now(); toast({ drown: "Soldiers are drowning in the lake", fall: "A soldier fell into a rift", sink: "Soldiers are sinking in quicksand" }[e.how], "bad"); }
       continue;
     }
+    if (e.k.startsWith("doom")) { if (!G.attract) doomFx(e); continue; }
     const pub = e.k === "crate" || e.k === "strike" || e.k === "strikeIn" || e.k === "open" || e.k === "trap" || e.k === "lost";
     if (!seen && !pub) continue;
     if (e.k === "strikeIn" && e.owner !== me && !G.attract) toast("Incoming strike!", "bad");
@@ -2857,6 +2915,7 @@ function render(dtReal) {
     c.beginPath(); c.moveTo(st.x - R * 1.15, st.y); c.lineTo(st.x - R * 0.3, st.y); c.moveTo(st.x + R * 0.3, st.y); c.lineTo(st.x + R * 1.15, st.y); c.moveTo(st.x, st.y - R * 1.15); c.lineTo(st.x, st.y - R * 0.3); c.moveTo(st.x, st.y + R * 0.3); c.lineTo(st.x, st.y + R * 1.15); c.stroke();
   }
   if (G.mis && !seeAll) drawMission(c, z, now);
+  drawDoomMarks(c, z, now);
   c.textAlign = "start"; c.textBaseline = "alphabetic";
 
   // order pings (above fog)
@@ -2965,12 +3024,128 @@ function updateAlertArrow() {
   el.style.transform = `translate(-50%,-50%) rotate(${Math.atan2(dy, dx)}rad)`;
 }
 // small arrows at the screen edge for things worth a look: crates, the mission, your general under fire
+// ---- mystery weapon: messages, markers, the banner and the finale ----
+function doomFx(e) {
+  const me = G.human, mine = e.owner === me, P = G.players[e.owner], nm = P.team.name;
+  if (e.k === "doomArm") {
+    SND.doom("arm");
+    if (mine) { toast("Level 9! Mystery weapon armed. Keep your general alive for " + DOOM.charge + "s to win", "gold"); tip("doom", "Your mystery weapon charges while your general lives. Every enemy can see him now and will come for him. Guard him!"); }
+    else { toast(nm + " reached level 9! Kill their general before the mystery weapon fires", "bad"); tip("doomE", "When an army reaches level 9 its general carries a mystery weapon. Kill him before the countdown ends, or that army wins."); }
+  } else if (e.k === "doomGo") {
+    if (e.fresh) return; SND.doom("arm");
+    toast(mine ? "Your general is back: the mystery weapon is charging" : nm + "'s mystery weapon is charging again!", mine ? "gold" : "bad");
+  } else if (e.k === "doomStop") {
+    SND.doom("stop");
+    if (mine) toast("Your general fell and the mystery weapon fizzled. It recharges when he's back", "bad");
+    else if (e.by === me) { toast("Mystery weapon stopped! Mercenaries and healers join you", "gold"); burst(e.x, e.y, "open"); }
+    else toast(nm + "'s mystery weapon was stopped");
+  } else if (e.k === "doomFire") {
+    if (G.doomFire) G.doomFire.r0 = performance.now();
+    $("toast").innerHTML = "";
+    SND.doom("fire", e.w);
+  }
+}
+// world space, above the fog: everyone can see a charging general
+function drawDoomMarks(c, z, now) {
+  for (const p of G.players) {
+    const d = p.doom; if (!d || p.out || G.doomFire) continue;
+    const g = G.gens[p.id];
+    if (d.on && g && g.alive) {
+      const f = d.t / DOOM.charge, pu = 0.5 + 0.5 * Math.sin(now * (6 + (1 - f) * 14));
+      c.strokeStyle = `rgba(255,59,48,${0.35 + 0.5 * pu})`; c.lineWidth = 3 / Math.max(z, 0.6);
+      c.beginPath(); c.arc(g.x, g.y, 30 + pu * 6, 0, TAU); c.stroke();
+      c.strokeStyle = "#ffd24a"; c.lineWidth = 4 / Math.max(z, 0.6); c.beginPath(); c.arc(g.x, g.y, 40, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.stroke();
+      c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.25 + 0.25 * pu; c.strokeStyle = "rgba(255,80,60,1)"; c.lineWidth = 6 / Math.max(z, 0.6);
+      c.beginPath(); c.moveTo(g.x, g.y - 40); c.lineTo(g.x, g.y - 700); c.stroke(); c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+      c.font = `900 ${Math.max(16, 15 / z)}px system-ui,sans-serif`; c.textAlign = "center"; c.textBaseline = "middle";
+      c.lineWidth = 4 / Math.max(z, 0.6); c.strokeStyle = "rgba(0,0,0,.8)"; const txt = Math.ceil(d.t) + "s"; c.strokeText(txt, g.x, g.y - 56); c.fillStyle = "#ffd24a"; c.fillText(txt, g.x, g.y - 56);
+    } else if (!d.on) {
+      const b = p.base, pu = 0.5 + 0.5 * Math.sin(now * 3);
+      c.strokeStyle = `rgba(255,59,48,${0.25 + 0.3 * pu})`; c.lineWidth = 3 / Math.max(z, 0.6); c.setLineDash([10 / z, 8 / z]); c.beginPath(); c.arc(b.x, b.y, 90, now * 0.5, now * 0.5 + TAU); c.stroke(); c.setLineDash([]);
+    }
+  }
+}
+// screen space: the countdown banner and the finale
+function drawDoom() {
+  if (!G || G.attract) return;
+  const c = ctx, F = G.doomFire, now = performance.now() / 1000;
+  c.setTransform(DPR, 0, 0, DPR, 0, 0); c.textAlign = "center"; c.textBaseline = "middle";
+  if (!F) {
+    if (G.over) return;
+    let txt = null, mine = false, urgent = 0;
+    for (const p of G.players) { const d = p.doom; if (!d || p.out) continue;
+      const nm = p.id === G.human ? "Your" : p.team.name + "'s"; mine = p.id === G.human;
+      txt = d.on ? `${nm} mystery weapon fires in ${Math.ceil(d.t)}s · ${mine ? "keep your general alive!" : "kill their general!"}` : `${nm} mystery weapon arms when ${mine ? "your" : "their"} general returns`;
+      urgent = d.on ? 1 - d.t / DOOM.charge : 0; if (d.on) break; }
+    if (!txt) return;
+    c.font = "800 13px system-ui,sans-serif"; const w = Math.min(W - 24, c.measureText(txt).width + 34), x = W / 2, y = 78, pu = 0.5 + 0.5 * Math.sin(now * (4 + urgent * 10));
+    c.fillStyle = mine ? `rgba(120,90,10,${0.8 + 0.15 * pu})` : `rgba(150,20,14,${0.78 + 0.18 * pu})`; c.beginPath(); c.roundRect(x - w / 2, y - 14, w, 28, 14); c.fill();
+    c.strokeStyle = mine ? "#ffd24a" : "#ff6b5e"; c.lineWidth = 1.5; c.stroke();
+    c.fillStyle = "#fff6e0"; c.fillText(txt, x, y + 0.5, w - 20);
+    if (!drawDoom.last || drawDoom.last !== Math.ceil(urgent ? (1 - urgent) * DOOM.charge : 99)) { drawDoom.last = Math.ceil(urgent ? (1 - urgent) * DOOM.charge : 99); if (urgent && drawDoom.last <= 10 && !UI.paused) SND.doom("tick", drawDoom.last); }
+    return;
+  }
+  const e = (performance.now() - (F.r0 || performance.now())) / 1000, M = Math.min(W, H), R = mulberry32(7);
+  if (e > DOOM.show + 3) return;
+  c.save();
+  if (F.w === 0) { // giant rubber duck waddles across the island
+    const k = clamp(e / (DOOM.show - 0.3), 0, 1), s = M * 0.55, x = -s + (W + 2 * s) * k, y = H * 0.62 + Math.abs(Math.sin(e * 6)) * -s * 0.06, tilt = Math.sin(e * 6) * 0.08;
+    c.fillStyle = "rgba(0,0,0,.25)"; c.beginPath(); c.ellipse(x, H * 0.62 + s * 0.42, s * 0.55, s * 0.08, 0, 0, TAU); c.fill();
+    c.translate(x, y); c.rotate(tilt);
+    const gy = c.createRadialGradient(-s * 0.1, -s * 0.15, s * 0.05, 0, 0, s * 0.6); gy.addColorStop(0, "#fff38a"); gy.addColorStop(1, "#e0a800");
+    c.fillStyle = gy; c.strokeStyle = "#7a5200"; c.lineWidth = 4;
+    c.beginPath(); c.ellipse(0, s * 0.1, s * 0.5, s * 0.3, 0, 0, TAU); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(-s * 0.45, 0); c.quadraticCurveTo(-s * 0.62, -s * 0.12, -s * 0.5, -s * 0.18); c.lineTo(-s * 0.38, -s * 0.02); c.fill();
+    c.beginPath(); c.arc(s * 0.28, -s * 0.22, s * 0.22, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = "#ff7a1a"; c.beginPath(); c.ellipse(s * 0.52, -s * 0.18, s * 0.13, s * 0.05, 0.1, 0, TAU); c.fill(); c.stroke();
+    c.fillStyle = "#111"; c.beginPath(); c.arc(s * 0.34, -s * 0.28, s * 0.035, 0, TAU); c.fill(); c.fillStyle = "#fff"; c.beginPath(); c.arc(s * 0.35, -s * 0.29, s * 0.012, 0, TAU); c.fill();
+    c.strokeStyle = "rgba(122,82,0,.6)"; c.lineWidth = 3; c.beginPath(); c.arc(-s * 0.05, s * 0.05, s * 0.2, 0.3, 2.2); c.stroke();
+    c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (Math.sin(e * 3) > 0.2) { c.font = `900 ${M * 0.09}px "Big Shoulders Display",system-ui,sans-serif`; c.fillStyle = "#fff38a"; c.strokeStyle = "#3a2600"; c.lineWidth = 6; c.strokeText("QUACK!", x + s * 0.45, y - s * 0.55); c.fillText("QUACK!", x + s * 0.45, y - s * 0.55); }
+  } else if (F.w === 1) { // black hole swallows the map
+    const k = clamp(e / 2.2, 0, 1), r = M * 0.32 * k * k, cx = W / 2, cy = H / 2;
+    const gd = c.createRadialGradient(cx, cy, r * 0.5, cx, cy, Math.max(W, H)); gd.addColorStop(0, "rgba(0,0,0,.85)"); gd.addColorStop(1, `rgba(0,0,0,${0.15 + 0.6 * k})`); c.fillStyle = gd; c.fillRect(0, 0, W, H);
+    c.translate(cx, cy);
+    for (let i = 0; i < 26; i++) { const a = i / 26 * TAU + e * (1.5 + i % 3 * 0.4), d = r * (1.3 + (i % 5) * 0.35) * (1 - ((e * 0.4 + i * 0.13) % 1) * 0.5); c.strokeStyle = `rgba(255,${150 + (i % 4) * 25},80,${0.5 * k})`; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, d, a, a + 0.9); c.stroke(); }
+    c.scale(1, 0.32); const ga = c.createRadialGradient(0, 0, r * 0.9, 0, 0, r * 2.1); ga.addColorStop(0, "rgba(255,220,140,.95)"); ga.addColorStop(0.4, "rgba(255,120,40,.6)"); ga.addColorStop(1, "rgba(255,60,20,0)"); c.fillStyle = ga; c.beginPath(); c.arc(0, 0, r * 2.1, 0, TAU); c.fill();
+    c.setTransform(DPR, 0, 0, DPR, 0, 0); c.fillStyle = "#000"; c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.fill();
+    c.strokeStyle = "rgba(255,230,180,.8)"; c.lineWidth = 2; c.beginPath(); c.arc(cx, cy, r * 1.03, 0, TAU); c.stroke();
+  } else if (F.w === 2) { // alien mothership
+    const k = clamp(e / 1.4, 0, 1), sw = W * 0.9, sh = M * 0.22, x = W / 2, y = -sh + (H * 0.3 + sh) * (1 - (1 - k) * (1 - k));
+    if (e > 1.4) { const bk = clamp((e - 1.4) / 0.4, 0, 1); for (let i = 0; i < 4; i++) { const bx = x + (i - 1.5) * sw * 0.22 + Math.sin(e * 2 + i) * 30; const gb = c.createLinearGradient(0, y, 0, H); gb.addColorStop(0, `rgba(140,255,120,${0.55 * bk})`); gb.addColorStop(1, `rgba(140,255,120,${0.12 * bk})`); c.fillStyle = gb; c.beginPath(); c.moveTo(bx - 14, y); c.lineTo(bx + 14, y); c.lineTo(bx + 90, H); c.lineTo(bx - 90, H); c.fill(); } }
+    c.fillStyle = "rgba(0,0,0,.3)"; c.fillRect(0, 0, W, H * k * 0.0);
+    const gs = c.createLinearGradient(0, y - sh / 2, 0, y + sh / 2); gs.addColorStop(0, "#c9ced6"); gs.addColorStop(0.5, "#6e7480"); gs.addColorStop(1, "#2e323a");
+    c.fillStyle = gs; c.strokeStyle = "#15181c"; c.lineWidth = 3; c.beginPath(); c.ellipse(x, y, sw / 2, sh / 2, 0, 0, TAU); c.fill(); c.stroke();
+    const gc = c.createRadialGradient(x - sw * 0.05, y - sh * 0.5, 4, x, y - sh * 0.3, sw * 0.16); gc.addColorStop(0, "#e8fff0"); gc.addColorStop(1, "#4ac48a"); c.fillStyle = gc; c.beginPath(); c.ellipse(x, y - sh * 0.3, sw * 0.15, sh * 0.42, 0, Math.PI, TAU); c.fill(); c.stroke();
+    for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI, lx = x + Math.cos(a) * sw * 0.42, ly = y + Math.sin(a) * sh * 0.3; c.fillStyle = (i + Math.floor(e * 8)) % 3 ? "#ffe066" : "#ff4f4f"; c.beginPath(); c.arc(lx, ly, M * 0.012, 0, TAU); c.fill(); }
+  } else { // chicken rain
+    for (let i = 0; i < 70; i++) { const d0 = R() * 1.6, sp = 0.7 + R() * 0.6, x = R() * W, kk = (e - d0) * sp; if (kk < 0) continue; const y = -40 + kk * H * 0.9, sz = M * (0.035 + R() * 0.03), rot = kk * (R() * 6 - 3);
+      if (y > H + 40) continue; c.save(); c.translate(x, Math.min(y, H * (0.55 + (i % 7) * 0.06))); c.rotate(y > H * 0.55 ? 0 : rot);
+      c.fillStyle = "#fbf7ec"; c.strokeStyle = "#5a4a3a"; c.lineWidth = 1.5; c.beginPath(); c.ellipse(0, 0, sz, sz * 0.75, 0, 0, TAU); c.fill(); c.stroke();
+      c.beginPath(); c.arc(sz * 0.8, -sz * 0.55, sz * 0.42, 0, TAU); c.fill(); c.stroke();
+      c.fillStyle = "#e23a2a"; c.beginPath(); c.arc(sz * 0.75, -sz * 0.98, sz * 0.16, 0, TAU); c.arc(sz * 0.95, -sz * 0.92, sz * 0.14, 0, TAU); c.fill();
+      c.fillStyle = "#f2a51a"; c.beginPath(); c.moveTo(sz * 1.18, -sz * 0.6); c.lineTo(sz * 1.45, -sz * 0.5); c.lineTo(sz * 1.18, -sz * 0.4); c.fill();
+      c.fillStyle = "#111"; c.beginPath(); c.arc(sz * 0.9, -sz * 0.62, sz * 0.06, 0, TAU); c.fill(); c.restore(); }
+    if (Math.sin(e * 4) > 0.3) { c.font = `900 ${M * 0.07}px "Big Shoulders Display",system-ui,sans-serif`; c.fillStyle = "#fbf7ec"; c.strokeStyle = "#3a2a1a"; c.lineWidth = 5; c.strokeText("BAWK!", W * 0.3, H * 0.3); c.fillText("BAWK!", W * 0.3, H * 0.3); }
+  }
+  c.restore(); c.setTransform(DPR, 0, 0, DPR, 0, 0); c.textAlign = "center"; c.textBaseline = "middle";
+  // caption, then a white flash as it lands
+  const ca = clamp(e / 0.4, 0, 1) * clamp((DOOM.show + 1.2 - e) / 0.5, 0, 1);
+  c.globalAlpha = ca; c.font = `800 ${Math.max(12, M * 0.03)}px system-ui,sans-serif`; c.fillStyle = "#ffd24a"; c.strokeStyle = "rgba(0,0,0,.85)"; c.lineWidth = 5;
+  const who = F.owner === G.human ? "Your" : G.players[F.owner].team.name + "'s", l1 = who + " mystery weapon:";
+  c.strokeText(l1, W / 2, H * 0.12); c.fillText(l1, W / 2, H * 0.12);
+  c.font = `900 ${Math.max(30, M * 0.1)}px "Big Shoulders Display",system-ui,sans-serif`; c.fillStyle = "#fff6e0"; const l2 = DOOM.names[F.w].toUpperCase();
+  c.strokeText(l2, W / 2, H * 0.12 + M * 0.085, W - 30); c.fillText(l2, W / 2, H * 0.12 + M * 0.085, W - 30);
+  const fl = clamp(1 - Math.abs(e - (DOOM.show - 0.5)) / 0.35, 0, 1); if (fl > 0) { c.globalAlpha = fl * 0.85; c.fillStyle = "#fff"; c.fillRect(0, 0, W, H); }
+  c.globalAlpha = 1;
+}
 function drawEdgeMarks() {
   if (!G || G.attract || G.over) return;
   const c = ctx, top = 92, bot = H - (($("bar").offsetHeight || 70) + 14), m = 22, now = performance.now() / 1000;
   const marks = [];
   for (const cr of G.crates || []) if (cr.land <= G.time) marks.push({ x: cr.x, y: cr.y, col: cr.mission ? "#f3c85a" : "#e9dfc0", kind: "crate" });
   if (G.mis && G.mis.x !== undefined) { const u = G.mis.unit, q = u && u.alive ? u : G.mis; marks.push({ x: q.x, y: q.y, col: "#f3c85a", kind: "star" }); }
+  for (const p of G.players) if (p.id !== G.human && p.doom && p.doom.on && !p.out && G.gens[p.id].alive) marks.push({ x: G.gens[p.id].x, y: G.gens[p.id].y, col: "#ff3b30", kind: "gen" });
   const g = G.gens[G.human]; if (g && g.alive && G.time - (g.hitAt || -99) < 3) marks.push({ x: g.x, y: g.y, col: "#ff6b5e", kind: "gen" });
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
   for (const q of marks) {
@@ -3034,7 +3209,7 @@ const UI = { sel: new Set(), selKey: "all", mode: "move", box: null, pings: [], 
 const $ = id => document.getElementById(id);
 
 function toast(msg, cls) {
-  if (G && G.attract) return;
+  if (G && (G.attract || G.doomFire)) return; // nothing competes with the finale
   const el = document.createElement("div"); el.textContent = msg; if (cls) el.className = cls;
   const box = $("toast"); box.appendChild(el);
   // keep a scrollable history under the minimap, newest on top, stamped with the battle clock
@@ -3069,7 +3244,7 @@ function refreshBar() {
       const f = mh ? hp / mh : 0, w = (f * 100).toFixed(0) + "%"; if (hb.firstChild.style.width !== w) { hb.firstChild.style.width = w; hb.firstChild.style.background = f > 0.5 ? "#9fe07a" : f > 0.25 ? "#f2c94c" : "#ff6b5e"; }
     }
     let txt;
-    if (k === "gen") { const g = G.gens[G.human]; txt = g.alive ? Math.ceil(g.hp / maxHp(g) * 100) + "%" : Math.ceil(g.respawn) + "s"; }
+    if (k === "gen") { const g = G.gens[G.human]; txt = g.alive ? Math.ceil(g.hp / maxHp(g) * 100) + "%" : g.respawn === Infinity ? "—" : Math.ceil(g.respawn) + "s"; }
     else { const list = k === "all" ? myUnits(u => u.alive) : k === "army" ? myUnits(u => u.alive && u.kind !== "gen") : k === "idle" ? myUnits(isIdle) : myUnits(u => u.alive && u.squad === +k); txt = String(list.length); }
     const sm = b.querySelector("small"); if (sm.textContent !== txt) sm.textContent = txt;
   }
@@ -3826,6 +4001,19 @@ const SND = (() => {
     if (ac && pref.s) { const n = now(); nz(n, 0.06, "bandpass", 2200, 2, 0.1, 0.002, 0, 0); nz(n + 0.02, 0.35, "bandpass", 1800, 0.7, 0.03, 0.01, 0, 0); } // radio click + static
   };
   // the general returns: brass fanfare in D major
+  // the mystery weapon: alarm, countdown ticks, fizzle, and one sound per weapon
+  S.doom = (k, w) => {
+    if (!ac || !pref.s || (G && G.attract)) return; const t = now() + 0.02;
+    if (k === "arm") { for (let i = 0; i < 4; i++) tone(t + i * 0.32, "square", i % 2 ? 620 : 880, i % 2 ? 620 : 880, 0.28, 0.07, 0.01, 0, 0.3); }
+    else if (k === "tick") { const f = w <= 3 ? 1320 : 990; tone(t, "square", f, f, 0.08, w <= 3 ? 0.09 : 0.05, 0.002, 0, 0.2); }
+    else if (k === "stop") { tone(t, "sawtooth", 700, 60, 0.9, 0.12, 0.01, 0, 0.3); nz(t, 0.5, "lowpass", 800, 0.7, 0.2, 0.01, 0, 0.3); }
+    else if (k === "fire") {
+      if (w === 0) for (let i = 0; i < 6; i++) { const q = t + 0.3 + i * 0.7; tone(q, "sawtooth", 520, 380, 0.22, 0.14, 0.01, 0, 0.3); tone(q, "square", 1040, 700, 0.18, 0.04, 0.01, 0, 0.3); tone(q + 0.35, "sine", 70, 40, 0.3, 0.4, 0.005, 0, 0.2); }
+      else if (w === 1) { tone(t, "sine", 220, 28, 4, 0.5, 0.3, 0, 0.5); nz(t, 4, "lowpass", 400, 0.9, 0.4, 1.2, 0, 0.6, sfxBus, 60); }
+      else if (w === 2) { for (let i = 0; i < 10; i++) tone(t + i * 0.4, "sine", 380 + (i % 2) * 160, 380 + ((i + 1) % 2) * 160, 0.45, 0.12, 0.05, 0, 0.6); tone(t, "sawtooth", 55, 55, 4, 0.08, 0.5, 0, 0.4); }
+      else for (let i = 0; i < 16; i++) { const q = t + 0.4 + i * 0.22 + Math.random() * 0.1, f = 700 + Math.random() * 400; tone(q, "triangle", f, f * 0.7, 0.12, 0.12, 0.005, Math.random() * 1.6 - 0.8, 0.2); }
+    }
+  };
   S.fanfare = () => {
     if (!ac || !pref.s) return; const t = now() + 0.03, hzN = q => 293.66 * Math.pow(2, q / 12);
     [[0, 0, 0.16], [7, 0.16, 0.16], [12, 0.32, 0.16], [16, 0.48, 0.5], [12, 1.0, 0.16], [16, 1.16, 0.16], [19, 1.32, 0.9]].forEach(([q, d, len]) => {
@@ -4682,7 +4870,7 @@ function showOver() {
   UI.paused = true;
   const me = G.players[G.human];
   $("overTitle").textContent = G.over.win ? "Victory" : "Defeated";
-  $("overEyebrow").textContent = G.over.win ? "All enemy bases destroyed" : "Your base has fallen";
+  $("overEyebrow").textContent = G.over.doom != null ? (G.over.win ? "Mystery weapon: " + DOOM.names[G.over.doom] : "Wiped out by " + G.players[G.over.by].team.name + "'s " + DOOM.names[G.over.doom].toLowerCase()) : G.over.win ? "All enemy bases destroyed" : "Your base has fallen";
   const t = Math.floor(G.time);
   $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your ${G.myArmy}<br>Time ${Math.floor(t / 60)}m ${t % 60}s<br>Kills ${me.kills} · Losses ${me.losses}<br>Army level ${me.level + 1} (${me.points} points)`;
   const enemies = G.players.length - 1, secs = t, win = !!G.over.win;
@@ -4788,7 +4976,7 @@ function frame(now) {
   if (G) {
     render(G.attract ? dtReal : !UI.paused ? dtReal * Math.min(UI.speed, 3) : 0);
     miniT -= dtReal; if (miniT <= 0) { miniT = alerts.beacons.length ? 0.04 : 0.1; renderMini(); }
-    drawEdgeMarks(); updateAlertArrow();
+    drawEdgeMarks(); drawDoom(); updateAlertArrow();
   } else if (!G) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#07090a"; ctx.fillRect(0, 0, cvs.width, cvs.height); }
   requestAnimationFrame(frame);
 }
@@ -4796,7 +4984,7 @@ startAttract();
 requestAnimationFrame(frame);
 
 // test hook
-window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR };
+window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM };
 })();
 </script>
 
