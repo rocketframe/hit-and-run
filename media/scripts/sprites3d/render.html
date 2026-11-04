@@ -17,10 +17,12 @@ window.renderAtlas = async (opts) => {
   if (opts.yaw) root.rotation.y = opts.yaw;
   root.traverse(o => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; const ms = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of ms) { if (opts.tint) for (const [rx, hex] of Object.entries(opts.tint)) if (new RegExp(rx, "i").test(m.name) || new RegExp(rx, "i").test(o.name)) { m.color = new THREE.Color(hex); if (m.map && opts.tintMap === false) m.map = null; } } } });
+  await new Promise(r => setTimeout(r, opts.wait || 0));
   const scene = new THREE.Scene(), holder = new THREE.Group(); holder.add(root); scene.add(holder);
   // optional prop held between the hands (rifle): origin at the right hand, barrel pointing at the left hand
   let prop = null, rH = null, lH = null;
-  if (opts.attach) { const a = await load(opts.attach.file), pr = a.scene || a; const pb = new THREE.Box3().setFromObject(pr), ps = pb.getSize(new THREE.Vector3()), pk = opts.attach.len / ps.x; pr.scale.multiplyScalar(pk);
+  if (opts.hide) root.traverse(o => { if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; if (ms.some(m => new RegExp(opts.hide).test(m.name))) o.visible = false; } });
+  if (opts.attach) { const a = opts.attach.proc === "spear" ? { scene: spear() } : await load(opts.attach.file), pr = a.scene || a; const pb = new THREE.Box3().setFromObject(pr), ps = pb.getSize(new THREE.Vector3()), pk = opts.attach.len / ps.x; pr.scale.multiplyScalar(pk);
     const pb2 = new THREE.Box3().setFromObject(pr), gx = pb2.min.x + (pb2.max.x - pb2.min.x) * (opts.attach.grip ?? 0.3), gy = (pb2.min.y + pb2.max.y) / 2 + (opts.attach.dy || 0); pr.position.x -= gx; pr.position.y -= gy; pr.position.z -= (pb2.min.z + pb2.max.z) / 2;
     prop = new THREE.Group(); prop.add(pr); scene.add(prop); root.traverse(o => { if (o.isBone && /RightHand$/.test(o.name)) rH = o; if (o.isBone && /LeftHand$/.test(o.name)) lH = o; }); console.log("hands", rH && rH.name, lH && lH.name); }
   const placeProp = () => { if (!prop || !rH || !lH) return; scene.updateMatrixWorld(true); const a = new THREE.Vector3().setFromMatrixPosition(rH.matrixWorld), b = new THREE.Vector3().setFromMatrixPosition(lH.matrixWorld);
@@ -56,6 +58,10 @@ window.renderAtlas = async (opts) => {
   if (mg) { const id = mg.getImageData(0, 0, maskAtlas.width, maskAtlas.height), d = id.data; for (let i = 0; i < d.length; i += 4) { const l = d[i]; d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = d[i + 3] ? l : 0; } mg.putImageData(id, 0, 0); }
   return { mask: maskAtlas ? maskAtlas.toDataURL("image/png") : null, png: atlas.toDataURL("image/png"), cols, rows, size: S, foot: [fx, fy], clips: opts.clips.map(c => ({ name: c.name, frames: c.frames })), dirs: opts.dirs, worldPerPx: ext * 2 / S };
 };
+function spear() { // a wooden spear with a stone tip, lying along +x
+  const g = new THREE.Group(), sh = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 1.7, 10), new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.9 })); sh.rotation.z = Math.PI / 2; g.add(sh);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.2, 5), new THREE.MeshStandardMaterial({ color: 0x8a8578, roughness: 0.8, flatShading: true })); tip.rotation.z = -Math.PI / 2; tip.position.x = 0.95; g.add(tip);
+  const bind = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.08, 8), new THREE.MeshStandardMaterial({ color: 0x3b2a18 })); bind.rotation.z = Math.PI / 2; bind.position.x = 0.83; g.add(bind); return g; }
 function testModel(T) { const g = new T.Group(), m = c => new T.MeshStandardMaterial({ color: c, roughness: 0.7 });
   const body = new T.Mesh(new T.BoxGeometry(0.5, 0.7, 0.3), m(0x4ea8ff)); body.position.y = 1.15; g.add(body);
   const head = new T.Mesh(new T.SphereGeometry(0.15, 16, 12), m(0xc29470)); head.position.y = 1.65; g.add(head);
