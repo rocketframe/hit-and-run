@@ -549,7 +549,7 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy, map) {
       for (const [ox, oy] of [[-1, 0], [0, -1]]) q.push({ k, x: h + ox * 95, y: h + oy * 95, r: 55 + hr() * 15 });
       for (let t = 0, made = 0; made < 2 && t < 60; t++) { const x = 140 + hr() * (h - 140), y = 140 + hr() * (h - 140); if (!fits(x, y, 70) || !far(x, y, 230)) continue; q.push(...blob(x, y, 3 + (hr() * 2 | 0), 38, 68, 60)); made++; }
     } else if (k === 2) {
-      for (let t = 0, made = 0; made < 4 && t < 80; t++) { const x = 100 + hr() * (h - 100), y = 100 + hr() * (h - 100); if (!fits(x, y, 60) || !far(x, y, 170)) continue; q.push(...blob(x, y, 3 + (hr() * 2 | 0), 26, 48, 45)); made++; }
+      for (let t = 0, made = 0; made < 3 && t < 90; t++) { const x = 110 + hr() * (h - 110), y = 110 + hr() * (h - 110); if (!fits(x, y, 80) || !far(x, y, 220)) continue; q.push(...blob(x, y, 4 + (hr() * 2 | 0), 40, 68, 62)); made++; }
     } else {
       for (let t = 0, made = 0; made < 2 && t < 80; t++) {
         let x = 160 + hr() * (h - 160), y = 160 + hr() * (h - 160), a = hr() * 7; if (!fits(x, y, 30) || !far(x, y, 200)) continue;
@@ -589,7 +589,7 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy, map) {
   for (let i = 0; i < nPlayers; i++) {
     const [bx, by] = corners[i];
     const p = {
-      id: i, team: TEAM[i], ai: i !== 0, mult: i ? DIFF[diff].mult : 1, respawnMult: i ? DIFF[diff].respawn : 1, smart: i ? DIFF[diff].smart : false, thinkEvery: i ? (DIFF[diff].think || 1.2) : 1.2, points: 0, level: 0, kills: 0, losses: 0, out: false,
+      id: i, stam: 1, tired: false, team: TEAM[i], ai: i !== 0, mult: i ? DIFF[diff].mult : 1, respawnMult: i ? DIFF[diff].respawn : 1, smart: i ? DIFF[diff].smart : false, thinkEvery: i ? (DIFF[diff].think || 1.2) : 1.2, points: 0, level: 0, kills: 0, losses: 0, out: false,
       base: { isBase: true, owner: i, x: bx, y: by, r: CFG.base.r, hp: CFG.base.hp, alive: true, cd: 0, flash: 0 },
       aiState: { state: "gather", t: 1 + i * 0.37, threshold: 15 + Math.floor(rng() * 8), target: null }
     };
@@ -681,6 +681,11 @@ function applyCmd(c) {
     list.forEach((u, i) => { const a = i / list.length * TAU2; u.escort = true; u.path = null; u.eox = Math.cos(a) * (42 + (i % 2) * 24); u.eoy = Math.sin(a) * (42 + (i % 2) * 24); u.mode = "move"; });
     return;
   }
+  if (c.t === "focus") { // hold on an enemy: everyone picked goes after that one target first
+    const t = G.unitById.get(c.tid); if (!t || !t.alive || t.owner === c.p) return;
+    for (const u of us) { u.focus = t; u.mode = "attack"; u.escort = false; u.path = null; u.run = false; }
+    return;
+  }
   const path = c.t === "path" && c.pts && c.pts.length ? c.pts.slice(0, 24) : null;
   if (path) c = { p: c.p, x: path[0].x, y: path[0].y, mode: c.mode, form: c.form };
   if (c.t === "kill") {
@@ -718,7 +723,7 @@ function applyCmd(c) {
     u.path = path ? path.slice(1).map(q => ({ x: q.x + x - c.x, y: q.y + y - c.y })) : null;
     x = clamp(x, 10, G.S - 10); y = clamp(y, 10, G.S - 10);
     const pt = pushOutOfRocks(x, y, CFG[u.kind].r + 2);
-    u.tx = pt.x; u.ty = pt.y; u.mode = c.mode;
+    u.tx = pt.x; u.ty = pt.y; u.mode = c.mode; u.focus = null; u.run = !!c.run && !p.tired;
   });
 }
 
@@ -842,6 +847,7 @@ function scan(u) {
     if (!seen && dd < ss * ss) seen = b;
     if (!tgt && dd < rr * rr) tgt = b;
   }
+  if (u.focus && u.focus.alive) { const f = u.focus, dd = d2(u, f); if (dd < s2) seen = f; if (dd < r2 && clearShot(u.x, u.y, f.x, f.y)) tgt = f; }
   u.seen = seen; u.tgt = tgt;
 }
 
@@ -1209,6 +1215,7 @@ function step() {
     u.scanT -= dt; if (u.scanT <= 0) { u.scanT = 0.25; scan(u); }
     if (u.seen && !u.seen.alive) u.seen = null;
     if (u.tgt && !u.tgt.alive) u.tgt = null;
+    if (u.focus && !u.focus.alive) u.focus = null;
     if (u.escort) { const g = G.gens[u.owner]; if (g && g.alive && (G.tick + u.id) % 10 === 0) { const pt = pushOutOfRocks(clamp(g.x + u.eox, 10, G.S - 10), clamp(g.y + u.eoy, 10, G.S - 10), 9); u.tx = pt.x; u.ty = pt.y; } }
     if (u.path && u.path.length && (u.x - u.tx) ** 2 + (u.y - u.ty) ** 2 < 14 * 14) { const q = u.path.shift(), pt = pushOutOfRocks(clamp(q.x, 10, G.S - 10), clamp(q.y, 10, G.S - 10), 9); u.tx = pt.x; u.ty = pt.y; }
     let gx = u.tx, gy = u.ty, stopAt = 3;
@@ -1217,17 +1224,26 @@ function step() {
       gx = u.seen.x; gy = u.seen.y;
       stopAt = (u.seen.isBase ? rangeOf(u) + u.seen.r - 14 : rangeOf(u) * 0.8);
     }
+    if (u.focus) { gx = u.focus.x; gy = u.focus.y; stopAt = rangeOf(u) * 0.8; }
     const dx = gx - u.x, dy = gy - u.y, dist = Math.hypot(dx, dy);
     u.moving = false;
     u.idleT = (u.idleT || 0) + dt;
     if (u.tgt || u.seen) u.idleT = 0;
+    if (u.run && dist <= stopAt) u.run = false;
     if (dist > stopAt) {
       u.idleT = 0;
       const [vx, vy] = navDir(u.x, u.y, gx, gy, C.r + 2, dx / dist, dy / dist);
-      const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : 1), dist - stopAt + 0.5);
+      const P = G.players[u.owner], runK = u.run && !P.tired ? 1.8 : 1; if (runK > 1) P.ran = true;
+      const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * runK * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : 1), dist - stopAt + 0.5);
       u.x += vx * sp; u.y += vy * sp; u.moving = true; u.face = Math.atan2(vy, vx);
       if (G.island && !onLand(u.x, u.y, C.r + 2)) { const q = toLand(u.x, u.y, C.r + 2); u.x = q.x; u.y = q.y; }
     }
+  }
+  // stamina is shared by the whole army: about 3.5 s of running, then about 5 s to get the breath back
+  for (const p of G.players) {
+    if (p.ran) { p.stam -= dt / 3.5; if (p.stam <= 0) { p.stam = 0; p.tired = true; for (const u of G.units) if (u.owner === p.id) u.run = false; } }
+    else if (p.stam < 1) { p.stam = Math.min(1, p.stam + dt / 5); if (p.stam >= 1) p.tired = false; }
+    p.ran = false;
   }
   // separation
   separate();
@@ -1249,7 +1265,7 @@ function step() {
     if (u.owner === G.human && !G.attract && !(G.hzSeen & (1 << hz))) { G.hzSeen = (G.hzSeen || 0) | (1 << hz); pushFx({ k: "hazIn", hz, x: u.x, y: u.y, owner: u.owner }); }
     if (hz === 3) { if (inf) hazDeath(u, "fall"); else if (hazAt(u.px, u.py) !== 3) { u.x = u.px; u.y = u.py; } }
     else if (hz === 1) { if (inf && G.rng() < 0.07 * dt) hazDeath(u, "drown"); }
-    else { u.hp -= (inf ? 4 : maxHp(u) * 0.01) * dt; if (u.hp <= 0) hazDeath(u, "sink"); }
+    else { u.hp -= (inf ? 10 : maxHp(u) * 0.03) * dt; if (u.hp <= 0) hazDeath(u, "sink"); }
   }
   // firing
   for (const u of G.units) {
@@ -1808,8 +1824,7 @@ function buildWorld() {
     for (const [lw, col] of [[70, "rgba(168,150,104,.35)"], [40, "rgba(190,170,120,.55)"], [20, "rgba(206,188,138,.8)"]]) { g.strokeStyle = col; g.lineWidth = lw; poly(g, 0); g.stroke(); }
     g.restore();
     g.beginPath(); g.rect(-20, -20, S + 40, S + 40); poly(g, 0, true); // the sea outside
-    const sea = g.createRadialGradient(I.c, I.c, I.c * 0.9, I.c, I.c, I.c * 1.45); sea.addColorStop(0, "#1f5866"); sea.addColorStop(0.35, "#163f52"); sea.addColorStop(1, "#0b2333");
-    g.fillStyle = sea; g.fill("evenodd");
+    g.fillStyle = SEA; g.fill("evenodd");
     for (const [off, lw, col] of [[10, 22, "rgba(60,140,150,.35)"], [4, 8, "rgba(110,190,190,.35)"], [1, 2.2, "rgba(230,240,230,.55)"], [16, 1.4, "rgba(200,230,230,.18)"], [30, 1.2, "rgba(200,230,230,.1)"]]) { g.strokeStyle = col; g.lineWidth = lw; poly(g, off); g.stroke(); }
     g.restore();
   }
@@ -1821,9 +1836,13 @@ function buildWorld() {
 
 function drawFogTexture() {
   const d = fogImg.data, { soft, explored } = G;
+  if (!G.seaMask) { // fog cells well out at sea: nothing to hide there, so leave the water clear
+    G.seaMask = new Uint8Array(soft.length); const cs = CFG.fogCell;
+    for (let i = 0; i < soft.length; i++) { const x = (i % G.gw + 0.5) * cs, y = ((i / G.gw) | 0) * cs + cs / 2; if (G.island && !onLand(x, y, -40)) G.seaMask[i] = 1; }
+  }
   for (let i = 0, n = soft.length; i < n; i++) {
     const o = i * 4, f = 1 - soft[i] / 255; d[o] = 10; d[o + 1] = 13; d[o + 2] = 16;
-    d[o + 3] = (explored[i] ? 150 : 242) * f;
+    d[o + 3] = G.seaMask[i] ? 0 : (explored[i] ? 150 : 242) * f;
   }
   fogCtx.putImageData(fogImg, 0, 0);
 }
@@ -1962,10 +1981,26 @@ function drawSpr(img, x, y, a, size) {
   ctx.drawImage(img, -size / 2, -size / 2, size, size); ctx.restore();
 }
 
+// open sea all round; gentle swell rolling in to the beach
+const SEA = "#123a4b";
+function drawWaves(c, now, z) {
+  const I = G.island, n = I.R.length, step = z < 0.5 ? 4 : 2;
+  const ring = (off, amp, ph) => { c.beginPath(); for (let i = 0; i <= n; i += step) { const k = i % n, t = k / n * TAU, rr = I.R[k] + off + Math.sin(t * 40 + now * 1.3 + ph) * amp; const x = I.c + Math.cos(t) * rr, y = I.c + Math.sin(t) * rr; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); };
+  // three swells moving toward the shore and fading as they arrive
+  for (let k = 0; k < 3; k++) {
+    const f = ((now * 0.22 + k / 3) % 1), off = 6 + (1 - f) * 46;
+    c.strokeStyle = `rgba(215,238,236,${(0.05 + 0.22 * f * f).toFixed(3)})`; c.lineWidth = (1.2 + f * 1.6) / Math.max(z, 0.5) * 0.9;
+    ring(off, 2.5, k * 2); c.stroke();
+  }
+  // foam line breathing on the sand
+  const br = 0.5 + 0.5 * Math.sin(now * 1.1);
+  c.strokeStyle = `rgba(240,246,240,${(0.35 + 0.25 * br).toFixed(3)})`; c.lineWidth = 2.2 / Math.max(z, 0.5);
+  ring(1.5 + br * 3, 1.2, 0); c.stroke();
+}
 function render(dtReal) {
   const c = ctx;
   c.setTransform(1, 0, 0, 1, 0, 0);
-  c.fillStyle = "#07090a"; c.fillRect(0, 0, cvs.width, cvs.height);
+  c.fillStyle = G && G.island ? SEA : "#07090a"; c.fillRect(0, 0, cvs.width, cvs.height);
   if (!G || !groundCvs) return;
   const now = performance.now() / 1000, P = QP[qLevel()];
   consumeFx(); stepParts(dtReal || 0.016);
@@ -1980,9 +2015,11 @@ function render(dtReal) {
   c.imageSmoothingEnabled = true;
   c.drawImage(groundCvs, 0, 0, G.S, G.S);
   c.drawImage(decalCvs, 0, 0, G.S, G.S);
-  // dark beyond the map edge
-  c.strokeStyle = "rgba(0,0,0,.6)"; c.lineWidth = 30; c.strokeRect(-15, -15, G.S + 30, G.S + 30);
-  c.strokeStyle = "rgba(205,180,106,.35)"; c.lineWidth = 2; c.strokeRect(0, 0, G.S, G.S);
+  if (G.island) drawWaves(c, now, z);
+  else { // dark beyond the map edge
+    c.strokeStyle = "rgba(0,0,0,.6)"; c.lineWidth = 30; c.strokeRect(-15, -15, G.S + 30, G.S + 30);
+    c.strokeStyle = "rgba(205,180,106,.35)"; c.lineWidth = 2; c.strokeRect(0, 0, G.S, G.S);
+  }
 
   // own general's aura
   const myGen = G.gens[G.human];
@@ -2226,6 +2263,30 @@ function render(dtReal) {
     c.font = "800 13px system-ui,sans-serif"; const tw = c.measureText(t).width + 18, x = clamp(UI.carry.x - tw / 2, 6, W - tw - 6), y = UI.carry.y - 52;
     c.fillStyle = "rgba(20,18,12,.9)"; c.fillRect(x, y, tw, 26); c.strokeStyle = "#cdb46a"; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, tw - 1, 25);
     c.fillStyle = "#f3d77c"; c.textBaseline = "middle"; c.fillText(t, x + 9, y + 13); c.textBaseline = "alphabetic";
+  }
+  if (UI.hold && !UI.box) { // filling ring while pressing, then what letting go will do
+    const H = UI.hold, f = clamp((performance.now() - H.t0) / HOLD_MS, 0, 1);
+    if (f > 0.15) {
+      const col = H.enemy ? "255,107,94" : "243,215,124";
+      c.lineWidth = 3; c.strokeStyle = `rgba(${col},.25)`; c.beginPath(); c.arc(H.x, H.y, 26, 0, TAU); c.stroke();
+      c.strokeStyle = `rgba(${col},.95)`; c.beginPath(); c.arc(H.x, H.y, 26, -Math.PI / 2, -Math.PI / 2 + f * TAU); c.stroke();
+      if (H.on) {
+        const t = H.enemy ? "Let go: all fire on it" : (G.players[G.human].tired ? "Let go: walk here (tired)" : "Let go: run here · Drag: select");
+        c.font = "800 13px system-ui,sans-serif"; const tw = c.measureText(t).width + 18, x = clamp(H.x - tw / 2, 6, W - tw - 6), y = H.y - 66;
+        c.fillStyle = "rgba(20,18,12,.9)"; c.fillRect(x, y, tw, 26); c.strokeStyle = `rgba(${col},.8)`; c.lineWidth = 1; c.strokeRect(x + 0.5, y + 0.5, tw - 1, 25);
+        c.fillStyle = `rgb(${col})`; c.textBaseline = "middle"; c.fillText(t, x + 9, y + 13); c.textBaseline = "alphabetic";
+      }
+    }
+  }
+  { // army stamina: only shown while it isn't full
+    const P = G.players[G.human];
+    if (!G.attract && P && P.stam < 1) {
+      const bw = 132, x = (W - bw) / 2, y = 56;
+      c.fillStyle = "rgba(10,12,9,.75)"; c.fillRect(x - 6, y - 15, bw + 12, 27);
+      c.font = "800 10px system-ui,sans-serif"; c.fillStyle = P.tired ? "#ff8a7a" : "#e9e5d3"; c.textAlign = "center"; c.fillText(P.tired ? "OUT OF BREATH" : "STAMINA", W / 2, y - 4); c.textAlign = "left";
+      c.fillStyle = "rgba(255,255,255,.12)"; c.fillRect(x, y, bw, 6);
+      c.fillStyle = P.tired ? "#d9574a" : "#f3d77c"; c.fillRect(x, y, bw * P.stam, 6);
+    }
   }
   if (UI.box) {
     const { x0, y0, x1, y1 } = UI.box;
@@ -2548,11 +2609,12 @@ function clampCam() {
   cam.x = clamp(cam.x, 0, G.S); cam.y = clamp(cam.y, 0, G.S);
 }
 
-function orderTo(wx, wy, forceMode) {
+function orderTo(wx, wy, forceMode, run) {
   const ids = [...UI.sel].filter(id => G.unitById.get(id).alive);
   if (!ids.length) { toast("Pick a squad first"); return; }
   const mode = forceMode || UI.mode;
-  issue({ p: G.human, ids, x: wx, y: wy, mode, form: curForm() });
+  issue({ p: G.human, ids, x: wx, y: wy, mode, form: curForm(), run: run ? 1 : 0 });
+  if (UI.orderN === 6) tip("hold", "Try press and hold on the map: let go to make your soldiers run there, or drag to box-select. Hold on an enemy to make them all shoot at it.");
   UI.pings.push({ x: wx, y: wy, t: 0.7, mode }); SND.order(mode); UI.orderN = (UI.orderN || 0) + 1;
   SND.say(mode === "attack" ? "attack" : "move", ids.length === 1 && G.unitById.get(ids[0]).kind === "gen");
 }
@@ -2585,6 +2647,25 @@ function handleTap(sx, sy, additive) {
   orderTo(w.x, w.y, enemy ? "attack" : null);
 }
 
+// press and hold on the map: let go to run there (or focus fire when it's an enemy), drag to box-select
+const HOLD_MS = 380;
+function holdEnemy(sx, sy) {
+  const w = s2w(sx, sy), hr = Math.max(18, 26 / cam.z); let best = null, bd = hr * hr;
+  for (const u of G.units) if (u.alive && u.owner !== G.human && !u.isBase && isVis(u.x, u.y)) { const dd = d2(u, w); if (dd < bd) { bd = dd; best = u; } }
+  return best;
+}
+function holdRelease(sx, sy) {
+  const ids = [...UI.sel].filter(id => G.unitById.get(id).alive);
+  if (!ids.length) { toast("Pick a squad first"); return; }
+  const t = holdEnemy(sx, sy), w = s2w(sx, sy);
+  if (t) {
+    issue({ p: G.human, t: "focus", ids, tid: t.id }); UI.pings.push({ x: t.x, y: t.y, t: 0.7, mode: "attack" }); SND.order("attack"); SND.say("attack");
+    toast(t.kind === "gen" ? "All guns on the enemy general!" : "Focus fire on that target", "gold"); return;
+  }
+  const P = G.players[G.human];
+  if (P.tired) toast("Too tired to run. They walk until they get their breath back");
+  orderTo(w.x, w.y, null, !P.tired);
+}
 const ptrs = new Map(); let gesture = null;
 cvs.addEventListener("contextmenu", e => e.preventDefault());
 cvs.addEventListener("pointerdown", e => {
@@ -2592,13 +2673,17 @@ cvs.addEventListener("pointerdown", e => {
   cvs.setPointerCapture(e.pointerId);
   ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (ptrs.size === 2) {
+    if (gesture) { clearTimeout(gesture.holdT); clearTimeout(gesture.carryT); } UI.hold = null;
     const [a, b] = [...ptrs.values()];
     gesture = { type: "pinch", d0: Math.hypot(a.x - b.x, a.y - b.y), z0: cam.z, w0: s2w((a.x + b.x) / 2, (a.y + b.y) / 2) };
   } else if (ptrs.size === 1) {
     gesture = { type: "pending", sx: e.clientX, sy: e.clientY, btn: e.button, mouse: e.pointerType === "mouse", shift: e.shiftKey, lx: e.clientX, ly: e.clientY };
     // long-press on your selected soldiers, then drag them onto a squad letter to move them into that squad
     const w = s2w(e.clientX, e.clientY), hr = Math.max(16, 22 / cam.z);
+    const g1 = gesture;
+    if (!UI.boxMode && !UI.rallyMode && !UI.strikeMode && e.button === 0) { UI.hold = { x: e.clientX, y: e.clientY, t0: performance.now(), on: false, enemy: !!holdEnemy(e.clientX, e.clientY) }; g1.holdT = setTimeout(() => { if (gesture === g1 && g1.type === "pending") { g1.type = "held"; UI.hold.on = true; if (navigator.vibrate) try { navigator.vibrate(12); } catch (er) {} } }, HOLD_MS); }
     if (EXP() && !UI.boxMode && UI.sel.size && G.units.some(u => u.alive && u.owner === G.human && UI.sel.has(u.id) && d2(u, w) < hr * hr)) {
+      clearTimeout(g1.holdT); UI.hold = null;
       const g0 = gesture; g0.carryT = setTimeout(() => { if (gesture === g0 && g0.type === "pending") { g0.type = "carry"; UI.carry = { x: e.clientX, y: e.clientY, n: selIds().filter(id => G.unitById.get(id).kind === "inf").length }; if (navigator.vibrate) try { navigator.vibrate(12); } catch (er) {} } }, 380);
     }
   }
@@ -2614,8 +2699,12 @@ cvs.addEventListener("pointermove", e => {
     clampCam(); return;
   }
   if (gesture.type === "carry") { UI.carry.x = e.clientX; UI.carry.y = e.clientY; const o = document.elementFromPoint(e.clientX, e.clientY), t = o && o.closest("[data-sel]"); UI.carry.over = t && isSqKey(t.dataset.sel) ? t.dataset.sel : null; return; }
+  if (gesture.type === "held") {
+    if (Math.hypot(e.clientX - gesture.sx, e.clientY - gesture.sy) <= 9) return;
+    gesture.type = "box"; UI.hold = null; UI.box = { x0: gesture.sx, y0: gesture.sy, x1: e.clientX, y1: e.clientY };
+  }
   if (gesture.type === "pending" && Math.hypot(e.clientX - gesture.sx, e.clientY - gesture.sy) > 9) {
-    clearTimeout(gesture.carryT);
+    clearTimeout(gesture.carryT); clearTimeout(gesture.holdT); UI.hold = null;
     gesture.type = (gesture.btn === 0 && (UI.boxMode || (gesture.mouse && gesture.shift))) ? "box" : "pan";
     if (gesture.type === "box") UI.box = { x0: gesture.sx, y0: gesture.sy, x1: e.clientX, y1: e.clientY };
   }
@@ -2628,8 +2717,9 @@ function endPtr(e) {
   if (!ptrs.has(e.pointerId)) return;
   ptrs.delete(e.pointerId);
   if (!gesture) return;
-  clearTimeout(gesture.carryT);
-  if (gesture.type === "carry") {
+  clearTimeout(gesture.carryT); clearTimeout(gesture.holdT); UI.hold = null;
+  if (gesture.type === "held") { if (e.type === "pointerup") holdRelease(e.clientX, e.clientY); }
+  else if (gesture.type === "carry") {
     const o = document.elementFromPoint(e.clientX, e.clientY), t = o && o.closest("[data-sel]");
     if (t && isSqKey(t.dataset.sel)) assignSquad(+t.dataset.sel);
     UI.carry = null;
@@ -2855,8 +2945,13 @@ function attractCam(dt) {
   if (G.over) startAttract();
 }
 
+// the browser's back button pauses a battle instead of leaving the page
+function guardBack() { try { if (!(history.state && history.state.hrGame)) history.pushState({ hrGame: 1 }, ""); } catch (e) {} }
+addEventListener("popstate", () => {
+  if (G && !G.attract && !G.over && $("menu").hidden) { if (!UI.paused) togglePause(); guardBack(); }
+});
 function start() {
-  TUT.stop(); setTimeout(resize, 0);
+  TUT.stop(); setTimeout(resize, 0); guardBack();
   document.body.classList.remove("attract");
   initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me, UI.opts.map));
   G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions && UI.opts.misTypes.length > 0 && (EXP() || loadLog().length >= 3); G.misTypes = UI.opts.misTypes.slice();
@@ -4022,7 +4117,7 @@ startAttract();
 requestAnimationFrame(frame);
 
 // test hook
-window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp };
+window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y) };
 })();
 </script>
 
