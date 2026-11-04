@@ -1722,6 +1722,8 @@ function drawStanding() {
     const fx = (q.x - cam.x) * cam.z + W / 2, fy = (q.y - cam.y) * cam.z + H / 2, f = (TILT.p - (fy - H / 2) * s) / TILT.p, k = cam.z / f;
     const p0 = flat2scr(fx, fy), p1 = flat2scr(fx + Math.cos(q.a) * 10, fy + Math.sin(q.a) * 10);
     if (p0.x < -60 || p0.x > SW + 60 || p0.y < -60 || p0.y > SH + 60) continue;
+    if (q.bb) { // upright billboard, feet on the ground, mirrored to face its way on screen
+      const w = q.bb.bw * k, h = q.bb.bh * k; c.globalAlpha = q.al; c.save(); c.translate(p0.x, p0.y); if (q.face && p1.x < p0.x) c.scale(-1, 1); c.drawImage(q.bb, -w / 2, -h, w, h); c.restore(); continue; }
     const sz = q.sz * k, lift = (2.5 + q.hov) * k;
     c.globalAlpha = q.al; c.save(); c.translate(p0.x, p0.y - lift); c.rotate(Math.atan2(p1.y - p0.y, p1.x - p0.x)); c.drawImage(q.img, -sz / 2, -sz / 2, sz, sz); c.restore();
   }
@@ -1871,7 +1873,7 @@ function buildSprites() {
       // team band
       g.strokeStyle = T.c; g.globalAlpha = 0.85; g.lineWidth = 3; star(R + 3, R * 0.72 + 2); g.stroke(); g.globalAlpha = 1;
     }, 2);
-    const set = m => ({ inf: m.inf, gen: m.gen, infW: whiteOf(m.inf), genW: whiteOf(m.gen), fort: m.fort, genSz: m.genSz, trot: m.trot, hover: m.hover });
+    const set = m => ({ inf: m.inf, gen: m.gen, infW: whiteOf(m.inf), genW: whiteOf(m.gen), fort: m.fort, genSz: m.genSz, trot: m.trot, hover: m.hover, bb: m.bb });
     const mod = { inf, gen, infW: whiteOf(inf), genW: whiteOf(gen), fort };
     const ww = wwSprites(T), mus = musketSprites(T);
     mod.eras = [set(stoneSprites(T)), set(bronzeSprites(T)), set(medSprites(T)), set({ ...mus, fort }), set({ inf, fort: ww.fort, gen: ww.gen, genSz: ww.genSz }), set(modernSprites(T)), set(laserSprites(T)), set(spaceSprites(T))];
@@ -1958,6 +1960,78 @@ function medSprites(T) {
   return { inf, gen, fort, genSz: 60, trot: true };
 }
 // stone age: fur-clad slinger, a chief with a club and feathers, a palisade village
+// 3D view trial, Stone Age only: side-on (3/4) figures and a village that stand up on the tilted board.
+// Billboards are drawn facing right with their origin at the feet; drawStanding flips them to face the way they walk.
+function bbSprite(w, h, draw, sc = 4) {
+  const c = document.createElement("canvas"); c.width = Math.ceil(w * sc); c.height = Math.ceil(h * sc);
+  const g = c.getContext("2d"); g.scale(sc, sc); g.translate(w / 2, h); draw(g); c.bw = w; c.bh = h; return c;
+}
+function stone3q(T) {
+  const skin = "#c99a70", skinD = "#9c7250", hair = "#3a2616", ink = "rgba(0,0,0,.75)";
+  const fur = (g, x0, y0, x1, y1, x2, y2, x3, y3, c0) => { // tunic with a ragged hem and spots
+    const gb = g.createLinearGradient(x0, y0, x2, y2); gb.addColorStop(0, shade(c0, 0.2)); gb.addColorStop(1, shade(c0, -0.4));
+    g.fillStyle = gb; g.strokeStyle = ink; g.lineWidth = 0.7; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1);
+    const n = 5; for (let i = 0; i <= n; i++) { const t = i / n; g.lineTo(x1 + (x2 - x1) * t, y2 + (i % 2 ? 1.2 : 0)); } g.lineTo(x3, y3); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "rgba(60,40,20,.4)"; for (const [a, b] of [[0.3, 0.3], [0.65, 0.55], [0.4, 0.75], [0.7, 0.2]]) { g.beginPath(); g.arc(x0 + (x2 - x0) * a, y0 + (y2 - y0) * b, 0.7, 0, 7); g.fill(); }
+  };
+  const leg = (g, x, top, len, sw, w) => { g.save(); g.translate(x, top); g.rotate(sw); g.fillStyle = skinD; g.strokeStyle = ink; g.lineWidth = 0.6; g.beginPath(); g.roundRect(-w / 2, 0, w, len, w / 2); g.fill(); g.stroke();
+    g.fillStyle = "#5a3e24"; g.beginPath(); g.ellipse(0.8, len, w * 0.75, w * 0.45, 0, 0, 7); g.fill(); g.stroke(); g.restore(); };
+  const head = (g, x, y, r, band) => {
+    g.fillStyle = skin; g.strokeStyle = ink; g.lineWidth = 0.7; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = skinD; g.beginPath(); g.ellipse(x + r * 0.95, y + r * 0.15, r * 0.28, r * 0.22, 0, 0, 7); g.fill(); // nose
+    g.fillStyle = "#111"; g.beginPath(); g.arc(x + r * 0.45, y - r * 0.15, r * 0.13, 0, 7); g.fill();
+    g.fillStyle = hair; g.beginPath(); for (let i = 0; i <= 12; i++) { const a = Math.PI * 0.9 + i / 12 * Math.PI * 1.25, rr = r * (i % 2 ? 1.05 : 1.3); g.lineTo(x - r * 0.1 + Math.cos(a) * rr, y - r * 0.05 + Math.sin(a) * rr); } g.lineTo(x - r * 0.9, y + r * 1.1); g.closePath(); g.fill();
+    g.fillStyle = hair; g.beginPath(); g.ellipse(x + r * 0.35, y + r * 0.75, r * 0.55, r * 0.4, 0, 0, Math.PI); g.fill(); // beard
+    g.strokeStyle = band; g.lineWidth = r * 0.32; g.beginPath(); g.arc(x - r * 0.05, y - r * 0.1, r * 1.02, Math.PI * 1.05, Math.PI * 1.9); g.stroke();
+  };
+  const man = st => bbSprite(22, 27, g => { // a slinger, st = walk phase -1..1
+    g.lineCap = "round";
+    leg(g, -1.6, -11, 9.5, -st * 0.35, 2.6); leg(g, 1.6, -11, 9.5, st * 0.35, 2.6);
+    g.strokeStyle = skinD; g.lineWidth = 2.2; g.beginPath(); g.moveTo(-2.5, -17); g.lineTo(-4.5 - st, -11.5); g.stroke(); // back arm
+    fur(g, -4, -19, -5, -9, 4.5, -9, 4, -19, T.c);
+    g.strokeStyle = skin; g.lineWidth = 2.3; g.beginPath(); g.moveTo(2.5, -17); g.lineTo(6.5, -14); g.stroke(); // throwing arm
+    g.strokeStyle = "#6b4a2a"; g.lineWidth = 0.7; g.beginPath(); g.moveTo(6.8, -14); g.quadraticCurveTo(9.5, -10, 8.5, -8.5); g.stroke();
+    g.fillStyle = "#8d8a80"; g.strokeStyle = ink; g.lineWidth = 0.5; g.beginPath(); g.arc(8.5, -8.3, 1.3, 0, 7); g.fill(); g.stroke();
+    head(g, 0.6, -22.5, 3.6, shade(T.c, 0.3));
+  });
+  const chief = st => bbSprite(34, 38, g => { // the chief: bigger, leopard cloak, club on the shoulder, feathers
+    g.lineCap = "round";
+    g.fillStyle = "#c08a3a"; g.strokeStyle = ink; g.lineWidth = 0.8; g.beginPath(); g.moveTo(-2, -27); g.quadraticCurveTo(-10, -18, -9 - st * 0.6, -8); g.lineTo(-2, -9); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "rgba(40,24,10,.6)"; for (const [x, y] of [[-6, -20], [-7.5, -14], [-4.5, -12], [-5, -24]]) { g.beginPath(); g.arc(x, y, 0.9, 0, 7); g.fill(); }
+    leg(g, -2.2, -14, 12, -st * 0.35, 3.4); leg(g, 2.2, -14, 12, st * 0.35, 3.4);
+    fur(g, -5.5, -26, -6.5, -12, 6, -12, 5.5, -26, T.c);
+    g.strokeStyle = "#5a3a20"; g.lineWidth = 2.4; g.beginPath(); g.moveTo(4, -17); g.lineTo(10, -31); g.stroke(); // club
+    g.fillStyle = "#6e4a2a"; g.strokeStyle = ink; g.lineWidth = 0.8; g.beginPath(); g.ellipse(10.6, -32.5, 2.6, 3.6, 0.4, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = skin; g.lineWidth = 3; g.beginPath(); g.moveTo(3, -24); g.lineTo(5, -18); g.stroke();
+    head(g, 0.8, -30.5, 4.6, "#f3d77c");
+    for (let i = 0; i < 5; i++) { const a = -Math.PI * 0.85 + i / 4 * Math.PI * 0.7; g.fillStyle = i % 2 ? shade(T.c, 0.35) : "#f3d77c"; g.strokeStyle = ink; g.lineWidth = 0.5; g.beginPath(); g.ellipse(0.4 + Math.cos(a) * 6.5, -31 + Math.sin(a) * 6.5, 3.4, 1.1, a, 0, 7); g.fill(); g.stroke(); }
+  });
+  const inf = [man(-1), man(0), man(1), man(0)], gen = [chief(-1), chief(0), chief(1), chief(0)];
+  // the village: a flat yard, plus standing stakes, huts and a banner that the renderer places one by one
+  const ground = sprite(150, g => {
+    g.fillStyle = "rgba(60,48,30,.55)"; g.beginPath(); g.arc(0, 0, 70, 0, 7); g.fill();
+    g.fillStyle = "#5b4a30"; g.beginPath(); g.arc(0, 0, 56, 0, 7); g.fill();
+    g.fillStyle = "#2a2018"; g.beginPath(); g.arc(4, 4, 5, 0, 7); g.fill(); g.fillStyle = "#e8873a"; g.beginPath(); g.arc(4, 4, 2.4, 0, 7); g.fill();
+    g.strokeStyle = T.c; g.globalAlpha = 0.85; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 61, 0, 7); g.stroke(); g.globalAlpha = 1;
+  }, 2);
+  const stake = [0, 1].map(v => bbSprite(6, 16, g => { const c0 = v ? "#8a6236" : "#6e4c28"; g.fillStyle = c0; g.strokeStyle = "#2a1c0e"; g.lineWidth = 0.6;
+    g.beginPath(); g.moveTo(-2.4, 0); g.lineTo(-2.4, -12); g.lineTo(0, -15.5); g.lineTo(2.4, -12); g.lineTo(2.4, 0); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "rgba(255,255,255,.12)"; g.fillRect(-2, -12, 1.2, 12); }));
+  const hut = bbSprite(30, 26, g => {
+    const gt = g.createLinearGradient(-13, 0, 13, 0); gt.addColorStop(0, "#d8b878"); gt.addColorStop(1, "#7a5a2e");
+    g.fillStyle = gt; g.strokeStyle = "rgba(40,26,12,.9)"; g.lineWidth = 0.8; g.beginPath(); g.moveTo(-13, 0); g.quadraticCurveTo(-11, -12, 0, -22); g.quadraticCurveTo(11, -12, 13, 0); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = "rgba(60,40,20,.55)"; for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(0, -22); g.lineTo(i * 5.5, 0); g.stroke(); }
+    g.fillStyle = "#1c140c"; g.beginPath(); g.moveTo(-3, 0); g.quadraticCurveTo(0, -8, 3, 0); g.fill();
+    g.strokeStyle = "#5a3a20"; g.lineWidth = 1.2; g.beginPath(); g.moveTo(-1, -21); g.lineTo(-3, -25); g.moveTo(1, -21); g.lineTo(3, -25); g.stroke();
+    g.fillStyle = T.c; g.beginPath(); g.moveTo(-9, -4); g.lineTo(-5, -11); g.lineTo(-2, -4); g.closePath(); g.fill();
+  });
+  const banner = bbSprite(24, 44, g => { g.strokeStyle = "#3a2616"; g.lineWidth = 1.4; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -42); g.stroke();
+    g.fillStyle = T.c; g.strokeStyle = ink; g.lineWidth = 0.7; g.beginPath(); g.moveTo(0, -41); g.lineTo(11, -38); g.lineTo(7, -34); g.lineTo(11, -30); g.lineTo(0, -29); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#e9e5d3"; g.beginPath(); g.arc(0, -43, 1.6, 0, 7); g.fill(); });
+  return { inf, gen, infW: inf.map(whiteOf), genW: gen.map(whiteOf), ground, stake, hut, banner,
+    village: [...Array.from({ length: 40 }, (_, k) => { const a = k / 40 * TAU; return { img: k % 2, x: Math.cos(a) * 55, y: Math.sin(a) * 55 }; }),
+      { img: "hut", x: -15, y: -12 }, { img: "hut", x: 16, y: -6 }, { img: "hut", x: -4, y: 17 }, { img: "banner", x: -30, y: -20 }] };
+}
 function stoneSprites(T) {
   const inf = sprite(28, g => {
     g.lineCap = "round";
@@ -2004,7 +2078,7 @@ function stoneSprites(T) {
     for (let k = 0; k < 44; k++) { const a = k / 44 * TAU, x = Math.cos(a) * 55, y = Math.sin(a) * 55; g.fillStyle = "rgba(0,0,0,.5)"; g.beginPath(); g.arc(x + 1.5, y + 2.5, 4, 0, 7); g.fill(); g.fillStyle = k % 2 ? "#8a6236" : "#6e4c28"; g.beginPath(); g.arc(x, y, 3.8, 0, 7); g.fill(); g.strokeStyle = "#2a1c0e"; g.lineWidth = 0.8; g.stroke(); }
     g.strokeStyle = T.c; g.globalAlpha = 0.85; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 61, 0, 7); g.stroke(); g.globalAlpha = 1;
   }, 2);
-  return { inf, gen, fort };
+  return { inf, gen, fort, bb: stone3q(T) };
 }
 // future: armoured trooper with a blaster, a general on a hover bike, a domed base
 function laserSprites(T) {
@@ -2769,21 +2843,22 @@ function render(dtReal) {
     const ghost = !(p.id === G.human || vis(b.x, b.y));
     if (ghost && !(seeAll || isExp(b.x, b.y))) continue;
     if (!inView(b.x, b.y)) continue;
-    const S = SPR.team[p.id].eras[eraOf(p.id)].fort;
+    const E = SPR.team[p.id].eras[eraOf(p.id)], BB = c !== ctx && E.bb, S = BB ? BB.ground : E.fort;
     c.globalAlpha = ghost ? 0.5 : 1;
     c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
+    if (BB) for (const v of BB.village) STAND.push({ bb: typeof v.img === "number" ? BB.stake[v.img] : BB[v.img], x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha });
     if (!ghost) {
-      // turret
-      c.save(); c.translate(b.x, b.y); c.rotate(b.aim || -Math.PI / 4);
+      // turret (the 3D village has no gun to show)
+      if (!BB) { c.save(); c.translate(b.x, b.y); c.rotate(b.aim || -Math.PI / 4);
       c.fillStyle = "#1c1c17"; c.fillRect(0, -2.4, 26, 4.8);
-      c.fillStyle = "#3d3c33"; c.beginPath(); c.arc(0, 0, 9, 0, TAU); c.fill(); c.strokeStyle = p.team.c; c.lineWidth = 2; c.stroke(); c.restore();
+      c.fillStyle = "#3d3c33"; c.beginPath(); c.arc(0, 0, 9, 0, TAU); c.fill(); c.strokeStyle = p.team.c; c.lineWidth = 2; c.stroke(); c.restore(); }
       // flag
       const fx = b.x - 30, fy = b.y - 38;
-      c.strokeStyle = "#2a261c"; c.lineWidth = 1.6; c.beginPath(); c.moveTo(fx, fy + 18); c.lineTo(fx, fy - 6); c.stroke();
+      if (!BB) { c.strokeStyle = "#2a261c"; c.lineWidth = 1.6; c.beginPath(); c.moveTo(fx, fy + 18); c.lineTo(fx, fy - 6); c.stroke();
       c.fillStyle = p.team.c; c.beginPath(); c.moveTo(fx, fy - 6);
       for (let i = 0; i <= 8; i++) { const t = i / 8; c.lineTo(fx + t * 20, fy - 6 + Math.sin(now * 6 + t * 5) * 2.2 * t); }
       for (let i = 8; i >= 0; i--) { const t = i / 8; c.lineTo(fx + t * 20, fy + 5 + Math.sin(now * 6 + t * 5 + 0.4) * 2.2 * t); }
-      c.closePath(); c.fill();
+      c.closePath(); c.fill(); }
       if (b.flash > 0) { c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.35; c.drawImage(SPR.glow, b.x - 50, b.y - 50, 100, 100); c.globalCompositeOperation = "source-over"; }
       // damaged bases burn
       const f = b.hp / (b.max || CFG.base.hp);
@@ -2832,6 +2907,7 @@ function render(dtReal) {
     const bob = u.moving ? Math.sin(now * 14 + u.id) * 0.6 : 0;
     if (u.camo > G.time) c.globalAlpha = 0.45;
     if (u.mis) drawMisUnit(c, u, T, now);
+    else if (c !== ctx && T.bb) { const fr = u.moving ? Math.floor(now * 9 + u.id) & 3 : 1, set = u.flash > 0 ? (gen ? T.bb.genW : T.bb.infW) : (gen ? T.bb.gen : T.bb.inf); STAND.push({ bb: set[fr], x: u.x, y: u.y, a: u.face, face: true, al: c.globalAlpha }); }
     else if (c !== ctx) STAND.push({ img, x: u.x, y: u.y + bob, a: u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), sz: gen ? (T.genSz || 44) : 28, al: c.globalAlpha, hov: gen && T.hover ? 3 + Math.sin(now * 3 + u.id) * 1.2 : 0 });
     else drawSpr(img, u.x, u.y + bob + (gen && T.hover ? Math.sin(now * 3 + u.id) * 1.2 : 0), u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), gen ? (T.genSz || 44) : 28);
     c.globalAlpha = 1;
