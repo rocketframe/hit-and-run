@@ -1,1 +1,1 @@
-{"model": "glb/mech.glb", "clips": [{"name": "idle", "frames": 1}], "dirs": 8, "size": 160, "height": 3.8, "dim": "h", "extent": 3.0, "yaw": 0}
+{"model": "glb/mech.glb", "clips": [{"name": "walk", "frames": 4, "rock": [0.03, 0.1, 0.05]}], "dirs": 8, "size": 160, "height": 3.8, "dim": "h", "extent": 3.0, "yaw": 0}

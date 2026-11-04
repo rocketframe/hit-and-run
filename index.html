@@ -420,7 +420,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Flag in the Wind by YouniqueIdeaStudio (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -1729,15 +1729,15 @@ const w2scr = (x, y) => flat2scr((x - cam.x) * cam.z + W / 2, (y - cam.y) * cam.
 const MODEL3 = {
   4: { inf: { src: "sprites/ww-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/ww-gen.png", S: 160, fx: 80, fy: 137.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 23 } },
-  0: { inf: { src: "sprites/st-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Mixamo Ch05 with a spear
+  0: { inf: { src: "sprites/cv-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Caveman by iRahulRajput (CC-BY), Mixamo-rigged, with a spear
   1: { gen: { src: "sprites/br-gen.png", S: 200, fx: 100, fy: 183.5, wpp: 0.026, k: 12.5, dirs: 8, clips: { walk: [0, 6] }, ring: true, ringR: 22 }, // Ancient Horse Chariot (Mauryan era) by EqualizerX, CC-BY
-       inf: { src: "sprites/st-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } },
-  2: { gen: { src: "sprites/me-gen.png", S: 160, fx: 80, fy: 139.6, wpp: 0.02375, k: 19, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 }, // 1964.88 Armor for Man and Horse, Cleveland Museum of Art (CC0)
+       inf: { src: "sprites/br-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } },
+  2: { gen: { src: "sprites/me-gen.png", S: 160, fx: 80, fy: 139.6, wpp: 0.02375, k: 19, dirs: 8, clips: { walk: [0, 4] }, ring: true, ringR: 20 }, // 1964.88 Armor for Man and Horse, Cleveland Museum of Art (CC0)
        inf: { src: "sprites/me-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Mixamo Erika Archer
-  5: { inf: { src: "sprites/ww-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
+  5: { inf: { src: "sprites/md-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/md-gen.png", S: 160, fx: 80, fy: 142.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 24 } }, // Tank by Quaternius
-  6: { gen: { src: "sprites/fu-gen.png", S: 160, fx: 80, fy: 114, wpp: 0.0325, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // HoverBikeTVS by Vijaysarathi, CC-BY
-  7: { gen: { src: "sprites/sp-gen.png", S: 160, fx: 80, fy: 127.8, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // Mech Assault Walker by Alimayo Arango
+  6: { gen: { src: "sprites/fu-gen.png", S: 160, fx: 80, fy: 114, wpp: 0.0325, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // HoverBikeTVS by Vijaysarathi, CC-BY, ridden by Cyborg Grid by CAPTAAINR, CC-BY
+  7: { gen: { src: "sprites/sp-gen.png", S: 160, fx: 80, fy: 127.8, wpp: 0.0375, k: 12.5, dirs: 8, clips: { walk: [0, 4] }, ring: true, ringR: 20 } }, // Mech Assault Walker by Alimayo Arango
 };
 function model3(era, kind, pid) {
   const M = MODEL3[era] && MODEL3[era][kind]; if (!M) return null;
@@ -2427,6 +2427,11 @@ const HUT3 = { src: "sprites/huts.png", S: 160, H: 183, N: 3, gx: 80, gy: 125.8,
 function hut3(i) { const R = HUT3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
   if (!R.cv[i]) { const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, (i % R.N) * R.S, 0, R.S, R.H, 0, 0, R.S, R.H); const f = R.wpp * R.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; R.cv[i] = cv; }
   return R.cv[i]; }
+// rally flag in the 3D view: Flag in the Wind by YouniqueIdeaStudio (CC-BY), one baked view per team colour, pole at the centre
+const RALLY3 = { src: "sprites/rally.png", w: 80, h: 64, ay: 62 / 64, bw: 47, bh: 37.5, cv: [] };
+function rally3(t) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
+  if (!R.cv[t]) { const cv = document.createElement("canvas"); cv.width = R.w; cv.height = R.h; cv.getContext("2d").drawImage(R.img, t * R.w, 0, R.w, R.h, 0, 0, R.w, R.h); cv.bw = R.bw; cv.bh = R.bh; cv.ay = R.ay; R.cv[t] = cv; }
+  return R.cv[t]; }
 // whole-base models for some eras (3D view): one baked view, ground centre at (gx, gy), footprint radius 1 = r world units
 const BASE3 = { 2: { src: "sprites/castle.png", S: 256, H: 317, gx: 128, gy: 214.7, wpp: 0.009765625, r: 64 }, // Castle by hamidkhan224, CC-BY
   6: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 }, // Dome Structure by trashbinkr
@@ -3711,8 +3716,9 @@ function render(dtReal) {
     const me = G.players[G.human], rp = me.rally;
     if (rp) {
       c.strokeStyle = "rgba(233,229,211,.25)"; c.lineWidth = 1.2 / z; c.setLineDash([5 / z, 9 / z]); c.beginPath(); c.moveTo(me.base.x, me.base.y); c.lineTo(rp.x, rp.y); c.stroke(); c.setLineDash([]);
-      c.strokeStyle = "#e9e5d3"; c.lineWidth = 1.6; c.beginPath(); c.moveTo(rp.x, rp.y + 8); c.lineTo(rp.x, rp.y - 18); c.stroke();
-      c.fillStyle = me.team.c; c.beginPath(); c.moveTo(rp.x, rp.y - 18); for (let i = 0; i <= 6; i++) { const t = i / 6; c.lineTo(rp.x + t * 15, rp.y - 18 + Math.sin(now * 6 + t * 5) * 1.6 * t); } c.lineTo(rp.x + 15, rp.y - 9); c.lineTo(rp.x, rp.y - 9); c.fill();
+      const RF = TILT.on && rally3(TEAM.indexOf(me.team)); if (RF) STAND.push({ bb: RF, x: rp.x, y: rp.y + 8, al: 1 });
+      else { c.strokeStyle = "#e9e5d3"; c.lineWidth = 1.6; c.beginPath(); c.moveTo(rp.x, rp.y + 8); c.lineTo(rp.x, rp.y - 18); c.stroke();
+      c.fillStyle = me.team.c; c.beginPath(); c.moveTo(rp.x, rp.y - 18); for (let i = 0; i <= 6; i++) { const t = i / 6; c.lineTo(rp.x + t * 15, rp.y - 18 + Math.sin(now * 6 + t * 5) * 1.6 * t); } c.lineTo(rp.x + 15, rp.y - 9); c.lineTo(rp.x, rp.y - 9); c.fill(); }
       c.strokeStyle = "rgba(233,229,211,.5)"; c.lineWidth = 1.2; c.beginPath(); c.ellipse(rp.x, rp.y + 8, 10, 4, 0, 0, TAU); c.stroke();
     }
     // path being drawn, and the path just ordered

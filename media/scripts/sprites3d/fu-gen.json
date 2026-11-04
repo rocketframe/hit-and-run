@@ -1,1 +1,2 @@
-{"model":"glb/hoverbike.glb","clips":[{"name":"idle","frames":1}],"dirs":8,"size":160,"height":4.0,"dim":"len","extent":2.6,"yaw":0,"wait":2000,"dy":0.9}
+{"model":"glb/hoverbike.glb","clips":[{"name":"idle","frames":1}],"dirs":8,"size":160,"height":4.0,"dim":"len","extent":2.6,"yaw":0,"wait":2000,"dy":0.9,
+"rider":{"model":"glb/cyborg.glb","height":2.4,"at":[0,0.15,0],"yaw":0,"idle":0,"pose":{"L.Thigh":[0,0,1.35],"R.Thigh":[0,0,1.35],"L.Calf":[0,0,-0.7],"R.Calf":[0,0,-0.7],"L.UpperArm":[0,0,0.9],"R.UpperArm":[0,0,0.9]}}}

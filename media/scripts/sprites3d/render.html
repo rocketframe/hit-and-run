@@ -15,7 +15,7 @@ window.renderAtlas = async (opts) => {
   const box = new THREE.Box3().setFromObject(root), sz = box.getSize(new THREE.Vector3()), k = opts.height / (opts.dim === "len" ? Math.max(sz.x, sz.z) : sz.y);
   root.scale.multiplyScalar(k); const b2 = new THREE.Box3().setFromObject(root), ctr = b2.getCenter(new THREE.Vector3()); root.position.x -= ctr.x; root.position.z -= ctr.z; root.position.y -= b2.min.y;
   if (opts.yaw) root.rotation.y = opts.yaw;
-  root.traverse(o => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; const ms = Array.isArray(o.material) ? o.material : [o.material];
+  root.traverse(o => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; if (opts.tint) o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone(); const ms = Array.isArray(o.material) ? o.material : [o.material];
     for (const m of ms) { if (opts.tint) for (const [rx, hex] of Object.entries(opts.tint)) if (new RegExp(rx, "i").test(m.name) || new RegExp(rx, "i").test(o.name)) { m.color = new THREE.Color(hex); if (m.map && opts.tintMap === false) m.map = null; } } } });
   await new Promise(r => setTimeout(r, opts.wait || 0));
   const scene = new THREE.Scene(), holder = new THREE.Group(); holder.add(root); scene.add(holder);
@@ -25,6 +25,17 @@ window.renderAtlas = async (opts) => {
   if (opts.attach) { const a = opts.attach.proc === "spear" ? { scene: spear() } : await load(opts.attach.file), pr = a.scene || a; const pb = new THREE.Box3().setFromObject(pr), ps = pb.getSize(new THREE.Vector3()), pk = opts.attach.len / ps.x; pr.scale.multiplyScalar(pk);
     const pb2 = new THREE.Box3().setFromObject(pr), gx = pb2.min.x + (pb2.max.x - pb2.min.x) * (opts.attach.grip ?? 0.3), gy = (pb2.min.y + pb2.max.y) / 2 + (opts.attach.dy || 0); pr.position.x -= gx; pr.position.y -= gy; pr.position.z -= (pb2.min.z + pb2.max.z) / 2;
     prop = new THREE.Group(); prop.add(pr); scene.add(prop); root.traverse(o => { if (o.isBone && /RightHand$/.test(o.name)) rH = o; if (o.isBone && /LeftHand$/.test(o.name)) lH = o; }); console.log("hands", rH && rH.name, lH && lH.name); }
+  // props parented to a bone: { bone: regex, proc: "helmet" | "shield", at: [x, y, z] in metres along the bone's axes }
+  if (opts.props) for (const P of opts.props) { let bn = null; root.traverse(o => { if (!bn && o.isBone && new RegExp(P.bone).test(o.name)) bn = o; }); if (!bn) { console.log("no bone", P.bone); continue; }
+    root.updateMatrixWorld(true); const ws = new THREE.Vector3(); bn.getWorldScale(ws); const g = procProp(P.proc); g.scale.setScalar(1 / ws.x); if (P.at) g.position.set(P.at[0] / ws.x, P.at[1] / ws.x, P.at[2] / ws.x); if (P.rot) g.rotation.set(...P.rot); bn.add(g); }
+  // seated rider on a vehicle: { model, height, at: [x, y, z], yaw, idle: anim index, pose: { boneRegex: [rx, ry, rz] } }
+  if (opts.rider) { const R = opts.rider, rb = await load(R.model), rr = rb.scene || rb; const bx = new THREE.Box3().setFromObject(rr), bs = bx.getSize(new THREE.Vector3()); rr.scale.multiplyScalar(R.height / bs.y);
+    const rm = new THREE.AnimationMixer(rr); if (R.idle != null && rb.animations[R.idle]) { rm.clipAction(rb.animations[R.idle]).play(); rm.setTime(R.t || 0); }
+    rr.updateMatrixWorld(true); const b3 = new THREE.Box3().setFromObject(rr), c3 = b3.getCenter(new THREE.Vector3()); rr.position.x -= c3.x; rr.position.z -= c3.z; rr.position.y -= b3.min.y;
+    const pv = new THREE.Group(); pv.add(rr); if (R.yaw) pv.rotation.y = R.yaw;
+    if (R.pose) for (const [rx, e] of Object.entries(R.pose)) rr.traverse(o => { if (o.isBone && new RegExp(rx).test(o.name)) o.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...e))); });
+    if (R.hide) rr.traverse(o => { if (new RegExp(R.hide).test(o.name)) o.visible = false; });
+    const off = new THREE.Group(); off.add(pv); off.position.set(...(R.at || [0, 0, 0])); root.parent.add(off); root.userData.rider = off; }
   const placeProp = () => { if (!prop || !rH || !lH) return; scene.updateMatrixWorld(true); const a = new THREE.Vector3().setFromMatrixPosition(rH.matrixWorld), b = new THREE.Vector3().setFromMatrixPosition(lH.matrixWorld);
     const dir = b.clone().sub(a); if (dir.length() < 1e-4) return; dir.normalize(); const up = new THREE.Vector3(0, 1, 0); up.sub(dir.clone().multiplyScalar(up.dot(dir))).normalize(); const side = new THREE.Vector3().crossVectors(dir, up);
     prop.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir, up, side)); prop.position.copy(a); };
@@ -50,6 +61,7 @@ window.renderAtlas = async (opts) => {
       holder.rotation.y = -d / opts.dirs * Math.PI * 2 + Math.PI / 2; // dir 0 faces screen-right, counting clockwise on screen
       for (let f = 0; f < c.frames; f++) { if (act) { mixer.setTime(((c.t0 || 0) + (c.loop === false ? f / Math.max(1, c.frames - 1) : f / c.frames) * (c.span || 1)) * dur); }
         if (opts.inPlace !== false) root.traverse(o => { if (o.isBone && !o.parent.isBone) { o.position.x = o.userData.x0 ?? (o.userData.x0 = o.position.x); o.position.z = o.userData.z0 ?? (o.userData.z0 = o.position.z); } });
+        if (c.rock) { const ph = f / c.frames * Math.PI * 2; root.userData.y0 ??= root.position.y; root.rotation.x = c.rock[0] * Math.sin(ph); root.position.y = root.userData.y0 + c.rock[1] * Math.abs(Math.sin(ph)); if (c.rock[2]) root.rotation.z = c.rock[2] * Math.sin(ph); }
         placeProp(); rnd.render(scene, cam); ag.drawImage(rnd.domElement, f * S, r * S);
         if (mg) { for (const [o, , m] of swaps) o.material = m; rnd.render(scene, cam); mg.drawImage(rnd.domElement, f * S, r * S); for (const [o, m0] of swaps) o.material = m0; } }
       r++;
@@ -58,6 +70,14 @@ window.renderAtlas = async (opts) => {
   if (mg) { const id = mg.getImageData(0, 0, maskAtlas.width, maskAtlas.height), d = id.data; for (let i = 0; i < d.length; i += 4) { const l = d[i]; d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = d[i + 3] ? l : 0; } mg.putImageData(id, 0, 0); }
   return { mask: maskAtlas ? maskAtlas.toDataURL("image/png") : null, png: atlas.toDataURL("image/png"), cols, rows, size: S, foot: [fx, fy], clips: opts.clips.map(c => ({ name: c.name, frames: c.frames })), dirs: opts.dirs, worldPerPx: ext * 2 / S };
 };
+function procProp(k) { const bronze = new THREE.MeshStandardMaterial({ color: 0xb07a3a, roughness: 0.45, metalness: 0.6 }), g = new THREE.Group();
+  if (k === "helmet") { const cap = new THREE.Mesh(new THREE.SphereGeometry(0.125, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), bronze); g.add(cap);
+    const crest = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.09, 0.24), new THREE.MeshStandardMaterial({ color: 0x9a2a1e, roughness: 0.9 })); crest.position.y = 0.12; g.add(crest);
+    const guard = new THREE.Mesh(new THREE.CylinderGeometry(0.128, 0.132, 0.06, 16, 1, true), bronze); guard.position.y = -0.01; g.add(guard); }
+  if (k === "shield") { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.03, 24), bronze); g.add(d);
+    const boss = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd8a45a, roughness: 0.35, metalness: 0.7 })); boss.position.y = 0.015; g.add(boss);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.018, 6, 28), bronze); rim.rotation.x = Math.PI / 2; g.add(rim); }
+  return g; }
 function spear() { // a wooden spear with a stone tip, lying along +x
   const g = new THREE.Group(), sh = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 1.7, 10), new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.9 })); sh.rotation.z = Math.PI / 2; g.add(sh);
   const tip = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.2, 5), new THREE.MeshStandardMaterial({ color: 0x8a8578, roughness: 0.8, flatShading: true })); tip.rotation.z = -Math.PI / 2; tip.position.x = 0.95; g.add(tip);

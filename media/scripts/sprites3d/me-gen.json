@@ -1,1 +1,1 @@
-{"model":"glb/armorhorse.glb","clips":[{"name":"idle","frames":1}],"dirs":8,"size":160,"height":3.0,"extent":1.9,"yaw":0,"wait":2500}
+{"model": "glb/armorhorse.glb", "clips": [{"name": "walk", "frames": 4, "rock": [0.07, 0.06]}], "dirs": 8, "size": 160, "height": 3.0, "extent": 1.9, "yaw": 0, "wait": 2500}
