@@ -3451,6 +3451,13 @@ function render(dtReal) {
       // hp ring
       c.globalAlpha = 1; c.lineWidth = 4; c.strokeStyle = "rgba(0,0,0,.45)"; c.beginPath(); c.arc(b.x, b.y, 64, 0, TAU); c.stroke();
       c.strokeStyle = f > 0.35 ? "rgba(233,229,211,.9)" : "#ff6b5e"; c.beginPath(); c.arc(b.x, b.y, 64, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.stroke();
+      // health bar under the base (3D view), like a strategy game
+      if (TILT.on) { const tc = p.team.c, fl = b.flash > 0; STAND.push({ x: b.x, y: b.y + 80, al: 1, draw: (g, P, k) => { const [x, y] = P(b.x, b.y + 66, 0), w = Math.max(70, 118 * k), h = Math.max(6, 8 * k), x0 = x - w / 2;
+        g.fillStyle = "rgba(8,10,10,.78)"; g.beginPath(); g.roundRect(x0 - 2, y - 2, w + 4, h + 4, 3); g.fill();
+        const col = f > 0.6 ? "#5fd16a" : f > 0.35 ? "#f2c14e" : "#ff5b4f", gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, fl ? "#fff" : col); gr.addColorStop(1, fl ? col : "rgba(0,0,0,.35)");
+        g.fillStyle = col; g.fillRect(x0, y, w * f, h); g.globalAlpha = 0.5; g.fillStyle = gr; g.fillRect(x0, y, w * f, h); g.globalAlpha = 1;
+        g.fillStyle = "rgba(0,0,0,.45)"; for (let i = 1; i < 10; i++) g.fillRect(x0 + w * i / 10 - 0.5, y, 1, h);
+        g.fillStyle = tc; g.fillRect(x0 - 2, y - 2, 4, h + 4); } }); }
     }
     c.globalAlpha = 1;
   }
