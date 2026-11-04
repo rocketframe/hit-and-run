@@ -740,7 +740,7 @@ function applyCmd(c) {
     return;
   }
   if (c.t === "focus") { // hold on an enemy: everyone picked goes after that one target first
-    const t = G.unitById.get(c.tid); if (!t || !t.alive || t.owner === c.p) return;
+    const t = c.tb != null ? G.players[c.tb] && G.players[c.tb].base : G.unitById.get(c.tid); if (!t || !t.alive || t.owner === c.p) return;
     for (const u of us) { u.focus = t; u.mode = "attack"; u.escort = false; u.path = null; u.run = false; }
     return;
   }
@@ -906,7 +906,7 @@ function scan(u) {
     if (!seen && dd < ss * ss) seen = b;
     if (!tgt && dd < rr * rr) tgt = b;
   }
-  if (u.focus && u.focus.alive) { const f = u.focus, dd = d2(u, f); if (dd < s2) seen = f; if (dd < r2 && clearShot(u.x, u.y, f.x, f.y)) tgt = f; }
+  if (u.focus && u.focus.alive) { const f = u.focus, dd = d2(u, f), fr = f.isBase ? f.r : 0, sr = Math.sqrt(s2) + fr, rr = Math.sqrt(r2) + fr; if (dd < sr * sr) seen = f; if (dd < rr * rr && (f.isBase || clearShot(u.x, u.y, f.x, f.y))) tgt = f; }
   u.seen = seen; u.tgt = tgt;
 }
 
@@ -1399,7 +1399,7 @@ function step() {
       gx = foe.x; gy = foe.y;
       stopAt = (foe.isBase ? rangeOf(u) + foe.r - 14 : rangeOf(u) * 0.8);
     }
-    if (u.focus) { gx = u.focus.x; gy = u.focus.y; stopAt = rangeOf(u) * 0.8; }
+    if (u.focus) { gx = u.focus.x; gy = u.focus.y; stopAt = u.focus.isBase ? rangeOf(u) + u.focus.r - 14 : rangeOf(u) * 0.8; }
     const dx = gx - u.x, dy = gy - u.y, dist = Math.hypot(dx, dy);
     u.moving = false;
     u.idleT = (u.idleT || 0) + dt;
@@ -4377,6 +4377,7 @@ const HOLD_MS = 380;
 function holdEnemy(sx, sy) {
   const w = s2w(sx, sy), hr = Math.max(18, 26 / cam.z); let best = null, bd = hr * hr;
   for (const u of G.units) if (u.alive && u.owner !== G.human && !u.isBase && isVis(u.x, u.y)) { const dd = d2(u, w); if (dd < bd) { bd = dd; best = u; } }
+  if (!best) for (const p of G.players) { const b = p.base; if (p.id === G.human || p.out || !b.alive || !isVis(b.x, b.y)) continue; if (d2(b, w) < (b.r + hr) * (b.r + hr)) return b; } // hold on an enemy base: attack it
   return best;
 }
 function holdRelease(sx, sy) {
@@ -4384,8 +4385,8 @@ function holdRelease(sx, sy) {
   if (!ids.length) { toast("Pick a squad first"); return; }
   const t = holdEnemy(sx, sy), w = s2w(sx, sy);
   if (t) {
-    if (UI.tut) UI.tut.focus = 1; issue({ p: G.human, t: "focus", ids, tid: t.id }); UI.pings.push({ x: t.x, y: t.y, t: 0.7, mode: "attack" }); SND.order("attack"); SND.say("attack");
-    toast(t.kind === "gen" ? "All guns on the enemy general!" : "Focus fire on that target", "gold"); return;
+    if (UI.tut) UI.tut.focus = 1; issue(t.isBase ? { p: G.human, t: "focus", ids, tb: t.owner } : { p: G.human, t: "focus", ids, tid: t.id }); UI.pings.push({ x: t.x, y: t.y, t: 0.7, mode: "attack" }); SND.order("attack"); SND.say("attack");
+    toast(t.isBase ? "Attack their base!" : t.kind === "gen" ? "All guns on the enemy general!" : "Focus fire on that target", "gold"); return;
   }
   const P = G.players[G.human];
   if (P.tired) toast("Too tired to run. They walk until they get their breath back");
@@ -5970,18 +5971,18 @@ startAttract();
 requestAnimationFrame(frame);
 // test links (?era=1..8): straight into a fight at your base, 30 of yours vs 10 of theirs plus both generals, at quarter speed
 if (URL_ERA != null) setTimeout(() => {
-  const o = UI.opts; UI.opts = { ...o, players: 2, army: 10, me: 30, crates: false, missions: false, advice: false, split: 3 };
+  const o = UI.opts; UI.opts = { ...o, players: 2, army: 10, me: 60, crates: false, missions: false, advice: false, split: 3 };
   try { start(); } finally { UI.opts = o; }
   const b = G.players[G.human].base, f = G.players[G.human].fwd, sx = -f.y, sy = f.x, eb = G.players[1].base;
   const mine = G.units.filter(u => u.owner === G.human), theirs = G.units.filter(u => u.owner === 1);
-  mine.forEach((u, i) => { const row = Math.floor(i / 8), col = i % 8 - 3.5; u.x = b.x + f.x * (80 + row * 22) + sx * col * 24; u.y = b.y + f.y * (80 + row * 22) + sy * col * 24; u.tx = u.x; u.ty = u.y; });
+  mine.forEach((u, i) => { const row = Math.floor(i / 10), col = i % 10 - 4.5; u.x = b.x + f.x * (80 + row * 22) + sx * col * 24; u.y = b.y + f.y * (80 + row * 22) + sy * col * 24; u.tx = u.x; u.ty = u.y; });
   theirs.forEach((u, i) => { const row = Math.floor(i / 5), col = i % 5 - 2; u.x = b.x + f.x * (300 + row * 24) + sx * col * 26; u.y = b.y + f.y * (300 + row * 24) + sy * col * 26; u.tx = b.x; u.ty = b.y; u.mode = "attack"; });
   cam.x = b.x + f.x * 180; cam.y = b.y + f.y * 180; cam.z = Math.min(SW, SH) < 600 ? 1.1 : 1.4; clampCam();
   setSpeed(0.25); G.slowmo = true; void eb;
 }, 400);
 
 // test hook
-window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM };
+window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue };
 })();
 </script>
 
