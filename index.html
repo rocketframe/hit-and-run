@@ -109,10 +109,10 @@ body.classic #grp2{flex-wrap:wrap;justify-content:center;max-width:100%;gap:3px}
   linear-gradient(90deg,rgba(6,8,6,.9) 0%,rgba(6,8,6,.72) 45%,rgba(6,8,6,.35) 100%)}
 #menu .card{text-shadow:0 1px 3px rgba(0,0,0,.7);position:relative}
 /* rubber stamp: worn red ink, slightly rotated, thumps down on load */
-.stamp{position:absolute;top:34px;right:0;transform:rotate(-9deg);color:#e8483a;pointer-events:none;text-shadow:none;
-  opacity:.92;will-change:transform}
-.stamp .st-in{border:3px solid currentColor;outline:1.5px solid currentColor;outline-offset:3px;border-radius:5px;padding:7px 12px 8px;display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(210,58,44,.06)}
-.stamp .st-k{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+.stamp{position:absolute;top:34px;right:0;transform:rotate(-7deg);color:#ff5a48;pointer-events:none;text-shadow:none;
+  opacity:1;will-change:transform}
+.stamp .st-in{border:3px solid currentColor;outline:1.5px solid currentColor;outline-offset:3px;border-radius:5px;padding:7px 12px 8px;display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(14,10,8,.82)}
+.stamp .st-k{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
 .stamp b{font-family:"Saira Condensed",sans-serif;font-size:30px;line-height:1;font-weight:800;letter-spacing:.02em}
 .stamp .st-rule{width:100%;height:2px;background:currentColor;margin:4px 0 3px}
 .stamp.thump{animation:thump .42s cubic-bezier(.2,.9,.3,1.25) both}
@@ -3610,9 +3610,9 @@ async function loadCounters() {
 (function bakeInk() {
   const c = document.createElement("canvas"); c.width = 220; c.height = 160; const x = c.getContext("2d"), d = x.createImageData(220, 160);
   let sd = 7; const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < d.data.length; i += 4) { const v = r(); d.data[i + 3] = v < 0.16 ? 0 : v < 0.3 ? 120 : 255; }
+  for (let i = 0; i < d.data.length; i += 4) { const v = r(); d.data[i + 3] = v < 0.04 ? 0 : v < 0.12 ? 190 : 255; }
   x.putImageData(d, 0, 0);
-  for (let k = 0; k < 14; k++) { x.globalCompositeOperation = "destination-out"; x.beginPath(); x.arc(r() * 220, r() * 160, 2 + r() * 7, 0, 7); x.fillStyle = `rgba(0,0,0,${0.3 + r() * 0.5})`; x.fill(); }
+  for (let k = 0; k < 8; k++) { x.globalCompositeOperation = "destination-out"; x.beginPath(); x.arc(r() * 220, r() * 160, 2 + r() * 6, 0, 7); x.fillStyle = `rgba(0,0,0,${0.15 + r() * 0.3})`; x.fill(); }
   const u = `url(${c.toDataURL()})`, st = $("stamp").style; st.webkitMaskImage = u; st.maskImage = u; st.webkitMaskSize = st.maskSize = "220px 160px";
 })();
 // numbers roll toward the latest totals like an odometer
