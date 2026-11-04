@@ -4356,7 +4356,7 @@ function handleTap(sx, sy, additive) {
     }
     else { // tap again quickly for more: 1 = this one, 2 = everyone close by, 3 = everyone on screen, 4 = all
       const T0 = performance.now(), mt = UI.multiTap, again = mt && T0 - mt.t < 420 && Math.hypot(sx - mt.x, sy - mt.y) < 40;
-      const n = again ? Math.min(4, mt.n + 1) : 1; UI.multiTap = { t: T0, x: sx, y: sy, n };
+      const n = again ? Math.min(4, mt.n + 1) : 1; UI.multiTap = { t: T0, x: sx, y: sy, n }; if (UI.tut) UI.tut.mt = Math.max(UI.tut.mt || 0, n);
       if (n === 4) { selectKey("all"); toast("Everyone selected: " + UI.sel.size); return; }
       const mine = G.units.filter(u => u.alive && u.owner === G.human && !u.mis);
       const pick = n === 1 ? [best] : n === 2 ? mine.filter(u => d2(u, best) < 100 * 100) : mine.filter(u => { const q = w2scr(u.x, u.y); return q.x >= 0 && q.x <= SW && q.y >= 0 && q.y <= SH; });
@@ -5386,6 +5386,7 @@ const TUT = (() => {
     { t: "Give an order", b: "Now tap open ground where you want them to go. A tap on the same squad button twice finds them on the map.", hand: "tap", at: () => front(330), enter() { base0 = UI.orderN || 0; }, ok: () => (UI.orderN || 0) > base0 },
     { t: "Run for it", b: "Press and hold on open ground until the ring fills, then let go. The squad sprints there and ignores enemies on the way. Running drains the yellow stamina bar, and tired soldiers walk until it fills up again.", hand: "hold", at: () => front(300), enter() { UI.tut = {}; }, ok: () => UI.tut && UI.tut.run },
     { t: "Break off", b: "Stuck in a fight you don't want? Tap the same spot twice, quickly. The soldiers stop fighting and head straight there, only shooting on the way.", hand: "tap", at: () => front(260), enter() { UI.tut = {}; base0 = UI.orderN || 0; }, ok: () => UI.tut && (UI.tut.brk || (UI.orderN || 0) - base0 >= 3) },
+    { t: "Tap your soldiers", b: "Tap one of your soldiers to pick just that one. Tap it twice quickly for everyone close by, three times for everyone on screen, four times for your whole army. Try a quick double tap on a soldier.", hand: "tap", at: () => { const u = G.units.find(u => u.alive && u.owner === G.human && u.kind !== "gen"); return u || front(200); }, enter() { UI.tut = {}; }, ok: () => UI.tut && UI.tut.mt >= 2 },
     { t: "Draw a box", b: "Press and hold, then drag without letting go. Everyone inside the box gets selected.", hand: "hold", enter() { UI.tut = {}; }, ok: () => UI.tut && UI.tut.box },
     { t: "Whole army", b: "Tap ALL to select everyone, general included. ARMY picks every soldier but leaves the general where he is.", el: '[data-sel="all"]', hand: "tap", ok: () => UI.selKey === "all" },
     { x: 1, t: "Two kinds of orders", b: "RUN & GUN keeps moving and shoots on the way. ENGAGE stops, and the whole group closes in on any enemy one of them spots. Tap it to switch to ENGAGE.", el: "#modeBtn", hand: "tap", ok: () => UI.mode === "attack" },
