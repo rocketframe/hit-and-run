@@ -1790,6 +1790,8 @@ function drawStanding() {
     const fx = (q.x - cam.x) * cam.z + W / 2, fy = (q.y - cam.y) * cam.z + H / 2, f = (TILT.p - (fy - H / 2) * s) / TILT.p, k = cam.z / f;
     const p0 = flat2scr(fx, fy), p1 = flat2scr(fx + Math.cos(q.a) * 10, fy + Math.sin(q.a) * 10);
     if (p0.x < -60 || p0.x > SW + 60 || p0.y < -60 || p0.y > SH + 60) continue;
+    if (q.draw) { const P = (wx, wy, h) => { const fx2 = (wx - cam.x) * cam.z + W / 2, fy2 = (wy - cam.y) * cam.z + H / 2, pp = flat2scr(fx2, fy2); return [pp.x, pp.y - h * k]; };
+      c.save(); c.globalAlpha = q.al; q.draw(c, P, k); c.restore(); continue; }
     if (q.atl) { const A = q.atl.M, sc = A.wpp * A.k * k, w = A.S * sc, x0 = p0.x - A.fx * sc, y0 = p0.y - A.fy * sc - (q.hov || 0) * k;
       if (A.ring && !q.dead) { // real colours on the model; the team shows as a ring on the ground
         const rx = (A.ringR || 7.2) * k, ry = rx * Math.cos(TILT.th); c.globalAlpha = q.al * 0.3; c.fillStyle = q.atl.c; c.beginPath(); c.ellipse(p0.x, p0.y, rx, ry, 0, 0, TAU); c.fill();
@@ -2459,7 +2461,9 @@ function rally3(t) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R.img = n
   if (!R.cv[t]) { const cv = document.createElement("canvas"); cv.width = R.w; cv.height = R.h; cv.getContext("2d").drawImage(R.img, t * R.w, 0, R.w, R.h, 0, 0, R.w, R.h); cv.bw = R.bw; cv.bh = R.bh; cv.ay = R.ay; R.cv[t] = cv; }
   return R.cv[t]; }
 // whole-base models for some eras (3D view): one baked view, ground centre at (gx, gy), footprint radius 1 = r world units
-const BASE3 = { 2: { src: "sprites/castle.png", S: 256, H: 317, gx: 128, gy: 214.7, wpp: 0.009765625, r: 64 }, // Castle by hamidkhan224, CC-BY
+const BASE3 = { 0: { src: "sprites/st-base.png", S: 256, H: 251, gx: 128, gy: 133.2, wpp: 0.009765625, r: 64 }, // log palisade with Basic Stone Age Houses (CristianPiotto, CC-BY), built in three.js
+  1: { src: "sprites/br-base.png", S: 256, H: 251, gx: 128, gy: 133.2, wpp: 0.009765625, r: 64 }, // mud-brick town with a temple, built in three.js
+  2: { src: "sprites/castle.png", S: 256, H: 317, gx: 128, gy: 214.7, wpp: 0.009765625, r: 64 }, // Castle by hamidkhan224, CC-BY
   6: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 }, // Dome Structure by trashbinkr
   7: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 } };
 function base3(era) { const R = BASE3[era]; if (!R) return null; if (!R.img) { R.img = new Image(); R.img.onload = () => { const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, 0, 0); const f = R.wpp * R.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; R.cv = cv; }; R.img.src = R.src; }
@@ -3677,45 +3681,54 @@ function render(dtReal) {
     c.fillStyle = "#f6efd8"; c.font = `900 ${sz * 0.8}px system-ui,sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(cr.mission ? "★" : "?", cr.x, y + sz * 0.04);
     if (cr.mission && cr.until < Infinity) { c.font = `800 ${Math.max(11, 10 / z)}px system-ui,sans-serif`; c.fillStyle = "#f3c85a"; c.fillText(Math.max(0, Math.ceil(cr.until - G.time)) + "s", cr.x, y - sz * (fall > 0 ? 3 : 1.1)); }
   }
+  // things in the air: drawn upright in the 3D view (STAND, screen space), or offset up the map when flat.
+  // fn(g, P, s): P(x, y, h) gives the drawing point of a world point h units above the ground, s = pixels per world unit
+  const air = (x, y, fn) => { if (TILT.on) STAND.push({ x, y, draw: fn, al: 1 }); else fn(c, (wx, wy, h) => [wx, wy - h], 1); };
+  const shadow = (x, y, r, a) => { c.fillStyle = `rgba(0,0,0,${a})`; c.beginPath(); c.ellipse(x, y, r, r * 0.45, 0, 0, TAU); c.fill(); };
+  const lw = w => w / Math.max(z, 0.6);
   for (const st of G.strikes || []) {
     const f = st.t / 1.8, R = 120, se = eraS(eraOf(st.owner)), k = 1 - f;
+    // n shots lobbed from the owner's side of the target: ground track plus height
     const lob = (n, h, draw) => { const b = G.players[st.owner].base, dx = st.x - b.x, dy = st.y - b.y, sx0 = st.x - dx * 0.35, sy0 = st.y - dy * 0.35;
       for (let i = 0; i < n; i++) { const kk = clamp(k * 1.1 - (i % 4) * 0.05, 0, 1), ex = st.x + ((i * 53) % 90) - 45, ey = st.y + ((i * 37) % 70) - 35;
-        const at = q => [sx0 + (ex - sx0) * q, sy0 + (ey - sy0) * q - Math.sin(Math.PI * q) * h], [px, py] = at(kk), [qx, qy] = at(Math.min(1, kk + 0.02));
-        draw(px, py, Math.atan2(qy - py, qx - px), i); } };
+        const at = q => [sx0 + (ex - sx0) * q, sy0 + (ey - sy0) * q, Math.sin(Math.PI * q) * h], [gx, gy, gh] = at(kk), [nx, ny, nh] = at(Math.min(1, kk + 0.02));
+        if (TILT.on) shadow(gx, gy, 3, 0.25);
+        air(gx, gy, (g, P, s) => { const [px, py] = P(gx, gy, gh), [qx, qy] = P(nx, ny, nh); draw(g, px, py, Math.atan2(qy - py, qx - px), s, i); }); } };
     if (se === "stone") { // boulders falling from the sky: shadows grow, rocks drop in
       for (let i = 0; i < 6; i++) { const a = i * 1.9 + st.x * 0.01, d = (i % 3) * 32, bx = st.x + Math.cos(a) * d, by = st.y + Math.sin(a) * d, kk = clamp(k * 1.25 - i * 0.04, 0, 1), hgt = (1 - kk) * 320, r = 9 + (i % 3) * 3;
-        c.fillStyle = `rgba(0,0,0,${0.15 + 0.35 * kk})`; c.beginPath(); c.ellipse(bx, by, r * (0.5 + kk * 0.6), r * 0.4 * (0.5 + kk * 0.6), 0, 0, TAU); c.fill();
-        if (kk > 0.05) { c.fillStyle = "#8d8a80"; c.strokeStyle = "rgba(0,0,0,.6)"; c.lineWidth = 1.2; c.beginPath(); c.arc(bx, by - hgt, r, 0, TAU); c.fill(); c.stroke(); } }
+        shadow(bx, by, r * (0.5 + kk * 0.6), 0.15 + 0.35 * kk);
+        if (kk > 0.05) air(bx, by, (g, P, s) => { const [px, py] = P(bx, by, hgt + r); const gr = g.createRadialGradient(px - r * s * 0.35, py - r * s * 0.4, r * s * 0.1, px, py, r * s); gr.addColorStop(0, "#b4b0a4"); gr.addColorStop(1, "#5e5b52"); g.fillStyle = gr; g.strokeStyle = "rgba(0,0,0,.6)"; g.lineWidth = 1.2 * s; g.beginPath(); g.arc(px, py, r * s, 0, TAU); g.fill(); g.stroke(); }); }
     } else if (se === "bronze") { // a volley of javelins from the owner's city
-      c.strokeStyle = "#5a3a20"; c.lineWidth = 1.6 / Math.max(z, 0.6);
-      lob(12, 140, (px, py, a) => { c.beginPath(); c.moveTo(px - Math.cos(a) * 14, py - Math.sin(a) * 14); c.lineTo(px, py); c.stroke(); c.fillStyle = "#c98a3a"; c.beginPath(); c.arc(px, py, 1.6, 0, TAU); c.fill(); });
+      lob(12, 140, (g, px, py, a, s) => { g.strokeStyle = "#5a3a20"; g.lineWidth = lw(1.6) * s; g.beginPath(); g.moveTo(px - Math.cos(a) * 14 * s, py - Math.sin(a) * 14 * s); g.lineTo(px, py); g.stroke(); g.fillStyle = "#c98a3a"; g.beginPath(); g.arc(px, py, 1.6 * s, 0, TAU); g.fill(); });
     } else if (se === "musket") { // a cannon barrage: black balls arcing in with smoke trails
-      lob(5, 200, (px, py) => { c.globalAlpha = 0.35; c.drawImage(SPR.smoke, px - 10, py - 4, 20, 20); c.globalAlpha = 1; c.fillStyle = "#1a1a18"; c.strokeStyle = "rgba(255,255,255,.3)"; c.lineWidth = 1; c.beginPath(); c.arc(px, py, 4.2, 0, TAU); c.fill(); c.stroke(); });
+      lob(5, 200, (g, px, py, a, s) => { g.globalAlpha = 0.35; g.drawImage(SPR.smoke, px - 10 * s, py - 4 * s, 20 * s, 20 * s); g.globalAlpha = 1; g.fillStyle = "#1a1a18"; g.strokeStyle = "rgba(255,255,255,.3)"; g.lineWidth = s; g.beginPath(); g.arc(px, py, 4.2 * s, 0, TAU); g.fill(); g.stroke(); });
     } else if (se === "ww") { // a biplane crossing the target and dropping bombs
-      const b = G.players[st.owner].base, a = Math.atan2(st.y - b.y, st.x - b.x), d = (k - 0.75) * 900, px = st.x + Math.cos(a) * d, py = st.y + Math.sin(a) * d - 60;
-      c.save(); c.translate(px + 30, py + 60); c.rotate(a); c.fillStyle = "rgba(0,0,0,.25)"; c.fillRect(-14, -3, 28, 6); c.fillRect(-4, -18, 8, 36); c.restore();
-      c.save(); c.translate(px, py); c.rotate(a); c.fillStyle = "#6e6a48"; c.strokeStyle = "rgba(0,0,0,.7)"; c.lineWidth = 1; c.beginPath(); c.roundRect(-14, -3, 28, 6, 2); c.fill(); c.stroke();
-      c.fillStyle = "#8a8660"; c.fillRect(-4, -18, 8, 36); c.strokeRect(-4, -18, 8, 36); c.fillRect(-14, -7, 4, 14); c.fillStyle = G.players[st.owner].team.c; c.beginPath(); c.arc(0, -12, 2.4, 0, TAU); c.arc(0, 12, 2.4, 0, TAU); c.fill();
-      c.strokeStyle = "rgba(220,220,220,.6)"; c.lineWidth = 1; c.beginPath(); c.moveTo(15, -5 + Math.sin(now * 80) * 5); c.lineTo(15, 5 - Math.sin(now * 80) * 5); c.stroke(); c.restore();
-      if (k > 0.75) for (let i = 0; i < 3; i++) { const kk = clamp((k - 0.75 - i * 0.05) * 5, 0, 1); if (kk <= 0) continue; c.fillStyle = "#2a2a24"; c.beginPath(); c.ellipse(st.x + (i - 1) * 30, st.y - (1 - kk) * 60, 2.6, 4, 0, 0, TAU); c.fill(); }
+      const b = G.players[st.owner].base, a = Math.atan2(st.y - b.y, st.x - b.x), d = (k - 0.75) * 900, gx = st.x + Math.cos(a) * d, gy = st.y + Math.sin(a) * d, H = 150;
+      c.save(); c.translate(gx + (TILT.on ? 0 : 30), gy); c.rotate(a); c.fillStyle = "rgba(0,0,0,.25)"; c.fillRect(-14, -3, 28, 6); c.fillRect(-4, -18, 8, 36); c.restore();
+      air(gx, gy, (g, P, s) => { const [px, py] = P(gx, gy, H), [qx, qy] = P(gx + Math.cos(a) * 10, gy + Math.sin(a) * 10, H), sa = Math.atan2(qy - py, qx - px);
+        g.save(); g.translate(px, py); g.rotate(sa); g.scale(s, s); g.fillStyle = "#6e6a48"; g.strokeStyle = "rgba(0,0,0,.7)"; g.lineWidth = 1; g.beginPath(); g.roundRect(-14, -3, 28, 6, 2); g.fill(); g.stroke();
+        g.fillStyle = "#8a8660"; g.fillRect(-4, -18, 8, 36); g.strokeRect(-4, -18, 8, 36); g.fillRect(-14, -7, 4, 14); g.fillStyle = G.players[st.owner].team.c; g.beginPath(); g.arc(0, -12, 2.4, 0, TAU); g.arc(0, 12, 2.4, 0, TAU); g.fill();
+        g.strokeStyle = "rgba(220,220,220,.6)"; g.lineWidth = 1; g.beginPath(); g.moveTo(15, -5 + Math.sin(now * 80) * 5); g.lineTo(15, 5 - Math.sin(now * 80) * 5); g.stroke(); g.restore(); });
+      if (k > 0.75) for (let i = 0; i < 3; i++) { const kk = clamp((k - 0.75 - i * 0.05) * 5, 0, 1); if (kk <= 0) continue; const bx = st.x + (i - 1) * 30, by = st.y;
+        if (TILT.on) shadow(bx, by, 3, 0.3); air(bx, by, (g, P, s) => { const [px, py] = P(bx, by, (1 - kk) * (TILT.on ? H : 60)); g.fillStyle = "#2a2a24"; g.beginPath(); g.ellipse(px, py, 2.6 * s, 4 * s, 0, 0, TAU); g.fill(); }); }
     } else if (se === "modern") { // a missile diving in with a smoke trail
-      const kk = clamp(k * 1.15, 0, 1), sx0 = st.x - 420, sy0 = st.y - 520, px = sx0 + (st.x - sx0) * kk, py = sy0 + (st.y - sy0) * kk;
-      for (let i = 1; i < 8; i++) { const kt = Math.max(0, kk - i * 0.03); c.globalAlpha = 0.5 * (1 - i / 8); c.drawImage(SPR.smoke, sx0 + (st.x - sx0) * kt - 8, sy0 + (st.y - sy0) * kt - 8, 16, 16); }
-      c.globalAlpha = 1; const a = Math.atan2(st.y - sy0, st.x - sx0); c.save(); c.translate(px, py); c.rotate(a); c.fillStyle = "#d8dad6"; c.beginPath(); c.roundRect(-10, -2, 20, 4, 2); c.fill(); c.fillStyle = "#c33"; c.fillRect(6, -2, 4, 4); c.restore();
-      c.globalCompositeOperation = "lighter"; c.drawImage(SPR.glow, px - Math.cos(a) * 12 - 8, py - Math.sin(a) * 12 - 8, 16, 16); c.globalCompositeOperation = "source-over";
-    } else if (se === "space") { // targeting beams from orbit sweep the circle
-      c.globalCompositeOperation = "lighter"; c.strokeStyle = "rgba(255,90,220,1)";
-      for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + now * 0.8, d = i ? 70 * (1 - k * 0.4) : 0, bx = st.x + Math.cos(a) * d, by = st.y + Math.sin(a) * d; c.globalAlpha = 0.2 + 0.5 * k; c.lineWidth = (1 + k * 4) / Math.max(z, 0.6); c.beginPath(); c.moveTo(bx, by - 900); c.lineTo(bx, by); c.stroke(); }
-      c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+      const kk = clamp(k * 1.15, 0, 1), T3 = TILT.on, sx0 = st.x - (T3 ? 300 : 420), sy0 = st.y - (T3 ? 120 : 520), H0 = T3 ? 650 : 0;
+      const at = q => [sx0 + (st.x - sx0) * q, sy0 + (st.y - sy0) * q, H0 * (1 - q)];
+      if (T3) { const [gx, gy] = at(kk); shadow(gx, gy, 4, 0.3); }
+      air(st.x, st.y, (g, P, s) => { for (let i = 1; i < 8; i++) { const [tx, ty, th] = at(Math.max(0, kk - i * 0.03)), [px, py] = P(tx, ty, th); g.globalAlpha = 0.5 * (1 - i / 8); g.drawImage(SPR.smoke, px - 8 * s, py - 8 * s, 16 * s, 16 * s); }
+        const [mx, my, mh] = at(kk), [px, py] = P(mx, my, mh), [qx, qy] = P(...at(Math.min(1, kk + 0.02))), a = Math.atan2(qy - py, qx - px) || Math.atan2(st.y - sy0, st.x - sx0);
+        g.globalAlpha = 1; g.save(); g.translate(px, py); g.rotate(a); g.scale(s, s); g.fillStyle = "#d8dad6"; g.beginPath(); g.roundRect(-10, -2, 20, 4, 2); g.fill(); g.fillStyle = "#c33"; g.fillRect(6, -2, 4, 4); g.restore();
+        g.globalCompositeOperation = "lighter"; g.drawImage(SPR.glow, px - Math.cos(a) * 12 * s - 8 * s, py - Math.sin(a) * 12 * s - 8 * s, 16 * s, 16 * s); g.globalCompositeOperation = "source-over"; });
+    } else if (se === "space" || se === "laser") { // targeting beams from orbit
+      const sp = se === "space", n = sp ? 5 : 1;
+      air(st.x, st.y, (g, P, s) => { g.globalCompositeOperation = "lighter"; g.strokeStyle = sp ? "rgba(255,90,220,1)" : "rgba(140,240,255,1)";
+        for (let i = 0; i < n; i++) { const a = i / 5 * TAU + now * 0.8, d = i ? 70 * (1 - k * 0.4) : 0, bx = st.x + Math.cos(a) * d, by = st.y + Math.sin(a) * d, [x0, y0] = P(bx, by, 900), [x1, y1] = P(bx, by, 0);
+          g.globalAlpha = sp ? 0.2 + 0.5 * k : 0.25 + 0.5 * k; g.lineWidth = lw(1 + k * (sp ? 4 : 5)) * (TILT.on ? 1 : s); g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+          if (TILT.on) { g.globalAlpha = 0.4 * k; g.drawImage(SPR.glow, x1 - 10, y1 - 5, 20, 10); } }
+        g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; });
     } else if (se === "med") { // flaming pots arcing in from the owner's castle
-      const b = G.players[st.owner].base, dx = st.x - b.x, dy = st.y - b.y;
-      for (let i = 0; i < 4; i++) { const kk = clamp(k * 1.1 - i * 0.05, 0, 1), sx0 = st.x - dx * 0.35, sy0 = st.y - dy * 0.35, ox = (i - 1.5) * 26, px = sx0 + (st.x + ox - sx0) * kk, py = sy0 + (st.y + ((i * 37) % 40 - 20) - sy0) * kk - Math.sin(Math.PI * kk) * 160;
-        c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.9; c.drawImage(SPR.glow, px - 14, py - 14, 28, 28); c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
-        c.fillStyle = "#4a3020"; c.beginPath(); c.arc(px, py, 4, 0, TAU); c.fill(); }
-    } else if (se === "laser") { // targeting beam from orbit
-      c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.25 + 0.5 * k; c.strokeStyle = "rgba(140,240,255,1)"; c.lineWidth = (1 + k * 5) / Math.max(z, 0.6);
-      c.beginPath(); c.moveTo(st.x, st.y - 900); c.lineTo(st.x, st.y); c.stroke(); c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+      lob(4, 160, (g, px, py, a, s) => { g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.9; g.drawImage(SPR.glow, px - 14 * s, py - 14 * s, 28 * s, 28 * s); g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+        g.fillStyle = "#4a3020"; g.beginPath(); g.arc(px, py, 4 * s, 0, TAU); g.fill(); });
     }
     c.strokeStyle = `rgba(255,80,50,${0.5 + Math.sin(now * 18) * 0.3})`; c.lineWidth = 2.5 / Math.max(z, 0.6);
     c.beginPath(); c.arc(st.x, st.y, R, 0, TAU); c.stroke();
@@ -5925,6 +5938,17 @@ function frame(now) {
 }
 startAttract();
 requestAnimationFrame(frame);
+// test links (?era=1..8): straight into a fight at your base, 30 of yours vs 10 of theirs plus both generals, at quarter speed
+if (URL_ERA != null) setTimeout(() => {
+  const o = UI.opts; UI.opts = { ...o, players: 2, army: 10, me: 30, crates: false, missions: false, advice: false, split: 3 };
+  try { start(); } finally { UI.opts = o; }
+  const b = G.players[G.human].base, f = G.players[G.human].fwd, sx = -f.y, sy = f.x, eb = G.players[1].base;
+  const mine = G.units.filter(u => u.owner === G.human), theirs = G.units.filter(u => u.owner === 1);
+  mine.forEach((u, i) => { const row = Math.floor(i / 8), col = i % 8 - 3.5; u.x = b.x + f.x * (80 + row * 22) + sx * col * 24; u.y = b.y + f.y * (80 + row * 22) + sy * col * 24; u.tx = u.x; u.ty = u.y; });
+  theirs.forEach((u, i) => { const row = Math.floor(i / 5), col = i % 5 - 2; u.x = b.x + f.x * (300 + row * 24) + sx * col * 26; u.y = b.y + f.y * (300 + row * 24) + sy * col * 26; u.tx = b.x; u.ty = b.y; u.mode = "attack"; });
+  cam.x = b.x + f.x * 180; cam.y = b.y + f.y * 180; cam.z = Math.min(SW, SH) < 600 ? 1.1 : 1.4; clampCam();
+  setSpeed(0.25); G.slowmo = true; void eb;
+}, 400);
 
 // test hook
 window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM };
