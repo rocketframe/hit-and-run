@@ -318,6 +318,9 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <div class="opt"><label>Button layout</label>
       <div class="seg" id="optLayout"><button data-v="1" class="on">Compact</button><button data-v="0">Classic</button></div>
       <p class="fine">Compact keeps one row of squad buttons and tucks the expert orders behind ⋯. Classic shows every button.</p></div>
+    <div class="opt"><label>Anonymous game stats</label>
+      <div class="seg" id="optTel"><button data-v="1">Send</button><button data-v="0" class="on">Don't send</button></div>
+      <p class="fine">Sends skill level, result, time and which orders you used after each battle, to help balance the game. No names, nothing about your device.</p></div>
     <div class="opt"><label>Sound</label>
       <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button><button class="go ghost" data-snd="v">Voices</button></div></div>
     <button class="go" id="setBack">Done</button>
@@ -402,6 +405,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <div class="stats" id="overStats"></div>
     <div class="score" id="overScore"></div>
     <div class="record" id="overRecord" hidden></div>
+    <div class="expoffer" id="telAsk" hidden><div><b>Help make the game better?</b> After each battle, send anonymous stats: skill level, result, time and which orders you used. No names, nothing about your device.</div><div class="sndrow"><button class="go ghost" id="telYes">Yes, send</button><button class="go ghost" id="telNo">No thanks</button></div></div>
     <div class="expoffer" id="expOffer" hidden><div><b>Ready for more?</b> Expert controls add formations, rally points, drawn routes, guard duty, merging squads and more.</div><button class="go ghost" id="expOn">Turn on Expert controls</button></div>
     <div class="arcade" id="nameEntry">
       <div class="arcade-h">Enter your name</div>
@@ -2560,7 +2564,10 @@ function renderMisTypes() {
   $("misNote").textContent = (UI.opts.missions && !EXP() && loadLog().length < 3 ? "With Basic controls, missions join after your first 3 battles. " : "") + (!UI.opts.missions ? "Missions are off." : !n ? "No mission types picked, so no missions will come." : n === 6 ? "All six mission types are in the mix." : n + " of 6 mission types are in the mix.");
 }
 renderMisTypes();
-UI.opts.split = 3; UI.opts.layout = 1; UI.opts.expert = 0;
+UI.opts.split = 3; UI.opts.layout = 1; UI.opts.expert = 0; UI.opts.tel = 0;
+try { UI.opts.tel = localStorage.getItem("hr-tel") === "1" ? 1 : 0; } catch (e) {}
+seg("optTel", "tel");
+$("optTel").addEventListener("click", () => { try { localStorage.setItem("hr-tel", String(UI.opts.tel)); } catch (e) {} });
 try { const v = localStorage.getItem("hr-expert"); if (v !== null) UI.opts.expert = +v ? 1 : 0; } catch (e) {}
 seg("optExpert", "expert");
 $("optExpert").addEventListener("click", () => { try { localStorage.setItem("hr-expert", String(UI.opts.expert)); } catch (e) {} applyExpert(); });
@@ -3534,6 +3541,19 @@ function lbRpc(fn, body) {
   if (!LB.url) return Promise.resolve();
   return fetch(LB.url + "/rest/v1/rpc/" + fn, { method: "POST", keepalive: true, headers: { ...lbHead(), "Content-Type": "application/json" }, body: JSON.stringify(body || {}) }).catch(() => {});
 }
+// opt-in anonymous game log (see sql/supabase-update-5-game-log.sql)
+function logGame(g) {
+  if (!g || !LB.url) return;
+  const use = {}; for (const [k, v] of Object.entries(g.use || {}).slice(0, 24)) if (/^[a-z]{1,12}$/.test(k)) use[k] = Math.min(9999, v | 0);
+  lbRpc("log_game", { diff: g.diff, enemies: g.enemies, army: g.army, my_army: g.me, win: !!g.win, secs: Math.min(36000, g.secs | 0), kills: g.kills | 0, losses: g.losses | 0, level: g.level | 0, expert: !!g.expert, use });
+}
+function setTel(on) {
+  UI.opts.tel = on ? 1 : 0; try { localStorage.setItem("hr-tel", on ? "1" : "0"); } catch (e) {}
+  $("optTel").querySelectorAll("button").forEach(x => x.classList.toggle("on", +x.dataset.v === UI.opts.tel));
+  $("telAsk").hidden = true;
+}
+$("telYes").addEventListener("click", () => { setTel(true); const l = loadLog(), g = l[+$("telAsk").dataset.n]; if (g) logGame(g); toast("Thanks! Stats from your battles help balance the game", "gold"); });
+$("telNo").addEventListener("click", () => setTel(false));
 function reportKills() {
   if (!G || G.attract || G.tutorial || !G.players) return;
   const k = G.players[G.human].kills - killsSent; if (k > 0) { killsSent += k; lbRpc("add_kills", { n: k }); }
@@ -3654,6 +3674,9 @@ function showOver() {
   reportKills();
   startNameEntry({ score, diff: G.diff, enemies, army: G.enemyArmy, my_army: G.myArmy, secs, kills: me.kills, win });
   if (G.slowmo) { $("nameEntry").hidden = true; }
+  { const entry = log[log.length - 1]; let asked = null; try { asked = localStorage.getItem("hr-tel"); } catch (e) {}
+    if (asked === "1") logGame(entry);
+    $("telAsk").hidden = !(asked === null && LB.url && !G.slowmo); $("telAsk").dataset.n = String(log.length - 1); }
   { let offered = false; try { offered = localStorage.getItem("hr-expoffer") === "1"; } catch (e) {}
     const show = win && G.diff >= 2 && !EXP() && !offered; $("expOffer").hidden = !show;
     if (show) try { localStorage.setItem("hr-expoffer", "1"); } catch (e) {} }
@@ -3745,7 +3768,7 @@ startAttract();
 requestAnimationFrame(frame);
 
 // test hook
-window.__hr = { get G() { return G; }, start, step, UI, cam, SND };
+window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp };
 })();
 </script>
 
