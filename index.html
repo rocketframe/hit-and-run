@@ -431,7 +431,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -590,7 +590,15 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy, map) {
       if (diag < need) R[i] += (need - diag) * Math.exp(-(((Math.PI / 4 - f) / 0.32) ** 2));
       R[i] = Math.min(R[i], h / Math.max(Math.abs(Math.cos(t)), Math.abs(Math.sin(t))) - 14);
     }
-    g.island = { c: h, R };
+    // rocky headlands (painted from the reef scan): the coast bulges out under each one, the same in every octant
+    const reef = [], m = 2 + Math.floor(ir() * 2);
+    for (let i = 0; i < m; i++) reef.push({ a: (0.06 + (i + 0.2 + ir() * 0.6) / m * 0.56) * Math.PI / 4, p: Math.floor(ir() * 3), sc: 0.9 + ir() * 0.3 });
+    for (let i = 0; i < N; i++) {
+      const t = i / N * T2; let f = t % (Math.PI / 2); if (f > Math.PI / 4) f = Math.PI / 2 - f;
+      for (const r of reef) { const hw = [510, 410, 443][r.p] * 0.62 * r.sc / 2 / R[i] * 0.8, d = Math.abs(f - r.a) / hw; if (d < 1) R[i] += 30 * r.sc * (0.5 + 0.5 * Math.cos(d * Math.PI)); }
+      R[i] = Math.min(R[i], h / Math.max(Math.abs(Math.cos(t)), Math.abs(Math.sin(t))) - 14);
+    }
+    g.island = { c: h, R, reef };
   }
   // map hazards: built in one quadrant and mirrored like the rocks, so every corner faces the same ground
   g.map = MAPS[map | 0] ? map | 0 : 0; g.haz = [];
@@ -2479,7 +2487,7 @@ function rally3(t, ph = 0) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R
   return R.cv[key]; }
 // whole-base models for some eras (3D view): one baked view, ground centre at (gx, gy), footprint radius 1 = r world units
 const BASE3 = { 0: { src: "sprites/st-base.png", S: 256, H: 251, gx: 128, gy: 133.2, wpp: 0.009765625, r: 64 }, // log palisade with Basic Stone Age Houses (CristianPiotto, CC-BY), built in three.js
-  1: { src: "sprites/br-base.png", S: 256, H: 251, gx: 128, gy: 133.2, wpp: 0.009765625, r: 64 }, // mud-brick town with a temple, built in three.js
+  1: { src: "sprites/br-temple2.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 56 }, // Greek Temple by cmzw (CC-BY)
   3: { src: "sprites/mu-base.png", S: 320, H: 331, gx: 160, gy: 171.2, wpp: 0.004375, r: 145 }, // Santa Luzia Fort by GSXNet (CC-BY-NC)
   4: { src: "sprites/ww-base.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 54 }, // Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY)
   2: { src: "sprites/castle.png", S: 256, H: 317, gx: 128, gy: 214.7, wpp: 0.009765625, r: 64 }, // Castle by hamidkhan224, CC-BY
@@ -2944,18 +2952,18 @@ function spaceSprites(T) {
   return { inf, gen, fort, genSz: 60, trot: true };
 }
 // rocky headlands cut from a photogrammetry reef (rock reef and beach by Metazeon), laid on the coast 8-fold symmetric
-const REEF = { img: null, ok: false, W: 510, H: 195, top: 45, w: [510, 410, 443], k: 0.42 };
+const REEF = { src: "sprites/reef2.png", img: null, ok: false, W: 510, H: 150, top: 66, w: [510, 410, 443], k: 0.62 };
 function paintReef(g) {
-  const I = G.island; if (!I) return;
-  if (!REEF.img) { REEF.img = new Image(); REEF.img.onload = () => { REEF.ok = true; if (groundCvs && G && G.island) { const g2 = groundCvs.getContext("2d"); g2.save(); g2.setTransform(GK, 0, 0, GK, 0, 0); paintReef(g2); g2.restore(); if (miniGround) miniGround.getContext("2d").drawImage(groundCvs, 0, 0, miniGround.width, miniGround.width); } }; REEF.img.src = "sprites/reef.png"; }
+  const I = G.island; if (!I || !I.reef) return;
+  if (!REEF.img) { REEF.img = new Image(); REEF.img.onload = () => { REEF.ok = true; if (groundCvs && G && G.island) { const g2 = groundCvs.getContext("2d"); g2.save(); g2.setTransform(GK, 0, 0, GK, 0, 0); paintReef(g2); g2.restore(); if (miniGround) miniGround.getContext("2d").drawImage(groundCvs, 0, 0, miniGround.width, miniGround.width); } }; REEF.img.src = REEF.src; }
   if (!REEF.ok) return;
-  const rr = mulberry32((G.S * 31 + 7) >>> 0), n = I.R.length, Q = Math.PI / 4, spots = [];
-  const m = 2 + Math.floor(rr() * 2); for (let i = 0; i < m; i++) spots.push({ a: (i + 0.25 + rr() * 0.5) / m * Q, p: Math.floor(rr() * 3), sc: 0.85 + rr() * 0.35 });
-  for (const sp of spots) for (let q = 0; q < 8; q++) {
+  const n = I.R.length; g.save(); g.filter = "contrast(1.2) brightness(0.82) saturate(0.85)";
+  for (const sp of I.reef) for (let q = 0; q < 8; q++) {
     const mir = q % 2 === 1, a = (mir ? Math.floor(q / 2) * Math.PI / 2 + Math.PI / 2 - sp.a : Math.floor(q / 2) * Math.PI / 2 + sp.a);
     const t = ((a % TAU) + TAU) % TAU, R = I.R[Math.round(t / TAU * n) % n], x = I.c + Math.cos(t) * R, y = I.c + Math.sin(t) * R, k = REEF.k * sp.sc, w = REEF.w[sp.p];
     g.save(); g.translate(x, y); g.rotate(t + Math.PI / 2); if (mir) g.scale(-1, 1);
-    g.drawImage(REEF.img, 0, sp.p * REEF.H, w, REEF.H, -w / 2 * k, (-REEF.top - 6) * k, w * k, REEF.H * k); g.restore(); }
+    g.drawImage(REEF.img, 0, sp.p * REEF.H, w, REEF.H, -w / 2 * k, -(REEF.top + 4) * k, w * k, REEF.H * k); g.restore(); }
+  g.restore();
 }
 // ---------- world (terrain, rocks) ----------
 function buildWorld() {
@@ -3389,8 +3397,8 @@ const SMOKE_L = sprite(64, g => { const gr = g.createRadialGradient(0, 0, 0, 0, 
   SMOKE_D = sprite(64, g => { const gr = g.createRadialGradient(0, 0, 0, 0, 0, 32); gr.addColorStop(0, "rgba(45,43,40,.95)"); gr.addColorStop(0.55, "rgba(60,58,55,.55)"); gr.addColorStop(1, "rgba(80,78,75,0)"); g.fillStyle = gr; g.fillRect(-32, -32, 64, 64); }, 1);
 function baseBurn(g, b, now, P, k) {
   const f = b.hp / (b.max || CFG.base.hp); if (f > 0.6) return;
-  if (!b.dmg) { let sd = Math.abs(Math.floor(b.x * 7 + b.y * 13)) || 1; const R = () => (sd = (sd * 16807) % 2147483647) / 2147483647; b.dmg = []; for (let i = 0; i < 5; i++) { const a = R() * TAU, d = 12 + R() * 38; b.dmg.push({ x: Math.cos(a) * d, y: Math.sin(a) * d * 0.8, s: 0.7 + R() * 0.6, ph: R() * 9 }); } }
-  const sm = clamp((0.6 - f) / 0.6, 0.25, 1), fire = f <= 0.35 ? 0.45 + 0.55 * clamp((0.35 - f) / 0.35, 0, 1) : 0, nS = f <= 0.35 ? 5 : 2;
+  if (!b.dmg) { const R = mulberry32((Math.floor(b.x) * 73856093 ^ Math.floor(b.y) * 19349663) >>> 0); b.dmg = []; for (let i = 0; i < 8; i++) { const a = (i + R() * 0.7) / 8 * TAU, d = 18 + R() * 46; b.dmg.push({ x: Math.cos(a) * d, y: Math.sin(a) * d * 0.85, s: 0.7 + R() * 0.6, ph: R() * 9 }); } for (let i = 7; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [b.dmg[i], b.dmg[j]] = [b.dmg[j], b.dmg[i]]; } }
+  const sm = clamp((0.6 - f) / 0.6, 0.25, 1), fire = f <= 0.35 ? 0.45 + 0.55 * clamp((0.35 - f) / 0.35, 0, 1) : 0, nS = f <= 0.35 ? 8 : 3;
   g.save();
   for (let i = 0; i < nS; i++) { const d = b.dmg[i], N = 8;
     for (let j = 0; j < N; j++) { const t = (now * 0.22 * (0.8 + d.s * 0.3) + j / N + d.ph) % 1, [sx, sy] = P(b.x + d.x + t * 26 + Math.sin(t * 5 + d.ph) * 4, b.y + d.y, 6 + t * 70 * d.s);
@@ -6020,7 +6028,7 @@ if (URL_ERA != null) setTimeout(() => {
 }, 400);
 
 // test hook
-window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
+window.__hr = { get G() { return G; }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
 })();
 </script>
 
