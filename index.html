@@ -420,7 +420,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -1731,7 +1731,8 @@ const MODEL3 = {
        gen: { src: "sprites/ww-gen.png", S: 160, fx: 80, fy: 137.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 23 } },
   0: { inf: { src: "sprites/st-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Mixamo Ch05 with a spear
   1: { inf: { src: "sprites/st-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } },
-  2: { inf: { src: "sprites/me-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Mixamo Erika Archer
+  2: { gen: { src: "sprites/me-gen.png", S: 160, fx: 80, fy: 139.6, wpp: 0.02375, k: 19, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 }, // 1964.88 Armor for Man and Horse, Cleveland Museum of Art (CC0)
+       inf: { src: "sprites/me-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Mixamo Erika Archer
   5: { inf: { src: "sprites/ww-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/md-gen.png", S: 160, fx: 80, fy: 142.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 24 } }, // Tank by Quaternius
   7: { gen: { src: "sprites/sp-gen.png", S: 160, fx: 80, fy: 127.8, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // Mech Assault Walker by Alimayo Arango
@@ -2419,6 +2420,11 @@ const ROCK3 = { src: "sprites/rocks.png", S: 128, H: 133, N: 6, gx: 64, gy: 86.2
 function rock3(o) { const R = ROCK3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
   const i = Math.floor(Math.abs(o.x * 7 + o.y * 3)) % R.N, cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, i * R.S, 0, R.S, R.H, 0, 0, R.S, R.H);
   const f = R.wpp * o.r * 1.12; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; return cv; }
+// baked Stone Age hut (Basic Stone Age House by CristianPiotto, CC-BY) in 3 turns; footprint radius 1 = the model's 10 x 10 plot
+const HUT3 = { src: "sprites/huts.png", S: 160, H: 183, N: 3, gx: 80, gy: 125.8, wpp: 0.0175, r: 27, cv: [] };
+function hut3(i) { const R = HUT3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
+  if (!R.cv[i]) { const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, (i % R.N) * R.S, 0, R.S, R.H, 0, 0, R.S, R.H); const f = R.wpp * R.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; R.cv[i] = cv; }
+  return R.cv[i]; }
 function boulder3(o) { const r = o.r, rr = mulberry32(Math.floor(o.x * 7 + o.y * 3)); return bbSprite(r * 2.3, r * 1.7, g => {
   const n = 9, pts = []; for (let i = 0; i <= n; i++) { const a = Math.PI + i / n * Math.PI, q = r * (0.85 + rr() * 0.25); pts.push([Math.cos(a) * q * 1.08, Math.sin(a) * q * 0.72 * (1 + (i > 2 && i < 7 ? 0.25 : 0))]); }
   const gr = g.createLinearGradient(-r, -r * 1.2, r, 0); gr.addColorStop(0, "#a8a490"); gr.addColorStop(0.5, "#6d6a5a"); gr.addColorStop(1, "#2e2d26"); g.fillStyle = gr;
@@ -2524,7 +2530,7 @@ function stone3q(T) {
     g.fillStyle = "#e9e5d3"; g.beginPath(); g.arc(0, -43, 1.6, 0, 7); g.fill(); });
   return { inf, gen, infW: F.inf.w, genW: F.gen.w, ground, stake, hut, banner,
     pieces: [...Array.from({ length: 40 }, (_, k) => { const a = k / 40 * TAU; return { img: stake[k % 2], x: Math.cos(a) * 55, y: Math.sin(a) * 55 }; }),
-      { img: hut, x: -15, y: -12 }, { img: hut, x: 16, y: -6 }, { img: hut, x: -4, y: 17 }, { img: banner, x: -30, y: -20 }] };
+      { img: hut, x: -15, y: -12, hut: 0 }, { img: hut, x: 16, y: -6, hut: 1 }, { img: hut, x: -4, y: 17, hut: 2 }, { img: banner, x: -30, y: -20 }] };
 }
 function stoneSprites(T) {
   const inf = sprite(28, g => {
@@ -3380,7 +3386,7 @@ function render(dtReal) {
     const E = SPR.team[p.id].eras[eraOf(p.id)], BB = c !== ctx && E.bb, S = BB ? BB.ground : E.fort;
     c.globalAlpha = ghost ? 0.5 : 1;
     c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
-    if (BB) for (const v of BB.pieces) STAND.push({ bb: v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
+    if (BB) for (const v of BB.pieces) STAND.push({ bb: (v.hut != null && hut3(v.hut)) || v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
     if (!ghost) {
       // turret (the 3D village has no gun to show)
       if (!BB) { c.save(); c.translate(b.x, b.y); c.rotate(b.aim || -Math.PI / 4);
