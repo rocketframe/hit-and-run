@@ -95,21 +95,27 @@ window.renderAtlas = async (opts) => {
 // a flag on a pole: cloth hangs from the top of the pole along its left edge (map: cloth spans +x, normal z)
 function flagModel(col) { const g = new THREE.Group(), H = 3, W = 1.3, CH = 0.86;
   // weathered wooden staff with a darker grain and an iron cap
-  const pc = document.createElement("canvas"); pc.width = 16; pc.height = 128; const px = pc.getContext("2d"); px.fillStyle = "#7a5a3a"; px.fillRect(0, 0, 16, 128);
+  const pc = document.createElement("canvas"); pc.width = 16; pc.height = 128; const px = pc.getContext("2d"); px.fillStyle = "#6a5440"; px.fillRect(0, 0, 16, 128);
   for (let i = 0; i < 60; i++) { px.fillStyle = `rgba(${Math.random() < 0.6 ? "40,25,12" : "160,125,85"},${0.08 + Math.random() * 0.15})`; px.fillRect(Math.random() * 16, Math.random() * 128, 1, 6 + Math.random() * 30); }
   const ptx = new THREE.CanvasTexture(pc); ptx.colorSpace = THREE.SRGBColorSpace;
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.04, H, 10), new THREE.MeshStandardMaterial({ map: ptx, roughness: 0.85 })); pole.name = "pole"; pole.position.y = H / 2; g.add(pole);
   const cap = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.12, 10), new THREE.MeshStandardMaterial({ color: 0x5c5a55, roughness: 0.5, metalness: 0.6 })); cap.position.y = H + 0.06; g.add(cap);
   for (const y of [H - 0.07, H - 0.05 - CH + 0.03]) { const tie = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.012, 6, 12), new THREE.MeshStandardMaterial({ color: 0xcdbb94, roughness: 0.95 })); tie.rotation.x = Math.PI / 2; tie.position.y = y; g.add(tie); }
-  // dyed wool: slightly muted team colour, woven noise, sun-faded fly end, double hem and a frayed edge
+  // dyed wool: muted, uneven dye, coarse weave, grime toward the bottom and fly end, a sewn hem and a frayed, torn edge
   const cv = document.createElement("canvas"); cv.width = 256; cv.height = 160; const x = cv.getContext("2d"), c = new THREE.Color(col), grey = (c.r + c.g + c.b) / 3;
-  c.lerp(new THREE.Color(grey, grey, grey), 0.06); x.fillStyle = "#" + c.getHexString(); x.fillRect(0, 0, 256, 160);
-  for (let yy = 0; yy < 160; yy += 2) { x.fillStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.03})`; x.fillRect(0, yy, 256, 1); }
-  for (let xx = 0; xx < 256; xx += 2) { x.fillStyle = `rgba(255,255,255,${0.01 + Math.random() * 0.012})`; x.fillRect(xx, 0, 1, 160); }
-  for (let i = 0; i < 2500; i++) { x.fillStyle = `rgba(${Math.random() < 0.5 ? "0,0,0" : "255,255,255"},${Math.random() * 0.07})`; x.fillRect(Math.random() * 256, Math.random() * 160, 3, 1); }
-  const fade = x.createLinearGradient(0, 0, 256, 0); fade.addColorStop(0, "rgba(255,250,235,0)"); fade.addColorStop(1, "rgba(255,250,235,.06)"); x.fillStyle = fade; x.fillRect(0, 0, 256, 160);
-  x.fillStyle = "rgba(0,0,0,.25)"; x.fillRect(0, 0, 10, 160); x.fillStyle = "rgba(0,0,0,.14)"; x.fillRect(0, 0, 256, 3); x.fillRect(0, 157, 256, 3);
-  x.globalCompositeOperation = "destination-out"; for (let yy = 0; yy < 160; yy += 3) x.fillRect(256 - Math.random() * 7, yy, 8, 2 + Math.random() * 2);
+  c.lerp(new THREE.Color(grey, grey, grey), 0.22).multiplyScalar(0.86); x.fillStyle = "#" + c.getHexString(); x.fillRect(0, 0, 256, 160);
+  for (let i = 0; i < 40; i++) { const r = 20 + Math.random() * 50, gx = x.createRadialGradient(0, 0, 0, 0, 0, r), dk = Math.random() < 0.6; gx.addColorStop(0, dk ? "rgba(20,12,4,.16)" : "rgba(255,240,210,.08)"); gx.addColorStop(1, "rgba(0,0,0,0)");
+    x.save(); x.translate(Math.random() * 256, Math.random() * 160); x.fillStyle = gx; x.fillRect(-r, -r, 2 * r, 2 * r); x.restore(); }
+  for (let yy = 0; yy < 160; yy += 2) { x.fillStyle = `rgba(0,0,0,${0.06 + Math.random() * 0.06})`; x.fillRect(0, yy, 256, 1); }
+  for (let xx = 0; xx < 256; xx += 2) { x.fillStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.05})`; x.fillRect(xx, 0, 1, 160); }
+  for (let i = 0; i < 4000; i++) { x.fillStyle = `rgba(${Math.random() < 0.7 ? "25,15,5" : "255,245,220"},${Math.random() * 0.1})`; x.fillRect(Math.random() * 256, Math.random() * 160, 1 + Math.random() * 3, 1); }
+  let gr = x.createLinearGradient(0, 0, 0, 160); gr.addColorStop(0.55, "rgba(60,40,20,0)"); gr.addColorStop(1, "rgba(60,40,20,.35)"); x.fillStyle = gr; x.fillRect(0, 0, 256, 160);
+  gr = x.createLinearGradient(0, 0, 256, 0); gr.addColorStop(0.6, "rgba(60,40,20,0)"); gr.addColorStop(1, "rgba(60,40,20,.3)"); x.fillStyle = gr; x.fillRect(0, 0, 256, 160);
+  x.fillStyle = "rgba(0,0,0,.3)"; x.fillRect(0, 0, 12, 160); x.fillStyle = "rgba(230,215,180,.35)"; for (let yy = 4; yy < 160; yy += 7) x.fillRect(13, yy, 1, 4);
+  x.fillStyle = "rgba(0,0,0,.2)"; x.fillRect(0, 0, 256, 4); x.fillRect(0, 156, 256, 4);
+  x.globalCompositeOperation = "destination-out"; for (let yy = 0; yy < 160; yy += 2) x.fillRect(256 - Math.random() * 14 - (Math.sin(yy * 0.09) + 1) * 4, yy, 30, 2);
+  for (let i = 0; i < 5; i++) { x.beginPath(); x.arc(60 + Math.random() * 180, Math.random() * 160, 1 + Math.random() * 2.2, 0, 7); x.fill(); }
+  x.globalCompositeOperation = "source-over";
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
   const geo = new THREE.PlaneGeometry(W, CH, 48, 16); geo.translate(W / 2 + 0.035, H - 0.05 - CH / 2, 0);
   const cloth = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, side: THREE.DoubleSide, roughness: 0.95, alphaTest: 0.5 })); cloth.name = "cloth"; g.add(cloth);

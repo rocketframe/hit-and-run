@@ -2471,7 +2471,7 @@ function drawBaseBar(g, [x, y], k, f, gh, hot) {
   g.restore();
 }
 // team flags in the 3D view: a cloth on a pole built and waved in three.js, 8 frames per team colour, pole at the centre
-const RALLY3 = { src: "sprites/flag10.png", w: 88, h: 72, N: 12, ay: 69.9 / 72, bw: 51.7, bh: 42.2, cv: [] }; // rows = teams, 12 waving frames
+const RALLY3 = { src: "sprites/flag11.png", w: 88, h: 72, N: 12, ay: 69.9 / 72, bw: 51.7, bh: 42.2, cv: [] }; // rows = teams, 12 waving frames
 function rally3(t, ph = 0) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
   const f = Math.floor(performance.now() / 105 + ph) % R.N, key = t * R.N + f;
   if (!R.cv[key]) { const cv = document.createElement("canvas"); cv.width = R.w; cv.height = R.h; cv.getContext("2d").drawImage(R.img, f * R.w, t * R.h, R.w, R.h, 0, 0, R.w, R.h); cv.bw = R.bw; cv.bh = R.bh; cv.ay = R.ay; R.cv[key] = cv; }
