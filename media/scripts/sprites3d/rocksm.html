@@ -7,7 +7,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 // A rock model in N variants (turned and squashed), footprint radius 1, lit like the soldier atlases. One row of N cells.
 window.renderRocks = async (file, N, S, o = {}) => {
   const g = await new Promise((res, rej) => new GLTFLoader().load(file, res, undefined, rej)), root = g.scene;
-  root.traverse(o => { if (o.isMesh) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) { m.metalness = 0; m.roughness = 1; } } });
+  root.traverse(m0 => { if (m0.isMesh) { const ms = Array.isArray(m0.material) ? m0.material : [m0.material]; for (const m of ms) { m.metalness = 0; m.roughness = 1; if (o.tint) { m.map = null; m.color = new THREE.Color(o.tint); } } } });
   if (o.dropGround) { root.updateMatrixWorld(true); root.traverse(m => { if (!m.isMesh) return; const g0 = m.geometry, idx = g0.index, pos = g0.attributes.position, v = new THREE.Vector3(), keep = [];
       const bb = new THREE.Box3().setFromBufferAttribute(pos), lim = bb.min.y + (bb.max.y - bb.min.y) * o.dropGround, n = idx ? idx.count : pos.count;
       for (let t = 0; t < n; t += 3) { const ids = [0, 1, 2].map(k => idx ? idx.getX(t + k) : t + k); if (ids.every(i => pos.getY(i) < lim) || (o.dropBox && ids.every(i => Math.abs(pos.getX(i)) > bb.max.x * 0.98 && Math.abs(pos.getZ(i)) > bb.max.z * 0.98))) continue; keep.push(...ids); }

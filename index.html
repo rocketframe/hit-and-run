@@ -420,7 +420,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -2426,6 +2426,12 @@ const HUT3 = { src: "sprites/huts.png", S: 160, H: 183, N: 3, gx: 80, gy: 125.8,
 function hut3(i) { const R = HUT3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
   if (!R.cv[i]) { const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, (i % R.N) * R.S, 0, R.S, R.H, 0, 0, R.S, R.H); const f = R.wpp * R.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; R.cv[i] = cv; }
   return R.cv[i]; }
+// whole-base models for some eras (3D view): one baked view, ground centre at (gx, gy), footprint radius 1 = r world units
+const BASE3 = { 2: { src: "sprites/castle.png", S: 256, H: 317, gx: 128, gy: 214.7, wpp: 0.009765625, r: 64 }, // Castle by hamidkhan224, CC-BY
+  6: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 }, // Dome Structure by trashbinkr
+  7: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 } };
+function base3(era) { const R = BASE3[era]; if (!R) return null; if (!R.img) { R.img = new Image(); R.img.onload = () => { const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, 0, 0); const f = R.wpp * R.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; R.cv = cv; }; R.img.src = R.src; }
+  return R.cv || null; }
 function boulder3(o) { const r = o.r, rr = mulberry32(Math.floor(o.x * 7 + o.y * 3)); return bbSprite(r * 2.3, r * 1.7, g => {
   const n = 9, pts = []; for (let i = 0; i <= n; i++) { const a = Math.PI + i / n * Math.PI, q = r * (0.85 + rr() * 0.25); pts.push([Math.cos(a) * q * 1.08, Math.sin(a) * q * 0.72 * (1 + (i > 2 && i < 7 ? 0.25 : 0))]); }
   const gr = g.createLinearGradient(-r, -r * 1.2, r, 0); gr.addColorStop(0, "#a8a490"); gr.addColorStop(0.5, "#6d6a5a"); gr.addColorStop(1, "#2e2d26"); g.fillStyle = gr;
@@ -3387,7 +3393,8 @@ function render(dtReal) {
     const E = SPR.team[p.id].eras[eraOf(p.id)], BB = c !== ctx && E.bb, S = BB ? BB.ground : E.fort;
     c.globalAlpha = ghost ? 0.5 : 1;
     c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
-    if (BB) for (const v of BB.pieces) STAND.push({ bb: (v.hut != null && hut3(v.hut)) || v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
+    const B3 = BB && base3(eraOf(p.id)); if (B3) STAND.push({ bb: B3, x: b.x, y: b.y, al: c.globalAlpha, fog: true });
+    else if (BB) for (const v of BB.pieces) STAND.push({ bb: (v.hut != null && hut3(v.hut)) || v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
     if (!ghost) {
       // turret (the 3D village has no gun to show)
       if (!BB) { c.save(); c.translate(b.x, b.y); c.rotate(b.aim || -Math.PI / 4);
