@@ -1,0 +1,5 @@
+[
+{"diff":1,"perVariant":60,"sum":{"auto":{"games":60,"winRate":76.7,"ci95":10.7,"timeouts":14,"avgWinSecs":518,"kd":1.52,"genDeaths":6.45}}}
+,
+{"diff":2,"perVariant":40,"sum":{"auto":{"games":40,"winRate":15,"ci95":11.1,"timeouts":21,"avgWinSecs":774,"kd":0.81,"genDeaths":11.93}}}
+]

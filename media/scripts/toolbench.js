@@ -3,7 +3,7 @@
 //   node toolbench.js <games per variant> <diff 1-4> [variants comma list] [game file]
 const { chromium } = require('playwright');
 const N = +(process.argv[2] || 20), DIFF = +(process.argv[3] || 2);
-const ALLV = ['basic', 'army', 'engage', 'guard', 'rally', 'wedge', 'line', 'regroup'];
+const ALLV = ['auto', 'basic', 'army', 'engage', 'guard', 'rally', 'wedge', 'line', 'regroup'];
 const VARS = (process.argv[4] || ALLV.join(',')).split(',');
 const FILE = process.argv[5] || '/home/claude/hitandrun/index.html';
 const SEED0 = 1000;
@@ -17,7 +17,7 @@ const SEED0 = 1000;
     const r = await pg.evaluate(([seed, diff, v]) => {
       const h = window.__hr, { newGame, initGame, d2, CFG, maxHp } = h; h.UI.paused = true;
       initGame(newGame(2, 100, seed, diff, 30, 30));
-      const G = h.G; G.cratesOn = true; G.missionsOn = false; G.players[0].ai = false; G.players[0].autoSpread = true;
+      const G = h.G; G.cratesOn = true; G.missionsOn = false; G.players[0].ai = false; G.players[0].autoSpread = true; G.players[0].autoEngage = v === 'auto';
       const cfg = { army: v === 'army', engage: v === 'engage', guard: v === 'guard', rally: v === 'rally', form: v === 'wedge' ? 'wedge' : v === 'line' ? 'line' : 'box', regroup: v === 'regroup' };
       const me = G.players[0], foeBase = () => { let bb = null, bd = 1e18; for (const q of G.players) if (q.id !== 0 && !q.out && q.base.alive !== false) { const dd = d2(q.base, me.base); if (dd < bd) { bd = dd; bb = q.base; } } return bb; };
       let lastT = null, lastIssue = -99, guardIds = [], genLast = -99, tick = 0, genDeaths = 0, genWasAlive = true;

@@ -296,6 +296,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     </details>
     <div class="opt"><label>Enemy skill</label>
       <div class="seg" id="optDiff"><button data-v="1">Recruit</button><button data-v="2" class="on">Veteran</button><button data-v="3">Elite</button><button data-v="4">Invincible</button></div>
+      <p class="fine" id="diffLine"></p>
       <div class="best" id="bestLine"></div></div>
     <button class="go" id="startBtn">Deploy</button>
     <div class="sndrow"><button class="go ghost" id="howBtn">How to play</button><button class="go ghost" id="tutBtn">Tutorial</button></div>
@@ -377,8 +378,8 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <section><h3>Your army</h3><p>Your soldiers come in squads A, B and C, plus one general (the star). Fallen soldiers respawn at your base after a few seconds, and the general takes longer. Out of combat, everyone slowly patches up.</p></section>
     <section><h3>The general</h3><p>He sees and shoots much further than infantry, is a little faster, and has ten times the health. Soldiers near him hit 30% harder. Use him for sneaky long-range shots, and don't lose him.</p></section>
     <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
-    <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li><b>ALL</b> picks everyone, general included. <b>ARMY</b> picks every soldier but leaves the general where he is.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li>Soldiers always shoot back on the way. With Expert controls you can also switch <b>RUN &amp; GUN</b> (move and shoot on the way) to <b>ENGAGE</b> (stop to chase anything they see).</li></ul></section>
-    <section><h3>Basic and Expert controls</h3><p>The game starts with <b>Basic</b> controls: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. That is all you need to win. Soldiers spread out on their own when plague hits, and missions join after your first 3 battles.</p><p>Turn on <b>Expert</b> in Settings for formations, drawn routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. Sections marked <span class="xp">Expert</span> below need it.</p></section>
+    <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li><b>ALL</b> picks everyone, general included. <b>ARMY</b> picks every soldier but leaves the general where he is.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li>With Basic controls, soldiers stop to fight any enemy they spot, then carry on to where you sent them. With Expert controls you choose: switch <b>RUN &amp; GUN</b> (move and shoot on the way) to <b>ENGAGE</b> (stop to chase anything they see).</li></ul></section>
+    <section><h3>Basic and Expert controls</h3><p>The game starts with <b>Basic</b> controls: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. That is all you need to win. Soldiers fight any enemy they spot and spread out on their own when plague hits, and missions join after your first 3 battles.</p><p>Turn on <b>Expert</b> in Settings for formations, drawn routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. Sections marked <span class="xp">Expert</span> below need it.</p></section>
     <section><h3>Picking exactly who you want <span class="xp">Expert</span></h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, a medkit, rapid fire, sniper rounds, a recon flare that lifts the fog, camouflage, or an airstrike you aim with <b>STRIKE</b>). Some are bad (plague that spreads between soldiers standing close, a booby trap, a jammed radio, a flare that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
     <section><h3>Missions</h3><p>Every couple of minutes a radio call hands you a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Cargo:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply truck drives home only while your soldiers walk next to it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it, for 30 seconds.</li><li><b>Rescue:</b> find the downed pilot in the marked area, then walk him home.</li><li><b>Assassinate:</b> an officer with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> blow up the supply depot near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
@@ -1099,7 +1100,8 @@ function step() {
     if (u.escort) { const g = G.gens[u.owner]; if (g && g.alive && (G.tick + u.id) % 10 === 0) { const pt = pushOutOfRocks(clamp(g.x + u.eox, 10, G.S - 10), clamp(g.y + u.eoy, 10, G.S - 10), 9); u.tx = pt.x; u.ty = pt.y; } }
     if (u.path && u.path.length && (u.x - u.tx) ** 2 + (u.y - u.ty) ** 2 < 14 * 14) { const q = u.path.shift(), pt = pushOutOfRocks(clamp(q.x, 10, G.S - 10), clamp(q.y, 10, G.S - 10), 9); u.tx = pt.x; u.ty = pt.y; }
     let gx = u.tx, gy = u.ty, stopAt = 3;
-    if (u.mode === "attack" && u.seen) {
+    // Basic controls: soldiers on a move order engage on their own when they spot an enemy
+    if ((u.mode === "attack" || (u.mode === "move" && G.players[u.owner].autoEngage && !u.escort && !u.mis)) && u.seen) {
       gx = u.seen.x; gy = u.seen.y;
       stopAt = (u.seen.isBase ? rangeOf(u) + u.seen.r - 14 : rangeOf(u) * 0.8);
     }
@@ -2539,7 +2541,7 @@ const EXP = () => !!UI.opts.expert;
 function applyExpert() {
   document.body.classList.toggle("basic", !EXP());
   if (!EXP()) { UI.mode = "move"; UI.boxMode = false; UI.rallyMode = false; if (G) closeTray(); }
-  const n = $("expNote"); if (n) n.textContent = EXP() ? "Everything is on: formations, routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. In battle, tap ⋯ to show every order and ▾ to fold them away." : "Just the essentials: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. Soldiers spread out on their own when plague hits. Missions join after your first 3 battles.";
+  const n = $("expNote"); if (n) n.textContent = EXP() ? "Everything is on: formations, routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. In battle, tap ⋯ to show every order and ▾ to fold them away." : "Just the essentials: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. Soldiers fight any enemy they spot and spread out on their own when plague hits. Missions join after your first 3 battles.";
   if (G) refreshBar();
 }
 function customSummary() {
@@ -2630,6 +2632,7 @@ function showBest() {
   $("bestLine").innerHTML = parts.length ? "Best wins: " + parts.join(" · ") : (UI.opts.diff === 4 ? "Invincible can't be beaten at 30 vs 30. Shrink their armies and work your way up." : "");
   if (typeof setArmy === "function" && $("armyMeV").textContent === "") setArmy("me", UI.opts.me);
   customSummary();
+  { const d = DIFF[UI.opts.diff], el = $("diffLine"); if (d && el) el.textContent = `Enemy soldiers: ${d.mult}× your health and damage, back from the dead ${d.respawn < 1 ? Math.round(1 / d.respawn * 10) / 10 + "× faster" : Math.round(d.respawn * 10) / 10 + "× slower"}${d.smart ? ", smarter tactics" : ""}.`; }
 }
 showBest();
 
@@ -2677,7 +2680,7 @@ function start() {
   document.body.classList.remove("attract");
   initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me));
   G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions && UI.opts.misTypes.length > 0 && (EXP() || loadLog().length >= 3); G.misTypes = UI.opts.misTypes.slice();
-  G.players[G.human].autoSpread = !EXP(); UI.use = {};
+  G.players[G.human].autoSpread = !EXP(); G.players[G.human].autoEngage = !EXP(); UI.use = {};
   { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = UI.opts.split || 3; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
   UI.forms = {}; UI.combo = null; UI.rallyMode = false; closeTray(); disarmKill();
   const b = G.players[G.human].base, p = G.players[G.human];
