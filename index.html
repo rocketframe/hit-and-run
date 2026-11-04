@@ -902,7 +902,7 @@ function damage(t, amount, by) {
   if (t.hp > 0) return;
   if (t.isBase) { eliminate(t.owner, by); return; }
   t.alive = false; t.respawn = (t.kind === "gen" ? CFG.genRespawn : CFG.respawn) * G.players[t.owner].respawnMult; t.seen = t.tgt = null;
-  pushFx({ k: "death", x: t.x, y: t.y, owner: t.owner, c: G.players[t.owner].team.c, big: t.kind === "gen" });
+  pushFx({ k: "death", x: t.x, y: t.y, a: t.face, owner: t.owner, c: G.players[t.owner].team.c, big: t.kind === "gen" });
   G.players[t.owner].losses++;
   const killer = G.players[by];
   killer.kills++; addPoints(killer, 1);
@@ -930,7 +930,7 @@ function eliminate(owner, by) {
   const p = G.players[owner]; if (p.out) return;
   p.out = true; p.base.alive = false; p.base.hp = 0;
   for (const u of G.units) if (u.owner === owner) {
-    if (u.alive) pushFx({ k: "death", x: u.x, y: u.y, owner, c: p.team.c });
+    if (u.alive) pushFx({ k: "death", x: u.x, y: u.y, a: u.face, owner, c: p.team.c, big: u.kind === "gen" });
     u.alive = false; u.respawn = Infinity;
   }
   pushFx({ k: "boom", x: p.base.x, y: p.base.y, owner, c: p.team.c });
@@ -1000,7 +1000,7 @@ function tempUnit(owner, x, y, squad, life) {
 }
 function killQuiet(u) { // no points for anyone
   u.alive = false; u.respawn = u.temp ? Infinity : (u.kind === "gen" ? CFG.genRespawn : CFG.respawn) * G.players[u.owner].respawnMult; u.seen = u.tgt = null;
-  pushFx({ k: "death", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" });
+  pushFx({ k: "death", x: u.x, y: u.y, a: u.face, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" });
 }
 function onLevel(p, before) {
   if (eraOfLevel(p.level) !== eraOfLevel(before) && G.eraFix == null) pushFx({ k: "era", owner: p.id, e: eraOfLevel(p.level), x: p.base.x, y: p.base.y });
@@ -1722,7 +1722,7 @@ const w2scr = (x, y) => flat2scr((x - cam.x) * cam.z + W / 2, (y - cam.y) * cam.
 // ---- 3D view: sprites pre-rendered from real 3D models (media/scripts/sprites3d in the repo). Until they load, the drawn art stands in.
 // clips: name -> [block, frames]; atlas row = block * dirs + direction (0 = facing screen right, then clockwise in 45° steps)
 const MODEL3 = {
-  4: { inf: { src: "sprites/ww-inf.png", mask: "sprites/ww-inf-mask.png", S: 112, fx: 56, fy: 103.6, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4] } },
+  4: { inf: { src: "sprites/ww-inf.png", mask: "sprites/ww-inf-mask.png", S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/ww-gen.png", S: 160, fx: 80, fy: 137.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, flag: true } },
 };
 function model3(era, kind, pid) {
@@ -1738,7 +1738,7 @@ function model3(era, kind, pid) {
   }
   return M.t[pid];
 }
-const STAND = [];
+const STAND = [], FALL3 = []; // FALL3: soldiers falling over in the 3D view (model sprites with a die clip)
 function drawStanding() {
   const c = ctx, s = Math.sin(TILT.th);
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -3146,6 +3146,7 @@ function consumeFx() {
     if ((e.k === "misWin" || e.k === "misFail" || e.k === "found") && !G.attract) { SND.fx(e); if (e.k === "misWin") burst(e.x, e.y, "open"); continue; }
     burst(e.x, e.y, e.k, e.c, e.big, e.era); SND.fx(e);
     if (e.k === "death" && e.big && e.owner === me) shake.a = Math.max(shake.a, 8);
+    if (e.k === "death" && !e.big && e.how !== "fall") { FALL3.push({ x: e.x, y: e.y, a: e.a || 0, owner: e.owner, t0: performance.now() }); if (FALL3.length > 60) FALL3.shift(); }
   }
   G.fx.length = 0;
   // fresh shots: muzzle flash, impact sparks
@@ -3379,6 +3380,10 @@ function render(dtReal) {
   drawBottle(c, now);
   if (!seeAll && myGen && myGen.alive) { let r = 0; for (const u of G.units) if (u.alive && u.escort && u.owner === G.human) r = Math.max(r, Math.hypot(u.eox, u.eoy));
     if (r) { c.strokeStyle = "rgba(243,215,124,.28)"; c.lineWidth = 1.5 / z; c.setLineDash([3 / z, 6 / z]); c.beginPath(); c.arc(myGen.x, myGen.y, r + 12, now * 0.3, now * 0.3 + TAU); c.stroke(); c.setLineDash([]); } }
+  // fallen soldiers (3D model view): play the death clip, lie still, then fade
+  if (c !== ctx) { const tn = performance.now(); for (let i = FALL3.length - 1; i >= 0; i--) { const d = FALL3[i], age = (tn - d.t0) / 1000; if (age > 2.6 || !G.players[d.owner]) { FALL3.splice(i, 1); continue; }
+    const A = model3(eraOf(d.owner), "inf", d.owner); if (!A || !A.M.clips.die) continue; const M = A.M, [blk, nf] = M.clips.die, dir = ((Math.round(d.a / (TAU / M.dirs)) % M.dirs) + M.dirs) % M.dirs;
+    STAND.push({ atl: A, col: Math.min(nf - 1, Math.floor(age / 0.11)), row: blk * M.dirs + dir, x: d.x, y: d.y - 0.5, al: age > 1.9 ? Math.max(0, (2.6 - age) / 0.7) : 1, fl: false, hov: 0 }); } }
   // soldiers
   for (const u of showU) {
     const T = SPR.team[u.owner].eras[eraOf(u.owner)], gen = u.kind === "gen";

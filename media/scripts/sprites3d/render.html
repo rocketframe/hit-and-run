@@ -27,7 +27,7 @@ window.renderAtlas = async (opts) => {
     const dir = b.clone().sub(a); if (dir.length() < 1e-4) return; dir.normalize(); const up = new THREE.Vector3(0, 1, 0); up.sub(dir.clone().multiplyScalar(up.dot(dir))).normalize(); const side = new THREE.Vector3().crossVectors(dir, up);
     prop.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir, up, side)); prop.position.copy(a); };
   scene.add(new THREE.HemisphereLight(0xf4f0e4, 0x4a4a38, 1.6)); const sun = new THREE.DirectionalLight(0xfff2dc, 2.6); sun.position.set(-4, 8, 5); scene.add(sun); const rim = new THREE.DirectionalLight(0xb8d0ff, 0.8); rim.position.set(5, 3, -6); scene.add(rim);
-  const S = opts.size, ext = opts.extent || opts.height * 0.75, cam = new THREE.OrthographicCamera(-ext, ext, ext * 1.15 + opts.height * 0.25, -ext * 1.15 + opts.height * 0.25, 0.1, 1000);
+  const S = opts.size, ext = opts.extent || opts.height * 0.75, dy = opts.dy || 0, cam = new THREE.OrthographicCamera(-ext, ext, ext * 1.15 + opts.height * 0.25 - dy, -ext * 1.15 + opts.height * 0.25 - dy, 0.1, 1000);
   const el = (opts.elev || 43) * Math.PI / 180, dist = 50; cam.position.set(0, Math.sin(el) * dist + opts.height * 0.4, Math.cos(el) * dist); cam.lookAt(0, opts.height * 0.4, 0);
   const rows = opts.clips.length * opts.dirs, cols = Math.max(...opts.clips.map(c => c.frames));
   const rnd = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); rnd.setPixelRatio(1); rnd.setSize(S, S); rnd.outputColorSpace = THREE.SRGBColorSpace; rnd.setClearColor(0, 0);
