@@ -492,11 +492,33 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy) {
   const corners = [[inset, S - inset], [S - inset, inset], [S - inset, S - inset], [inset, inset]];
   const g = { rng, S, upEvery, diff, enemyArmy: enemyArmy || CFG.army, myArmy: myArmy || CFG.army, fx: [], tick: 0, time: 0, cmds: [], units: [], players: [], rocks: [], tracers: [], corpses: [], pings: [], over: null, nextId: 1, human: 0 };
 
+  // island: the same coastline around every corner (mirrored across both axes and both diagonals),
+  // so every base gets the same odds; a separate random stream keeps the rest of the map as it was
+  {
+    const ir = mulberry32((seed ^ 0x51ed27) >>> 0), N = 720, R = new Float32Array(N), h = S / 2, T2 = Math.PI * 2;
+    const ex = 4 + ir() * 1.6, a = h - 34, amp = [0, 0, 0.03 + ir() * 0.03, 0.018 + ir() * 0.022, 0.01 + ir() * 0.014, 0.006 + ir() * 0.01, 0.004 + ir() * 0.006], sg = amp.map(() => ir() < 0.5 ? -1 : 1);
+    const need = (h - inset) * Math.SQRT2 + 150;
+    for (let i = 0; i < N; i++) {
+      const t = i / N * T2; let f = t % (Math.PI / 2); if (f > Math.PI / 4) f = Math.PI / 2 - f;
+      const c = Math.abs(Math.cos(t)), sn = Math.abs(Math.sin(t));
+      let rad = a / Math.pow(Math.pow(c, ex) + Math.pow(sn, ex), 1 / ex), w = 0;
+      for (let k = 2; k < amp.length; k++) w += sg[k] * amp[k] * Math.cos(k * f * 4);
+      R[i] = rad * (1 + w);
+    }
+    const diag = R[Math.round(N / 8)];
+    for (let i = 0; i < N; i++) {
+      const t = i / N * T2; let f = t % (Math.PI / 2); if (f > Math.PI / 4) f = Math.PI / 2 - f;
+      if (diag < need) R[i] += (need - diag) * Math.exp(-(((Math.PI / 4 - f) / 0.32) ** 2));
+      R[i] = Math.min(R[i], h / Math.max(Math.abs(Math.cos(t)), Math.abs(Math.sin(t))) - 14);
+    }
+    g.island = { c: h, R };
+  }
   // rocks: generate one quadrant, mirror 4 ways for fairness
   const q = [];
   for (let tries = 0; q.length < (nPlayers === 2 ? 8 : 10) && tries < 400; tries++) {
     const r = 26 + rng() * 48, x = 60 + rng() * (S / 2 - 60), y = 60 + rng() * (S / 2 - 60);
     if (Math.hypot(x - inset, y - inset) < 340) continue;
+    { const I = g.island, aa = Math.atan2(y - I.c, x - I.c), ri = Math.round(((aa + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2) * I.R.length) % I.R.length; if (Math.hypot(x - I.c, y - I.c) > I.R[ri] - r - 40) continue; }
     if (q.some(o => Math.hypot(o.x - x, o.y - y) < o.r + r + 50)) continue;
     q.push({ x, y, r });
   }
@@ -642,12 +664,24 @@ function applyCmd(c) {
   });
 }
 
+// coastline radius at the angle of (x, y), measured from the island's centre
+function landR(x, y) {
+  const I = G.island; if (!I) return 1e9;
+  const a = Math.atan2(y - I.c, x - I.c), n = I.R.length;
+  return I.R[Math.round(((a + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2) * n) % n];
+}
+const onLand = (x, y, m) => !G.island || Math.hypot(x - G.island.c, y - G.island.c) < landR(x, y) - (m || 0);
+function toLand(x, y, rad) {
+  const I = G.island; if (!I) return { x, y };
+  const dx = x - I.c, dy = y - I.c, d = Math.hypot(dx, dy) || 1e-6, m = landR(x, y) - rad;
+  return d > m ? { x: I.c + dx / d * m, y: I.c + dy / d * m } : { x, y };
+}
 function pushOutOfRocks(x, y, rad) {
   for (const r of G.rocks) {
     const dx = x - r.x, dy = y - r.y, d = Math.hypot(dx, dy) || 0.001, m = r.r + rad;
     if (d < m) { x = r.x + dx / d * m; y = r.y + dy / d * m; }
   }
-  return { x, y };
+  return toLand(x, y, rad + 6);
 }
 
 const NAV = 25;
@@ -817,6 +851,7 @@ function crateSpot(mission) {
   for (let tries = 0; tries < 60; tries++) {
     const x = rr(150, G.S - 150), y = rr(150, G.S - 150);
     if (G.rocks.some(o => Math.hypot(x - o.x, y - o.y) < o.r + 50)) continue;
+    if (!onLand(x, y, 90)) continue;
     if (G.players.some(p => Math.hypot(x - p.base.x, y - p.base.y) < (mission ? 650 : 450))) continue;
     if (G.crates.some(c => Math.hypot(x - c.x, y - c.y) < 300)) continue;
     return { x, y };
@@ -1118,6 +1153,7 @@ function step() {
       const [vx, vy] = navDir(u.x, u.y, gx, gy, C.r + 2, dx / dist, dy / dist);
       const sp = Math.min(C.speed * dt, dist - stopAt + 0.5);
       u.x += vx * sp; u.y += vy * sp; u.moving = true; u.face = Math.atan2(vy, vx);
+      if (G.island && !onLand(u.x, u.y, C.r + 2)) { const q = toLand(u.x, u.y, C.r + 2); u.x = q.x; u.y = q.y; }
     }
   }
   // separation
@@ -1651,6 +1687,18 @@ function buildWorld() {
       const i = (y * N + x) * 4; cd[i] = 14 + v * 46; cd[i + 1] = 18 + v * 50; cd[i + 2] = 24 + v * 54; cd[i + 3] = 255;
     }
     cloudCvs.getContext("2d").putImageData(ci, 0, 0);
+  }
+  if (G.island) { // ocean around the island: deep water, shallows, foam and a sandy beach
+    const I = G.island, n = I.R.length, poly = (c, off, keep) => { if (!keep) c.beginPath(); for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, rr = I.R[i] + off; c.lineTo(I.c + Math.cos(t) * rr, I.c + Math.sin(t) * rr); } c.closePath(); };
+    g.save(); g.setTransform(GK, 0, 0, GK, 0, 0);
+    g.save(); poly(g, 0); g.clip(); // beach on the land side
+    for (const [lw, col] of [[70, "rgba(168,150,104,.35)"], [40, "rgba(190,170,120,.55)"], [20, "rgba(206,188,138,.8)"]]) { g.strokeStyle = col; g.lineWidth = lw; poly(g, 0); g.stroke(); }
+    g.restore();
+    g.beginPath(); g.rect(-20, -20, S + 40, S + 40); poly(g, 0, true); // the sea outside
+    const sea = g.createRadialGradient(I.c, I.c, I.c * 0.9, I.c, I.c, I.c * 1.45); sea.addColorStop(0, "#1f5866"); sea.addColorStop(0.35, "#163f52"); sea.addColorStop(1, "#0b2333");
+    g.fillStyle = sea; g.fill("evenodd");
+    for (const [off, lw, col] of [[10, 22, "rgba(60,140,150,.35)"], [4, 8, "rgba(110,190,190,.35)"], [1, 2.2, "rgba(230,240,230,.55)"], [16, 1.4, "rgba(200,230,230,.18)"], [30, 1.2, "rgba(200,230,230,.1)"]]) { g.strokeStyle = col; g.lineWidth = lw; poly(g, off); g.stroke(); }
+    g.restore();
   }
   miniGround = document.createElement("canvas"); miniGround.width = miniGround.height = mini.width;
   const mg = miniGround.getContext("2d"); mg.drawImage(groundCvs, 0, 0, mini.width, mini.width);
