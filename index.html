@@ -408,6 +408,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b>, then pick who goes: the selected soldiers, the ones on screen, or all of them. The general is only withdrawn if you pick him on his own. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
+    <section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> with slings, and moves up through the ages as it levels up: <b>Middle Ages</b> at L2 (bows, a castle, the general on horseback), <b>Gunpowder</b> at L4 (rifles and a fort) and the <b>Future</b> at L7 (lasers and a hover bike).</li><li>The era is the look of each army's upgrades: stones and arrows fly for a moment before they land, bullets and lasers hit at once. So an enemy with lasers is an army many upgrades ahead of you.</li></ul></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
     <section><h3>Marks on your soldiers</h3><ul><li><b>Pale ring</b>: selected.</li><li><b>Bar underneath</b>: health, shown once a soldier is hurt.</li><li><b>Gold ring and arc</b>: mercenary. The arc shows how long they stay.</li><li><b>Green bubbles and dashed ring</b>: plague. It jumps to soldiers close by, so SPREAD out.</li><li><b>Dot above the head</b>: a crate effect. <b style="color:#ff9a3c">Orange</b> rapid fire, <b style="color:#6fd3ff">blue</b> sniper rounds, <b style="color:#9a9a9a">grey</b> radio jammed, blinking <b style="color:#ff3b30">red</b> flare gun (the enemy can see you).</li><li>Your army level is the <b>L</b> number at the top left.</li></ul></section>
     <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: [ and ] to slow down or speed up time, \ for normal speed, shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, Z army (all but the general), I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
@@ -959,7 +960,8 @@ function killQuiet(u) { // no points for anyone
   pushFx({ k: "death", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" });
 }
 function levelUp(p) {
-  const before = p.level; p.level++; p.bonus = (p.bonus || 0) + 1; pushFx({ k: "level", owner: p.id, x: p.base.x, y: p.base.y });
+  const before = p.level; p.level++;
+  if (eraOfLevel(p.level) !== eraOfLevel(before) && G.eraFix == null) pushFx({ k: "era", owner: p.id, e: eraOfLevel(p.level), x: p.base.x, y: p.base.y }); p.bonus = (p.bonus || 0) + 1; pushFx({ k: "level", owner: p.id, x: p.base.x, y: p.base.y });
   for (const u of G.units) if (u.owner === p.id && u.alive) u.hp *= (1 + CFG.upStep * p.level) / (1 + CFG.upStep * before);
 }
 function strikeAt(owner, x, y) {
@@ -1296,8 +1298,15 @@ function step() {
     if (u.kind === "inf" && gnl && d2(u, gnl) < CFG.auraR * CFG.auraR) dmg *= CFG.aura;
     const hit = t.isBase || G.rng() < (u.moving ? CFG.hitMoving : CFG.hitStill);
     const ox = hit ? 0 : (G.rng() - 0.5) * 30, oy = hit ? 0 : (G.rng() - 0.5) * 30;
-    G.tracers.push({ x1: u.x, y1: u.y, x2: t.x + ox, y2: t.y + oy, t: 0.12, c: p.team.c, w: u.kind === "gen" ? 2.2 : 1.2, owner: u.owner, fresh: true, hit, a: u.face });
-    if (hit) damage(t, dmg, u.owner);
+    const era = eraOf(u.owner);
+    if (era < 2) { // stones and arrows fly for a moment and the hit lands with them
+      const fl = Math.sqrt(d2(u, t)) / (era ? 560 : 420) + 0.08;
+      G.tracers.push({ x1: u.x, y1: u.y, x2: t.x + ox, y2: t.y + oy, t: fl + 0.06, tot: fl, arrow: true, era, tgt: hit ? t : null, c: p.team.c, w: u.kind === "gen" ? 2.2 : 1.2, owner: u.owner, fresh: true, hit, a: u.face });
+      if (hit) G.pend.push({ t: fl, tgt: t, dmg, by: u.owner });
+    } else {
+      G.tracers.push({ x1: u.x, y1: u.y, x2: t.x + ox, y2: t.y + oy, t: 0.12, era, c: p.team.c, w: u.kind === "gen" ? 2.2 : 1.2, owner: u.owner, fresh: true, hit, a: u.face });
+      if (hit) damage(t, dmg, u.owner);
+    }
   }
   // base turrets
   for (const p of G.players) {
@@ -1309,10 +1318,14 @@ function step() {
     if (best) {
       b.cd = CFG.base.cd;
       b.aim = Math.atan2(best.y - b.y, best.x - b.x);
-      G.tracers.push({ x1: b.x + Math.cos(b.aim) * 22, y1: b.y + Math.sin(b.aim) * 22, x2: best.x, y2: best.y, t: 0.12, c: p.team.c, w: 2.4, owner: p.id, fresh: true, hit: true, a: b.aim });
-      damage(best, CFG.base.dmg * (1 + CFG.upStep * p.level), p.id);
+      const bd2 = CFG.base.dmg * (1 + CFG.upStep * p.level);
+      const be = eraOf(p.id);
+      if (be < 2) { const fl = Math.sqrt(bd) / (be ? 620 : 460) + 0.06; G.tracers.push({ x1: b.x + Math.cos(b.aim) * 22, y1: b.y + Math.sin(b.aim) * 22, x2: best.x, y2: best.y, t: fl + 0.06, tot: fl, arrow: true, era: be, tgt: best, c: p.team.c, w: 2.4, owner: p.id, fresh: true, hit: true, a: b.aim }); G.pend.push({ t: fl, tgt: best, dmg: bd2, by: p.id }); }
+      else { G.tracers.push({ x1: b.x + Math.cos(b.aim) * 22, y1: b.y + Math.sin(b.aim) * 22, x2: best.x, y2: best.y, t: 0.12, era: be, c: p.team.c, w: 2.4, owner: p.id, fresh: true, hit: true, a: b.aim }); damage(best, bd2, p.id); }
     }
   }
+  // arrows in flight land now
+  if (G.pend.length) { for (const q of G.pend) { q.t -= dt; if (q.t <= 0 && q.tgt.alive) damage(q.tgt, q.dmg, q.by); } G.pend = G.pend.filter(q => q.t > 0); }
   // fx decay
   for (const t of G.tracers) t.t -= dt;
   G.tracers = G.tracers.filter(t => t.t > 0);
@@ -1537,6 +1550,15 @@ let cloudCvs = null, vignetteCvs = null, miniGround = null;
 const shake = { a: 0 };
 let parts = [];
 const SPR = {};
+// eras: each army's weapons and look evolve with its level. Only the look and the flight of shots change; damage is the same.
+const ERAS = [
+  { n: "Stone Age", w: "slings and stones", at: 0 },
+  { n: "Middle Ages", w: "bows, castles and a mounted general", at: 1 },
+  { n: "Gunpowder", w: "rifles and forts", at: 3 },
+  { n: "Future", w: "lasers and a hover bike", at: 6 }
+];
+function eraOfLevel(l) { let e = 0; while (e < ERAS.length - 1 && l >= ERAS[e + 1].at) e++; return e; }
+const eraOf = pid => G.eraFix != null ? G.eraFix : eraOfLevel(G.players[pid].level);
 
 function resize() {
   DPR = Math.min(QP[qLevel()].dpr, (G && G.attract) ? 1.25 : 9, window.devicePixelRatio || 1);
@@ -1660,10 +1682,194 @@ function buildSprites() {
       // team band
       g.strokeStyle = T.c; g.globalAlpha = 0.85; g.lineWidth = 3; star(R + 3, R * 0.72 + 2); g.stroke(); g.globalAlpha = 1;
     }, 2);
-    return { inf, gen, infW: whiteOf(inf), genW: whiteOf(gen), fort };
+    const set = m => ({ inf: m.inf, gen: m.gen, infW: whiteOf(m.inf), genW: whiteOf(m.gen), fort: m.fort, genSz: m.genSz, trot: m.trot, hover: m.hover });
+    const mod = { inf, gen, infW: whiteOf(inf), genW: whiteOf(gen), fort };
+    mod.eras = [set(stoneSprites(T)), set(medSprites(T)), mod, set(laserSprites(T))];
+    return mod;
   });
 }
 
+// medieval look: hooded archer, general on horseback, a castle with round towers
+function medSprites(T) {
+  const inf = sprite(28, g => {
+    g.lineCap = "round"; g.lineJoin = "round";
+    // quiver on the back with fletchings
+    g.save(); g.translate(-6, -3.2); g.rotate(-0.35);
+    g.fillStyle = "#5a3d22"; g.strokeStyle = "rgba(0,0,0,.65)"; g.lineWidth = 0.8; g.beginPath(); g.roundRect(-4, -1.6, 7, 3.4, 1.2); g.fill(); g.stroke();
+    g.fillStyle = "#e9e1c8"; for (const yy of [-1, 0.2, 1.3]) { g.beginPath(); g.arc(-4.6, yy, 0.9, 0, 7); g.fill(); }
+    g.restore();
+    // tunic
+    const gb = g.createLinearGradient(-5, -7, 4, 7); gb.addColorStop(0, shade(T.c, 0.25)); gb.addColorStop(1, shade(T.c, -0.35));
+    g.fillStyle = gb; g.strokeStyle = "rgba(0,0,0,.75)"; g.lineWidth = 1;
+    g.beginPath(); g.ellipse(-0.5, 0, 4.6, 6.8, 0, 0, 7); g.fill(); g.stroke();
+    // bow across the front, string and nocked arrow
+    g.strokeStyle = "#6b4a2a"; g.lineWidth = 1.7; g.beginPath(); g.moveTo(5.2, -8.4); g.quadraticCurveTo(11.5, 0, 5.2, 8.4); g.stroke();
+    g.strokeStyle = "rgba(240,232,210,.8)"; g.lineWidth = 0.5; g.beginPath(); g.moveTo(5.2, -8.4); g.lineTo(2.6, 0); g.lineTo(5.2, 8.4); g.stroke();
+    g.strokeStyle = "#d8cfb4"; g.lineWidth = 0.8; g.beginPath(); g.moveTo(2.6, 0); g.lineTo(11.8, 0); g.stroke();
+    g.fillStyle = "#c79a74"; g.beginPath(); g.arc(8.2, 0.2, 1.2, 0, 7); g.fill(); g.beginPath(); g.arc(2.8, 1.2, 1.1, 0, 7); g.fill();
+    // hood with a point at the back
+    const gh = g.createRadialGradient(0.2, -1.2, 0.3, 0.4, 0, 4.4); gh.addColorStop(0, shade(T.c, -0.05)); gh.addColorStop(0.6, shade(T.c, -0.5)); gh.addColorStop(1, shade(T.c, -0.72));
+    g.fillStyle = gh; g.strokeStyle = "rgba(0,0,0,.8)"; g.lineWidth = 0.9;
+    g.beginPath(); g.moveTo(-5.6, 0); g.lineTo(-1.5, -3.6); g.arc(0.6, 0, 4, -2.1, 2.1); g.lineTo(-5.6, 0); g.closePath(); g.fill(); g.stroke();
+  });
+  const gen = sprite(60, g => {
+    g.lineCap = "round"; g.lineJoin = "round";
+    // tail
+    g.strokeStyle = "#241710"; g.lineWidth = 3.2; g.beginPath(); g.moveTo(-15, 0); g.quadraticCurveTo(-21, 1.5, -25, 3.5); g.stroke();
+    // horse body, neck and head
+    const hb = g.createLinearGradient(-14, -8, 10, 8); hb.addColorStop(0, "#a8774c"); hb.addColorStop(1, "#5a3a24");
+    g.fillStyle = hb; g.strokeStyle = "rgba(0,0,0,.75)"; g.lineWidth = 1.1;
+    g.beginPath(); g.ellipse(-2, 0, 15, 8.2, 0, 0, 7); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(8, -4.6); g.quadraticCurveTo(15, -4.2, 21, -2.6); g.quadraticCurveTo(24.5, 0, 21, 2.6); g.quadraticCurveTo(15, 4.2, 8, 4.6); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#3a2416"; for (const s of [-1, 1]) { g.beginPath(); g.ellipse(17.5, s * 2.6, 1.6, 0.8, s * 0.5, 0, 7); g.fill(); }
+    g.strokeStyle = "#1e140c"; g.lineWidth = 1.8; g.beginPath(); g.moveTo(5, 0); g.lineTo(17, 0); g.stroke();
+    // caparison in team colour with gold trim
+    const gc = g.createLinearGradient(-10, -8, 4, 8); gc.addColorStop(0, shade(T.c, 0.1)); gc.addColorStop(1, shade(T.c, -0.5));
+    g.fillStyle = gc; g.strokeStyle = "#d9b860"; g.lineWidth = 1; g.beginPath(); g.ellipse(-3.5, 0, 6.5, 9.4, 0, 0, 7); g.fill(); g.stroke();
+    // lance
+    g.strokeStyle = "#6a5032"; g.lineWidth = 1.8; g.beginPath(); g.moveTo(-8, 5.5); g.lineTo(25, 4.6); g.stroke();
+    g.fillStyle = "#cfd2d4"; g.beginPath(); g.moveTo(25, 3.6); g.lineTo(29, 4.5); g.lineTo(25, 5.6); g.closePath(); g.fill();
+    // rider: cloak, shoulders, helmet with plume
+    g.fillStyle = shade(T.c, -0.6); g.beginPath(); g.moveTo(-2, -5.5); g.quadraticCurveTo(-11, -6, -12, 0); g.quadraticCurveTo(-11, 6, -2, 5.5); g.closePath(); g.fill();
+    const gb = g.createLinearGradient(-5, -6, 4, 6); gb.addColorStop(0, shade(T.c, 0.3)); gb.addColorStop(1, shade(T.c, -0.35));
+    g.fillStyle = gb; g.strokeStyle = "rgba(0,0,0,.8)"; g.lineWidth = 1; g.beginPath(); g.ellipse(-2, 0, 4.6, 6.4, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = "#c79a74"; g.beginPath(); g.arc(2.5, 5, 1.3, 0, 7); g.fill();
+    const gh = g.createRadialGradient(-2.6, -1.2, 0.3, -1.6, 0, 4); gh.addColorStop(0, "#f2f2ee"); gh.addColorStop(0.5, "#9aa0a4"); gh.addColorStop(1, "#4c5256");
+    g.fillStyle = gh; g.beginPath(); g.arc(-1.6, 0, 3.7, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = shade(T.c, 0.2); g.lineWidth = 2.2; g.beginPath(); g.moveTo(-2.6, 0); g.quadraticCurveTo(-6, -0.8, -9, 0.6); g.stroke();
+    g.fillStyle = "#f3d77c"; g.beginPath(); g.arc(-0.8, 0, 1.1, 0, 7); g.fill();
+  });
+  const fort = sprite(150, g => {
+    const R = 46, n = 5, tw = (a, r) => [Math.cos(a) * r, Math.sin(a) * r];
+    g.fillStyle = "rgba(60,48,30,.55)"; g.beginPath(); g.arc(0, 0, 70, 0, 7); g.fill();
+    // curtain wall linking the towers
+    const ring = (r) => { g.beginPath(); for (let i = 0; i < n; i++) { const [x, y] = tw(i / n * TAU - Math.PI / 2, r); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); };
+    g.save(); g.translate(3, 5); ring(R + 4); g.fillStyle = "rgba(0,0,0,.5)"; g.fill(); g.restore();
+    ring(R + 3); const gs = g.createLinearGradient(-R, -R, R, R); gs.addColorStop(0, "#aaa492"); gs.addColorStop(0.5, "#7d7764"); gs.addColorStop(1, "#4d493b");
+    g.fillStyle = gs; g.fill(); g.lineWidth = 2; g.strokeStyle = "#2a2820"; g.stroke();
+    ring(R - 6); const gy = g.createRadialGradient(0, 0, 2, 0, 0, R); gy.addColorStop(0, "#6e5a3c"); gy.addColorStop(1, "#4a3c27"); g.fillStyle = gy; g.fill();
+    g.strokeStyle = "rgba(255,255,240,.18)"; g.lineWidth = 1.2; ring(R); g.stroke();
+    // keep with a team roof
+    g.fillStyle = "rgba(0,0,0,.45)"; g.fillRect(-11, -9, 24, 24);
+    const gk = g.createLinearGradient(-12, -12, 12, 12); gk.addColorStop(0, "#9b9584"); gk.addColorStop(1, "#5a5546"); g.fillStyle = gk; g.fillRect(-13, -13, 24, 24); g.strokeStyle = "#2a2820"; g.lineWidth = 1.5; g.strokeRect(-13, -13, 24, 24);
+    const gr = g.createLinearGradient(-9, -9, 7, 7); gr.addColorStop(0, shade(T.c, 0.15)); gr.addColorStop(0.5, shade(T.c, -0.1)); gr.addColorStop(0.51, shade(T.c, -0.45)); gr.addColorStop(1, shade(T.c, -0.6));
+    g.fillStyle = gr; g.beginPath(); g.moveTo(-9, -9); g.lineTo(7, -9); g.lineTo(7, 7); g.lineTo(-9, 7); g.closePath(); g.fill(); g.strokeStyle = "rgba(0,0,0,.5)"; g.lineWidth = 0.8; g.beginPath(); g.moveTo(-9, -9); g.lineTo(7, 7); g.moveTo(7, -9); g.lineTo(-9, 7); g.stroke();
+    // round towers with crenellations and a team ring
+    for (let i = 0; i < n; i++) {
+      const [x, y] = tw(i / n * TAU - Math.PI / 2, R + 3);
+      g.fillStyle = "rgba(0,0,0,.5)"; g.beginPath(); g.arc(x + 2.5, y + 4, 12, 0, 7); g.fill();
+      const gt = g.createRadialGradient(x - 4, y - 4, 1, x, y, 12); gt.addColorStop(0, "#b8b2a0"); gt.addColorStop(1, "#5c5747");
+      g.fillStyle = gt; g.beginPath(); g.arc(x, y, 11, 0, 7); g.fill(); g.strokeStyle = "#2a2820"; g.lineWidth = 1.6; g.stroke();
+      g.fillStyle = "#3a372b"; g.beginPath(); g.arc(x, y, 6, 0, 7); g.fill();
+      g.fillStyle = "#8d8775"; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; g.fillRect(x + Math.cos(a) * 8.5 - 1.3, y + Math.sin(a) * 8.5 - 1.3, 2.6, 2.6); }
+      g.strokeStyle = T.c; g.globalAlpha = 0.85; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 12.5, 0, 7); g.stroke(); g.globalAlpha = 1;
+    }
+  }, 2);
+  return { inf, gen, fort, genSz: 60, trot: true };
+}
+// stone age: fur-clad slinger, a chief with a club and feathers, a palisade village
+function stoneSprites(T) {
+  const inf = sprite(28, g => {
+    g.lineCap = "round";
+    // sling strap and stone
+    g.strokeStyle = "#6b4a2a"; g.lineWidth = 0.9; g.beginPath(); g.moveTo(3, 3.5); g.quadraticCurveTo(9, 6, 11, 2.5); g.stroke();
+    g.fillStyle = "#8d8a80"; g.strokeStyle = "rgba(0,0,0,.6)"; g.lineWidth = 0.7; g.beginPath(); g.arc(11, 2.2, 1.6, 0, 7); g.fill(); g.stroke();
+    // fur tunic in team colour with spots
+    const gb = g.createLinearGradient(-5, -7, 4, 7); gb.addColorStop(0, shade(T.c, 0.15)); gb.addColorStop(1, shade(T.c, -0.4));
+    g.fillStyle = gb; g.strokeStyle = "rgba(0,0,0,.75)"; g.lineWidth = 1; g.beginPath(); g.ellipse(-0.5, 0, 5, 7, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = "rgba(60,40,20,.45)"; for (const [x, y] of [[-3, -3], [-2, 4], [1, -5], [-4, 1]]) { g.beginPath(); g.arc(x, y, 0.9, 0, 7); g.fill(); }
+    g.fillStyle = "#c79a74"; g.strokeStyle = "rgba(0,0,0,.7)"; g.lineWidth = 0.8; g.beginPath(); g.arc(3.8, 3.4, 1.5, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.arc(3.4, -4, 1.4, 0, 7); g.fill(); g.stroke();
+    // shaggy hair with a team headband
+    g.fillStyle = "#3a2616"; g.beginPath(); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, r = i % 2 ? 3.6 : 4.5; g.lineTo(0.4 + Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = shade(T.c, 0.3); g.lineWidth = 1.2; g.beginPath(); g.arc(0.4, 0, 2.9, -1.2, 1.2); g.stroke();
+  });
+  const gen = sprite(44, g => {
+    g.lineCap = "round";
+    // big club
+    g.strokeStyle = "#5a3a20"; g.lineWidth = 2.6; g.beginPath(); g.moveTo(2, 5); g.lineTo(16, 6); g.stroke();
+    g.fillStyle = "#6e4a2a"; g.strokeStyle = "rgba(0,0,0,.7)"; g.lineWidth = 1; g.beginPath(); g.ellipse(17.5, 6.2, 4, 3, 0.1, 0, 7); g.fill(); g.stroke();
+    // leopard cloak
+    g.fillStyle = "#c08a3a"; g.beginPath(); g.moveTo(-1, -9); g.quadraticCurveTo(-15, -10, -17, 0); g.quadraticCurveTo(-15, 10, -1, 9); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "rgba(40,24,10,.6)"; for (const [x, y] of [[-12, -3], [-9, 4], [-14, 2], [-6, -6], [-6, 6]]) { g.beginPath(); g.arc(x, y, 1.3, 0, 7); g.fill(); }
+    const gb = g.createLinearGradient(-6, -10, 6, 10); gb.addColorStop(0, shade(T.c, 0.3)); gb.addColorStop(1, shade(T.c, -0.4));
+    g.fillStyle = gb; g.strokeStyle = "rgba(0,0,0,.8)"; g.lineWidth = 1.2; g.beginPath(); g.ellipse(0, 0, 7, 10, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = "#c79a74"; g.beginPath(); g.arc(9, 5, 1.8, 0, 7); g.fill();
+    // feather headdress in team colours
+    for (let i = 0; i < 7; i++) { const a = Math.PI * 0.55 + i / 6 * Math.PI * 0.9; g.fillStyle = i % 2 ? shade(T.c, 0.35) : "#f3d77c"; g.beginPath(); g.ellipse(Math.cos(a) * 6.5, Math.sin(a) * 6.5, 3.4, 1.2, a, 0, 7); g.fill(); }
+    g.fillStyle = "#3a2616"; g.strokeStyle = "rgba(0,0,0,.8)"; g.lineWidth = 1; g.beginPath(); g.arc(0.8, 0, 5, 0, 7); g.fill(); g.stroke();
+  });
+  const fort = sprite(150, g => {
+    g.fillStyle = "rgba(60,48,30,.55)"; g.beginPath(); g.arc(0, 0, 70, 0, 7); g.fill();
+    g.fillStyle = "#5b4a30"; g.beginPath(); g.arc(0, 0, 50, 0, 7); g.fill();
+    // huts with team cloth
+    for (const [x, y, r] of [[-15, -12, 13], [16, -6, 11], [-4, 17, 12]]) {
+      g.fillStyle = "rgba(0,0,0,.45)"; g.beginPath(); g.arc(x + 2, y + 3, r, 0, 7); g.fill();
+      const gt = g.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r); gt.addColorStop(0, "#d8b878"); gt.addColorStop(1, "#7a5a2e"); g.fillStyle = gt; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+      g.strokeStyle = "rgba(60,40,20,.6)"; g.lineWidth = 1; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); g.stroke(); }
+      g.fillStyle = T.c; g.beginPath(); g.arc(x, y, r * 0.28, 0, 7); g.fill();
+    }
+    // fire pit
+    g.fillStyle = "#2a2018"; g.beginPath(); g.arc(4, 4, 5, 0, 7); g.fill(); g.fillStyle = "#e8873a"; g.beginPath(); g.arc(4, 4, 2.4, 0, 7); g.fill();
+    // palisade of sharpened stakes
+    for (let k = 0; k < 44; k++) { const a = k / 44 * TAU, x = Math.cos(a) * 55, y = Math.sin(a) * 55; g.fillStyle = "rgba(0,0,0,.5)"; g.beginPath(); g.arc(x + 1.5, y + 2.5, 4, 0, 7); g.fill(); g.fillStyle = k % 2 ? "#8a6236" : "#6e4c28"; g.beginPath(); g.arc(x, y, 3.8, 0, 7); g.fill(); g.strokeStyle = "#2a1c0e"; g.lineWidth = 0.8; g.stroke(); }
+    g.strokeStyle = T.c; g.globalAlpha = 0.85; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 61, 0, 7); g.stroke(); g.globalAlpha = 1;
+  }, 2);
+  return { inf, gen, fort };
+}
+// future: armoured trooper with a blaster, a general on a hover bike, a domed base
+function laserSprites(T) {
+  const inf = sprite(28, g => {
+    g.lineCap = "round";
+    // blaster with a glowing muzzle
+    g.strokeStyle = "#d6dade"; g.lineWidth = 2.4; g.beginPath(); g.moveTo(0, 3.4); g.lineTo(11, 3); g.stroke();
+    g.strokeStyle = "#5a6066"; g.lineWidth = 1; g.beginPath(); g.moveTo(1, 3.4); g.lineTo(10, 3.1); g.stroke();
+    g.fillStyle = shade(T.c, 0.5); g.beginPath(); g.arc(12, 3, 1.4, 0, 7); g.fill();
+    // armour
+    const gb = g.createLinearGradient(-5, -7, 4, 7); gb.addColorStop(0, shade(T.c, 0.4)); gb.addColorStop(1, shade(T.c, -0.3));
+    g.fillStyle = gb; g.strokeStyle = "rgba(0,0,0,.75)"; g.lineWidth = 1; g.beginPath(); g.roundRect(-5.5, -7, 9.5, 14, 3.5); g.fill(); g.stroke();
+    g.fillStyle = "rgba(255,255,255,.28)"; g.beginPath(); g.roundRect(-3.5, -5, 4, 10, 2); g.fill();
+    g.fillStyle = "#e4e7ea"; g.beginPath(); g.arc(4.4, 3.2, 1.6, 0, 7); g.fill(); g.stroke();
+    // helmet with a visor
+    const gh = g.createRadialGradient(-0.4, -1.2, 0.3, 0.5, 0, 4.4); gh.addColorStop(0, "#f4f6f8"); gh.addColorStop(0.6, "#a7aeb4"); gh.addColorStop(1, "#5c636a");
+    g.fillStyle = gh; g.beginPath(); g.arc(0.6, 0, 4, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = "#7ff3ff"; g.lineWidth = 1.6; g.beginPath(); g.arc(0.6, 0, 2.9, -0.8, 0.8); g.stroke();
+  });
+  const gen = sprite(56, g => {
+    g.lineCap = "round";
+    // thruster glow
+    for (const s of [-1, 1]) { const gr = g.createRadialGradient(-17, s * 4, 0, -17, s * 4, 7); gr.addColorStop(0, "rgba(140,240,255,.95)"); gr.addColorStop(1, "rgba(140,240,255,0)"); g.fillStyle = gr; g.beginPath(); g.arc(-17, s * 4, 7, 0, 7); g.fill(); }
+    // bike body
+    const gb = g.createLinearGradient(-14, -7, 16, 7); gb.addColorStop(0, shade(T.c, 0.35)); gb.addColorStop(1, shade(T.c, -0.45));
+    g.fillStyle = gb; g.strokeStyle = "rgba(0,0,0,.8)"; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(-15, -6); g.lineTo(8, -5); g.quadraticCurveTo(20, -3, 22, 0); g.quadraticCurveTo(20, 3, 8, 5); g.lineTo(-15, 6); g.quadraticCurveTo(-18, 0, -15, -6); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#cfd4d8"; for (const s of [-1, 1]) { g.beginPath(); g.roundRect(-14, s * 7 - 1.5, 14, 3, 1.5); g.fill(); g.stroke(); }
+    g.strokeStyle = "#7ff3ff"; g.lineWidth = 1.2; g.beginPath(); g.moveTo(10, -2.5); g.lineTo(18, -1); g.moveTo(10, 2.5); g.lineTo(18, 1); g.stroke();
+    // twin cannons
+    g.strokeStyle = "#e4e7ea"; g.lineWidth = 2; for (const s of [-1, 1]) { g.beginPath(); g.moveTo(10, s * 5.5); g.lineTo(25, s * 5.2); g.stroke(); }
+    // rider
+    g.fillStyle = shade(T.c, -0.2); g.strokeStyle = "rgba(0,0,0,.8)"; g.lineWidth = 1; g.beginPath(); g.ellipse(-3, 0, 4.6, 6, 0, 0, 7); g.fill(); g.stroke();
+    const gh = g.createRadialGradient(-3.6, -1.2, 0.3, -2.6, 0, 4); gh.addColorStop(0, "#ffffff"); gh.addColorStop(0.6, "#a7aeb4"); gh.addColorStop(1, "#4c5256");
+    g.fillStyle = gh; g.beginPath(); g.arc(-2.6, 0, 3.8, 0, 7); g.fill(); g.stroke();
+    g.strokeStyle = "#f3d77c"; g.lineWidth = 1.6; g.beginPath(); g.arc(-2.6, 0, 2.6, -0.9, 0.9); g.stroke();
+  });
+  const fort = sprite(150, g => {
+    g.fillStyle = "rgba(40,48,56,.5)"; g.beginPath(); g.arc(0, 0, 70, 0, 7); g.fill();
+    // hex platform
+    const hex = r => { g.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); };
+    g.save(); g.translate(3, 5); hex(56); g.fillStyle = "rgba(0,0,0,.5)"; g.fill(); g.restore();
+    hex(56); const gp = g.createLinearGradient(-50, -50, 50, 50); gp.addColorStop(0, "#c4cad0"); gp.addColorStop(1, "#5d646b"); g.fillStyle = gp; g.fill(); g.strokeStyle = "#2a2f34"; g.lineWidth = 2; g.stroke();
+    g.strokeStyle = T.c; g.lineWidth = 3; hex(49); g.stroke();
+    g.strokeStyle = "rgba(255,255,255,.25)"; g.lineWidth = 1; hex(44); g.stroke();
+    // pylons
+    for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6, x = Math.cos(a) * 50, y = Math.sin(a) * 50; g.fillStyle = "#2f353b"; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); g.fillStyle = shade(T.c, 0.4); g.beginPath(); g.arc(x, y, 2.2, 0, 7); g.fill(); }
+    // glass dome
+    g.fillStyle = "rgba(0,0,0,.4)"; g.beginPath(); g.arc(3, 4, 26, 0, 7); g.fill();
+    const gd = g.createRadialGradient(-8, -9, 2, 0, 0, 26); gd.addColorStop(0, "rgba(230,250,255,.95)"); gd.addColorStop(0.35, shade(T.c, 0.25)); gd.addColorStop(1, shade(T.c, -0.55));
+    g.fillStyle = gd; g.beginPath(); g.arc(0, 0, 25, 0, 7); g.fill(); g.strokeStyle = "rgba(0,0,0,.6)"; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = "rgba(255,255,255,.4)"; g.beginPath(); g.ellipse(-9, -10, 8, 4, -0.7, 0, 7); g.fill();
+  }, 2);
+  return { inf, gen, fort, genSz: 56, hover: true };
+}
 // ---------- world (terrain, rocks) ----------
 function buildWorld() {
   buildSprites();
@@ -1908,6 +2114,12 @@ function consumeFx() {
       for (const u of G.units) if (u.alive && u.owner === e.owner && (G.attract || u.owner === me || isVis(u.x, u.y))) burst(u.x, u.y, "level");
       SND.fx(e); continue;
     }
+    if (e.k === "era" && !G.attract) {
+      const E = ERAS[e.e];
+      if (e.owner === me) { toast(`New era: ${E.n}! Your army now has ${E.w}`, "gold"); burst(e.x, e.y, "level"); }
+      else toast(`${G.players[e.owner].team.name} reached the ${E.n}`, "bad");
+      continue;
+    }
     if (e.k === "hazIn") { tip("haz" + e.hz, ["", "Water slows your soldiers, and some drown on the way across. They walk around lakes on their own unless you send them in.", "Quicksand slows soldiers to a crawl and sinks them slowly. Get them out fast.", "Rifts are deadly: a soldier who gets pushed in falls. Keep crowds away from the edge."][e.hz], "bad"); continue; }
     if (e.k === "haz") {
       if (seen && e.how === "drown") addPart({ k: "ring", x: e.x, y: e.y, life: 0.7, max: 0.7, s: 26, c: "170,220,230" });
@@ -1930,7 +2142,8 @@ function consumeFx() {
   for (const t of G.tracers) {
     if (!t.fresh) continue; t.fresh = false;
     if (!(G.attract || t.owner === me || isVis(t.x1, t.y1) || isVis(t.x2, t.y2))) continue;
-    SND.shot(t.x1, t.y1, t.w, t.owner === me);
+    SND.shot(t.x1, t.y1, t.w, t.owner === me, t.era);
+    if (t.arrow) continue; // impact shows when it lands
     addPart({ k: "glow", x: t.x1 + Math.cos(t.a) * 10, y: t.y1 + Math.sin(t.a) * 10, life: 0.07, max: 0.07, s: t.w > 2 ? 30 : 18 });
     if (t.hit) burst(t.x2, t.y2, "hit");
   }
@@ -2049,7 +2262,7 @@ function render(dtReal) {
     const ghost = !(p.id === G.human || vis(b.x, b.y));
     if (ghost && !(seeAll || isExp(b.x, b.y))) continue;
     if (!inView(b.x, b.y)) continue;
-    const S = SPR.team[p.id].fort;
+    const S = SPR.team[p.id].eras[eraOf(p.id)].fort;
     c.globalAlpha = ghost ? 0.5 : 1;
     c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
     if (!ghost) {
@@ -2104,11 +2317,11 @@ function render(dtReal) {
   }
   // soldiers
   for (const u of showU) {
-    const T = SPR.team[u.owner], gen = u.kind === "gen";
+    const T = SPR.team[u.owner].eras[eraOf(u.owner)], gen = u.kind === "gen";
     const img = u.flash > 0 ? (gen ? T.genW : T.infW) : (gen ? T.gen : T.inf);
     const bob = u.moving ? Math.sin(now * 14 + u.id) * 0.6 : 0;
     if (u.camo > G.time) c.globalAlpha = 0.45;
-    if (u.mis) drawMisUnit(c, u, T, now); else drawSpr(img, u.x, u.y + bob, u.face, gen ? 44 : 28);
+    if (u.mis) drawMisUnit(c, u, T, now); else drawSpr(img, u.x, u.y + bob + (gen && T.hover ? Math.sin(now * 3 + u.id) * 1.2 : 0), u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), gen ? (T.genSz || 44) : 28);
     c.globalAlpha = 1;
     if (u.temp && u.turncoat) { c.strokeStyle = "rgba(255,255,255,.55)"; c.lineWidth = 1; c.setLineDash([2, 2]); c.beginPath(); c.arc(u.x, u.y, 9.5, 0, TAU); c.stroke(); c.setLineDash([]); }
     else if (u.temp) { // mercenaries: gold ring, the arc shows how long they stay
@@ -2153,12 +2366,37 @@ function render(dtReal) {
     c.globalCompositeOperation = "source-over";
   }
 
+  // stones and arrows in flight: a low arc, then a puff where they land
+  c.lineCap = "round";
+  for (const t of G.tracers) {
+    if (!t.arrow) continue;
+    const ex = t.tgt && t.tgt.alive ? t.tgt.x : t.x2, ey = t.tgt && t.tgt.alive ? t.tgt.y : t.y2;
+    const k = clamp((t.tot + 0.06 - t.t) / t.tot, 0, 1);
+    if (k >= 1) { if (!t.landed) { t.landed = true; if (seeAll || t.owner === G.human || isVis(ex, ey)) addPart({ k: "smoke", x: ex, y: ey, vx: 0, vy: -4, life: 0.35, max: 0.35, s: t.era ? 5 : 8, g: 8 }); } continue; }
+    if (!(seeAll || t.owner === G.human || isVis(t.x1, t.y1) || isVis(ex, ey))) continue;
+    const L = Math.hypot(ex - t.x1, ey - t.y1), hgt = L * (t.era ? 0.12 : 0.22) * Math.sin(Math.PI * k);
+    const x = t.x1 + (ex - t.x1) * k, y = t.y1 + (ey - t.y1) * k - hgt;
+    // shadow on the ground
+    c.fillStyle = "rgba(0,0,0,.3)"; c.beginPath(); c.arc(t.x1 + (ex - t.x1) * k, t.y1 + (ey - t.y1) * k, t.era ? 1.3 : 1.8, 0, TAU); c.fill();
+    if (!t.era) { c.fillStyle = "#9a968a"; c.strokeStyle = "rgba(0,0,0,.6)"; c.lineWidth = 0.7; c.beginPath(); c.arc(x, y, t.w > 2 ? 3.4 : 2.3, 0, TAU); c.fill(); c.stroke(); continue; }
+    const dk = 0.02, k2 = Math.min(1, k + dk), x2 = t.x1 + (ex - t.x1) * k2, y2 = t.y1 + (ey - t.y1) * k2 - L * 0.12 * Math.sin(Math.PI * k2);
+    const ang = Math.atan2(y2 - y, x2 - x), al = t.w > 2 ? 11 : 8;
+    const bx = x - Math.cos(ang) * al, by = y - Math.sin(ang) * al;
+    c.strokeStyle = "#3a2a18"; c.lineWidth = t.w > 2 ? 1.6 : 1.1; c.beginPath(); c.moveTo(bx, by); c.lineTo(x, y); c.stroke();
+    c.strokeStyle = "#e9e1c8"; c.lineWidth = 1.8; c.beginPath(); c.moveTo(bx, by); c.lineTo(bx + Math.cos(ang) * 2.2, by + Math.sin(ang) * 2.2); c.stroke();
+  }
   // light: tracers, flashes, sparks
   c.globalCompositeOperation = "lighter";
   c.lineCap = "round";
   for (const t of G.tracers) {
+    if (t.arrow) continue;
     if (!(seeAll || t.owner === G.human || isVis(t.x1, t.y1) || isVis(t.x2, t.y2))) continue;
     const a = clamp(t.t / 0.12, 0, 1);
+    if (t.era === 3) { // laser: a full beam with a white core
+      c.globalAlpha = a * 0.55; c.strokeStyle = t.c; c.lineWidth = t.w * 3.6; c.beginPath(); c.moveTo(t.x1, t.y1); c.lineTo(t.x2, t.y2); c.stroke();
+      c.globalAlpha = a; c.strokeStyle = "rgba(240,255,255,.95)"; c.lineWidth = t.w * 0.9; c.beginPath(); c.moveTo(t.x1, t.y1); c.lineTo(t.x2, t.y2); c.stroke();
+      continue;
+    }
     // bullet head travelling along the line
     const k = 1 - a, hx = t.x1 + (t.x2 - t.x1) * Math.min(1, k * 2.2), hy = t.y1 + (t.y2 - t.y1) * Math.min(1, k * 2.2);
     c.globalAlpha = a * 0.45; c.strokeStyle = t.c; c.lineWidth = t.w * 3.2;
@@ -2922,7 +3160,7 @@ function showBest() {
 showBest();
 
 function initGame(g) {
-  G = g;
+  G = g; G.pend = [];
   G.unitById = new Map(G.units.map(u => [u.id, u]));
   G.gens = G.players.map(p => G.units.find(u => u.owner === p.id && u.kind === "gen"));
   cratesInit(); missionsInit(); G.cratesOn = true; G.missionsOn = false; UI.strikeMode = false;
@@ -3065,11 +3303,27 @@ const SND = (() => {
   }
 
   // ---- effects ----
-  S.shot = (x, y, w, mine) => {
+  S.shot = (x, y, w, mine, era) => {
     if (!ac) return;
     const P = place(x, y); heat += (P.d < 1.2 ? 1 : 0.5) * (mine ? 1.2 : 1); lastShot = performance.now();
     if (!pref.s || (G && G.attract) || !budget()) return;
     const t = now() + Math.random() * 0.012, v = P.v;
+    if (era === 0) { // sling: a whirr and release
+      nz(t, 0.14, "bandpass", 700 + Math.random() * 300, 1.4, 0.35 * v, 0.03, P.pan, 0.15);
+      if (w > 2.3) tone(t, "sine", 90, 50, 0.25, 0.5 * v, 0.004, P.pan, 0.1);
+      return;
+    }
+    if (era === 1) { // bow: a twang and the arrow's hiss
+      const f = w > 2.3 ? 110 : w > 2 ? 150 : 190 + Math.random() * 40;
+      tone(t, "triangle", f, f * 0.82, 0.13, 0.32 * v, 0.002, P.pan, 0.15);
+      nz(t + 0.01, 0.12, "highpass", 3200, 0.7, 0.12 * v, 0.02, P.pan, 0.1);
+      return;
+    }
+    if (era === 3) { // laser: a falling zap
+      tone(t, "sawtooth", w > 2 ? 1500 : 1900 + Math.random() * 300, w > 2 ? 260 : 380, w > 2 ? 0.2 : 0.11, 0.16 * v, 0.002, P.pan, 0.3);
+      tone(t, "sine", 900, 200, 0.09, 0.12 * v, 0.002, P.pan, 0.2);
+      return;
+    }
     if (w > 2.3) { // base turret: heavy thump
       nz(t, 0.25, "lowpass", 900, 0.7, 0.5 * v, 0.003, P.pan, 0.25);
       tone(t, "sine", 110, 42, 0.28, 0.6 * v, 0.004, P.pan, 0.1);
@@ -4132,7 +4386,7 @@ startAttract();
 requestAnimationFrame(frame);
 
 // test hook
-window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y) };
+window.__hr = { get G() { return G; }, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR };
 })();
 </script>
 
