@@ -1004,7 +1004,7 @@ function killQuiet(u) { // no points for anyone
   pushFx({ k: "death", x: u.x, y: u.y, a: u.face, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" });
 }
 function onLevel(p, before) {
-  if (eraOfLevel(p.level) !== eraOfLevel(before) && G.eraFix == null) pushFx({ k: "era", owner: p.id, e: eraOfLevel(p.level), x: p.base.x, y: p.base.y });
+  if (eraOfLevel(p.level) !== eraOfLevel(before) && G.eraFix == null && URL_ERA == null) pushFx({ k: "era", owner: p.id, e: eraOfLevel(p.level), x: p.base.x, y: p.base.y });
   if (p.level >= DOOM.lvl) doomArm(p);
 }
 function levelUp(p) {
@@ -1715,6 +1715,9 @@ let PIXEL = false; // easter egg: Konami code
 let SW = 0, SH = 0, flatCvs = null, flatCtx = null;
 const TILT = { on: false, th: 0.82, p: 1000, oy: 0.4 };
 try { TILT.on = localStorage.getItem("hr-3d") === "1"; } catch (e) {}
+// test links: ?era=5 shows every army in that era (1 Stone ... 8 Space) with the 3D view on; ?3d turns the 3D view on (neither is saved)
+const URL_ERA = (n => n >= 1 && n <= 8 ? n - 1 : null)(+((location.search.match(/[?&]era=(\d)/) || [])[1]));
+if (URL_ERA != null || /[?&]3d\b/.test(location.search)) TILT.on = true;
 const tvOf = dy => dy * TILT.p / (Math.cos(TILT.th) * TILT.p + dy * Math.sin(TILT.th));
 function scr2flat(x, y) { if (!TILT.on) return { x, y }; const v = tvOf(y - SH * TILT.oy), f = (TILT.p - v * Math.sin(TILT.th)) / TILT.p; return { x: W / 2 + (x - SW / 2) * f, y: H / 2 + v }; }
 function flat2scr(x, y) { if (!TILT.on) return { x, y }; const v = y - H / 2, d = TILT.p - v * Math.sin(TILT.th), f = d / TILT.p; return { x: SW / 2 + (x - W / 2) / f, y: SH * TILT.oy + v * Math.cos(TILT.th) * TILT.p / d }; }
@@ -1775,7 +1778,7 @@ function warpFlat() {
 const FORM_FX = { line: { aim: 1.15 }, wedge: { speed: 1.1, dmg: 1.25, chargeT: 3 } };
 const GUARD_R = 130; // guards this close to their general take 15% less damage
 function eraOfLevel(l) { let e = 0; while (e < ERAS.length - 1 && l >= ERAS[e + 1].at) e++; return e; }
-const eraOf = pid => G.eraFix != null ? G.eraFix : eraOfLevel(G.players[pid].level);
+const eraOf = pid => G.eraFix != null ? G.eraFix : URL_ERA != null ? URL_ERA : eraOfLevel(G.players[pid].level);
 
 function resize() {
   DPR = PIXEL ? 0.3 : Math.min(QP[qLevel()].dpr, (G && G.attract) ? 1.25 : 9, window.devicePixelRatio || 1);
