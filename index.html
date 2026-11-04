@@ -430,7 +430,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Flag in the Wind by YouniqueIdeaStudio (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Flag in the Wind by YouniqueIdeaStudio (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -1755,7 +1755,8 @@ const w2scr = (x, y) => flat2scr((x - cam.x) * cam.z + W / 2, (y - cam.y) * cam.
 const MODEL3 = {
   4: { inf: { src: "sprites/ww-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/ww-gen.png", S: 160, fx: 80, fy: 137.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 23 } },
-  0: { inf: { src: "sprites/cv-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Caveman by iRahulRajput (CC-BY), Mixamo-rigged, with a spear
+  0: { gen: { src: "sprites/st-gen.png", ring: true, ringR: 9, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 18.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } }, // Chara Design 01 by SheeroChana (CC-BY), Mixamo-rigged
+       inf: { src: "sprites/cv-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Caveman by iRahulRajput (CC-BY), Mixamo-rigged, with a spear
   1: { gen: { src: "sprites/br-gen.png", S: 200, fx: 100, fy: 183.5, wpp: 0.026, k: 12.5, dirs: 8, clips: { walk: [0, 6] }, ring: true, ringR: 22 }, // Ancient Horse Chariot (Mauryan era) by EqualizerX, CC-BY
        inf: { src: "sprites/br-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } },
   2: { gen: { src: "sprites/me-gen.png", S: 160, fx: 80, fy: 139.6, wpp: 0.02375, k: 19, dirs: 8, clips: { walk: [0, 8] }, ring: true, ringR: 20 }, // 1964.88 Armor for Man and Horse, Cleveland Museum of Art (CC0)
@@ -2383,7 +2384,7 @@ function house(w, h, wall, roof, flat) { return bbSprite(w + 2, h + 8, g => { co
   const rg = g.createLinearGradient(0, -h - 6, 0, -h); rg.addColorStop(0, shade(roof, 0.25)); rg.addColorStop(1, shade(roof, -0.3)); g.fillStyle = rg;
   if (flat) g.fillRect(-w / 2 - 0.5, -h - 1.4, w + 1, 1.6); else { g.beginPath(); g.moveTo(-w / 2 - 1, -h); g.lineTo(-w / 2 + 2, -h - 5.5); g.lineTo(w / 2 - 2, -h - 5.5); g.lineTo(w / 2 + 1, -h); g.closePath(); g.fill(); } }); }
 function eraBase(T, era) {
-  const tc = T.c, P = [], ground = c => sprite(150, g => { g.fillStyle = "rgba(40,34,24,.45)"; g.beginPath(); g.arc(0, 0, 70, 0, 7); g.fill(); c(g); g.strokeStyle = tc; g.globalAlpha = 0.85; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 66, 0, 7); g.stroke(); g.globalAlpha = 1; }, 2);
+  const tc = T.c, P = [], ground = c => sprite(150, g => { g.fillStyle = "rgba(40,34,24,.45)"; g.beginPath(); g.arc(0, 0, 70, 0, 7); g.fill(); c(g); }, 2); // no team ring: the team shows on the flag
   let gr;
   if (era === 1) {
     gr = ground(g => { g.fillStyle = "#9c8456"; g.fillRect(-52, -52, 104, 104); g.fillStyle = "#b29a68"; g.fillRect(-12, -14, 26, 22); });
@@ -2455,30 +2456,23 @@ const HUT3 = { src: "sprites/huts.png", S: 160, H: 183, N: 3, gx: 80, gy: 125.8,
 function hut3(i) { const R = HUT3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
   if (!R.cv[i]) { const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, (i % R.N) * R.S, 0, R.S, R.H, 0, 0, R.S, R.H); const f = R.wpp * R.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; R.cv[i] = cv; }
   return R.cv[i]; }
-// the base's health in the 3D view: a framed, glossy bar with a fading "damage taken" trail and tick marks
-function drawBaseBar(g, [x, y], k, f, gh, fl, now) {
-  const w = Math.max(84, 132 * k), h = Math.max(8, 10 * k), x0 = x - w / 2, r = h / 2 + 2;
-  const col = f > 0.6 ? ["#9cf08a", "#3fae4c", "#1d5e27"] : f > 0.35 ? ["#ffe08a", "#e0a630", "#7a4e10"] : ["#ff9a8a", "#e23b2e", "#6a1410"];
-  g.save(); g.shadowColor = "rgba(0,0,0,.55)"; g.shadowBlur = 6; g.shadowOffsetY = 2;
-  const fr = g.createLinearGradient(0, y - 3, 0, y + h + 3); fr.addColorStop(0, "#5b5a52"); fr.addColorStop(0.5, "#2a2a26"); fr.addColorStop(1, "#151513");
-  g.fillStyle = fr; g.beginPath(); g.roundRect(x0 - 3, y - 3, w + 6, h + 6, r); g.fill(); g.restore();
-  g.strokeStyle = "rgba(233,210,140,.75)"; g.lineWidth = 1; g.beginPath(); g.roundRect(x0 - 2.5, y - 2.5, w + 5, h + 5, r - 0.5); g.stroke();
-  g.save(); g.beginPath(); g.roundRect(x0, y, w, h, h / 2); g.clip();
-  g.fillStyle = "#0b0c0b"; g.fillRect(x0, y, w, h);
-  if (gh > f) { g.fillStyle = "rgba(255,240,210,.85)"; g.fillRect(x0 + w * f, y, w * (gh - f), h); }
-  const fill = g.createLinearGradient(0, y, 0, y + h); fill.addColorStop(0, col[0]); fill.addColorStop(0.45, col[1]); fill.addColorStop(1, col[2]);
-  g.fillStyle = fill; g.fillRect(x0, y, w * f, h);
-  if (f <= 0.35) { g.globalAlpha = 0.25 + 0.25 * Math.sin(now * 8); g.fillStyle = "#fff"; g.fillRect(x0, y, w * f, h); g.globalAlpha = 1; }
-  if (fl) { g.globalAlpha = 0.45; g.fillStyle = "#fff"; g.fillRect(x0, y, w * f, h); g.globalAlpha = 1; }
-  const gl = g.createLinearGradient(0, y, 0, y + h * 0.5); gl.addColorStop(0, "rgba(255,255,255,.45)"); gl.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = gl; g.fillRect(x0, y, w, h * 0.5);
-  g.fillStyle = "rgba(0,0,0,.35)"; for (let i = 1; i < 10; i++) g.fillRect(x0 + w * i / 10 - 0.5, y + 1, 1, h - 2);
+// the base's health in the 3D view: a thin, quiet bar that comes forward when the base is being hit
+function drawBaseBar(g, [x, y], k, f, gh, hot) {
+  const w = Math.max(70, 104 * k), h = Math.max(3, 4 * k), x0 = x - w / 2;
+  const col = f > 0.6 ? "120,190,110" : f > 0.35 ? "220,175,80" : "220,80,60";
+  g.save(); g.globalAlpha = 0.35 + 0.6 * hot;
+  g.fillStyle = "rgba(0,0,0,.55)"; g.fillRect(x0 - 1, y - 1, w + 2, h + 2);
+  if (gh > f) { g.fillStyle = `rgba(240,230,210,${0.5 + 0.4 * hot})`; g.fillRect(x0 + w * f, y, w * (gh - f), h); }
+  g.fillStyle = `rgb(${col})`; g.fillRect(x0, y, w * f, h);
+  g.fillStyle = "rgba(255,255,255,.18)"; g.fillRect(x0, y, w * f, Math.max(1, h * 0.35));
   g.restore();
 }
 // rally flag in the 3D view: Flag in the Wind by YouniqueIdeaStudio (CC-BY), one baked view per team colour, pole at the centre
-const RALLY3 = { src: "sprites/rally.png", w: 80, h: 64, ay: 62 / 64, bw: 47, bh: 37.5, cv: [] };
-function rally3(t) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
-  if (!R.cv[t]) { const cv = document.createElement("canvas"); cv.width = R.w; cv.height = R.h; cv.getContext("2d").drawImage(R.img, t * R.w, 0, R.w, R.h, 0, 0, R.w, R.h); cv.bw = R.bw; cv.bh = R.bh; cv.ay = R.ay; R.cv[t] = cv; }
-  return R.cv[t]; }
+const RALLY3 = { src: "sprites/rally.png", w: 80, h: 72, N: 8, ay: 70 / 72, bw: 47, bh: 42.2, cv: [] }; // rows = teams, 8 waving frames
+function rally3(t, ph = 0) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
+  const f = Math.floor(performance.now() / 110 + ph) % R.N, key = t * R.N + f;
+  if (!R.cv[key]) { const cv = document.createElement("canvas"); cv.width = R.w; cv.height = R.h; cv.getContext("2d").drawImage(R.img, f * R.w, t * R.h, R.w, R.h, 0, 0, R.w, R.h); cv.bw = R.bw; cv.bh = R.bh; cv.ay = R.ay; R.cv[key] = cv; }
+  return R.cv[key]; }
 // whole-base models for some eras (3D view): one baked view, ground centre at (gx, gy), footprint radius 1 = r world units
 const BASE3 = { 0: { src: "sprites/st-base.png", S: 256, H: 251, gx: 128, gy: 133.2, wpp: 0.009765625, r: 64 }, // log palisade with Basic Stone Age Houses (CristianPiotto, CC-BY), built in three.js
   1: { src: "sprites/br-base.png", S: 256, H: 251, gx: 128, gy: 133.2, wpp: 0.009765625, r: 64 }, // mud-brick town with a temple, built in three.js
@@ -2574,7 +2568,6 @@ function stone3q(T) {
     g.fillStyle = "rgba(60,48,30,.55)"; g.beginPath(); g.arc(0, 0, 70, 0, 7); g.fill();
     g.fillStyle = "#5b4a30"; g.beginPath(); g.arc(0, 0, 56, 0, 7); g.fill();
     g.fillStyle = "#2a2018"; g.beginPath(); g.arc(4, 4, 5, 0, 7); g.fill(); g.fillStyle = "#e8873a"; g.beginPath(); g.arc(4, 4, 2.4, 0, 7); g.fill();
-    g.strokeStyle = T.c; g.globalAlpha = 0.85; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, 61, 0, 7); g.stroke(); g.globalAlpha = 1;
   }, 2);
   const stake = [0, 1].map(v => bbSprite(6, 16, g => { const c0 = v ? "#8a6236" : "#6e4c28"; g.fillStyle = c0; g.strokeStyle = "#2a1c0e"; g.lineWidth = 0.6;
     g.beginPath(); g.moveTo(-2.4, 0); g.lineTo(-2.4, -12); g.lineTo(0, -15.5); g.lineTo(2.4, -12); g.lineTo(2.4, 0); g.closePath(); g.fill(); g.stroke();
@@ -3449,7 +3442,7 @@ function render(dtReal) {
     c.globalAlpha = ghost ? 0.5 : 1;
     const B3 = BB && base3(eraOf(p.id)); if (!B3) c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
     if (B3) STAND.push({ bb: B3, x: b.x, y: b.y, al: c.globalAlpha, fog: true });
-    if (BB) { const F3 = rally3(TEAM.indexOf(p.team)); if (F3) STAND.push({ bb: F3, sc: 1.7, x: b.x - 72, y: b.y + 8, al: c.globalAlpha }); } // the team colour flies on a flag
+    if (BB) { const F3 = rally3(TEAM.indexOf(p.team), p.id * 3); if (F3) STAND.push({ bb: F3, sc: 1.7, x: b.x - 72, y: b.y + 8, al: c.globalAlpha }); } // the team colour flies on a flag
     else if (BB) for (const v of BB.pieces) STAND.push({ bb: (v.hut != null && hut3(v.hut)) || v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
     if (!ghost) {
       // turret (the 3D village has no gun to show)
@@ -3473,7 +3466,8 @@ function render(dtReal) {
       c.strokeStyle = f > 0.35 ? "rgba(233,229,211,.9)" : "#ff6b5e"; c.beginPath(); c.arc(b.x, b.y, 64, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.stroke(); }
       // health bar under the base (3D view), like a strategy game
       if (TILT.on) { b.ghost = b.ghost == null || b.ghost < f ? f : b.ghost + (f - b.ghost) * 0.04; const gh = b.ghost, fl = b.flash > 0;
-        STAND.push({ x: b.x, y: b.y + 80, al: 1, draw: (g, P, k) => drawBaseBar(g, P(b.x, b.y + 64, 0), k, f, gh, fl, now) }); }
+        const hot = clamp(1 - (G.time - (b.hitAt ?? -99)) / 3, 0, 1); void fl;
+        STAND.push({ x: b.x, y: b.y + 80, al: 1, draw: (g, P, k) => drawBaseBar(g, P(b.x, b.y + 64, 0), k, f, gh, hot) }); }
     }
     c.globalAlpha = 1;
   }

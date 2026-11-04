@@ -36,6 +36,16 @@ window.renderAtlas = async (opts) => {
     if (R.pose) for (const [rx, e] of Object.entries(R.pose)) rr.traverse(o => { if (o.isBone && new RegExp(rx).test(o.name)) o.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...e))); });
     if (R.hide) rr.traverse(o => { if (new RegExp(R.hide).test(o.name)) o.visible = false; });
     const off = new THREE.Group(); off.add(pv); off.position.set(...(R.at || [0, 0, 0])); root.parent.add(off); root.userData.rider = off; }
+  // waving cloth: { mesh: regex for the cloth, pole: regex for the pole, amp (fraction of the cloth length), waves }
+  let wave = null;
+  if (opts.wave) { const W = opts.wave; let cl = null, po = null; root.traverse(o => { if (o.isMesh && new RegExp(W.mesh).test(o.name)) cl = o; if (o.isMesh && new RegExp(W.pole).test(o.name)) po = o; });
+    if (cl) { root.updateMatrixWorld(true); const pos = cl.geometry.attributes.position, bb = new THREE.Box3().setFromBufferAttribute(pos), sz = bb.getSize(new THREE.Vector3());
+      const ax = sz.x >= sz.z ? "x" : "z", nx = ax === "x" ? "z" : "x", pc = po ? cl.worldToLocal(new THREE.Box3().setFromObject(po).getCenter(new THREE.Vector3())) : bb.min, near = Math.abs(pc[ax] - bb.min[ax]) < Math.abs(pc[ax] - bb.max[ax]) ? bb.min[ax] : bb.max[ax], len = sz[ax] || 1;
+      wave = { cl, pos, orig: pos.array.slice(), ax: "xyz".indexOf(ax), nx: "xyz".indexOf(nx), near, len, amp: (W.amp || 0.12) * len, waves: W.waves || 1.5 }; console.log("wave", cl.name, ax, len); } }
+  const doWave = ph => { if (!wave) return; const { pos, orig, ax, nx, near, len, amp, waves } = wave, a = pos.array;
+    for (let i = 0; i < a.length; i += 3) { const d = Math.abs(orig[i + ax] - near) / len, y = orig[i + 1]; a[i] = orig[i]; a[i + 1] = orig[i + 1]; a[i + 2] = orig[i + 2];
+      a[i + nx] += amp * d * Math.sin(d * waves * Math.PI * 2 - ph + y * 0.0); a[i + 1] += amp * 0.06 * d * Math.cos(d * waves * Math.PI * 2 - ph); }
+    pos.needsUpdate = true; wave.cl.geometry.computeVertexNormals(); };
   const placeProp = () => { if (!prop || !rH || !lH) return; scene.updateMatrixWorld(true); const a = new THREE.Vector3().setFromMatrixPosition(rH.matrixWorld), b = new THREE.Vector3().setFromMatrixPosition(lH.matrixWorld);
     const dir = b.clone().sub(a); if (dir.length() < 1e-4) return; dir.normalize(); const up = new THREE.Vector3(0, 1, 0); up.sub(dir.clone().multiplyScalar(up.dot(dir))).normalize(); const side = new THREE.Vector3().crossVectors(dir, up);
     prop.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir, up, side)); prop.position.copy(a); };
@@ -62,7 +72,7 @@ window.renderAtlas = async (opts) => {
       for (let f = 0; f < c.frames; f++) { if (act) { mixer.setTime(((c.t0 || 0) + (c.loop === false ? f / Math.max(1, c.frames - 1) : f / c.frames) * (c.span || 1)) * dur); }
         if (opts.inPlace !== false) root.traverse(o => { if (o.isBone && !o.parent.isBone) { o.position.x = o.userData.x0 ?? (o.userData.x0 = o.position.x); o.position.z = o.userData.z0 ?? (o.userData.z0 = o.position.z); } });
         if (c.rock) { const ph = f / c.frames * Math.PI * 2; root.userData.y0 ??= root.position.y; root.rotation.x = c.rock[0] * Math.sin(ph); root.position.y = root.userData.y0 + c.rock[1] * Math.abs(Math.sin(ph)); if (c.rock[2]) root.rotation.z = c.rock[2] * Math.sin(ph); }
-        placeProp(); rnd.render(scene, cam); ag.drawImage(rnd.domElement, f * S, r * S);
+        doWave(f / c.frames * Math.PI * 2); placeProp(); rnd.render(scene, cam); ag.drawImage(rnd.domElement, f * S, r * S);
         if (mg) { for (const [o, , m] of swaps) o.material = m; rnd.render(scene, cam); mg.drawImage(rnd.domElement, f * S, r * S); for (const [o, m0] of swaps) o.material = m0; } }
       r++;
     }
