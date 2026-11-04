@@ -354,7 +354,9 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <h2 class="hiscore">High scores</h2>
     <div class="seg" id="boardTabs"><button data-v="0" class="on">All</button><button data-v="4">Invincible</button><button data-v="3">Elite</button><button data-v="2">Veteran</button><button data-v="1">Recruit</button></div>
     <div class="logwrap tall"><table class="log arcade-t" id="boardTable"></table></div>
+    <div id="boardShare"></div>
     <p class="fine" id="boardNote"></p>
+    <button class="go" id="boardAgain" hidden>Play again</button>
     <button class="go" id="boardBack">Back</button>
   </div>
 </div>
@@ -416,7 +418,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
       <input id="nameInput" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Your name">
       <div class="arcade-msg" id="nameMsg"></div>
     </div>
-    <div class="sharebox">
+    <div class="sharebox" id="sharebox">
       <div class="arcade-h">Share your score</div>
       <div class="shares">
         <a class="sb li" id="shLi" target="_blank" rel="noopener">LinkedIn</a>
@@ -3529,6 +3531,7 @@ $("nameOk").addEventListener("click", async () => {
     $("nameOk").textContent = "Posted";
     boardMine = saved; postedRow = saved;
     $("nameOk").disabled = false; $("nameOk").textContent = "See your rank";
+    showBoard(saved.diff, saved);
   } catch (e) {
     msg.className = "arcade-msg bad";
     console.warn("leaderboard submit failed", e.status, e.detail);
@@ -3634,7 +3637,11 @@ let boardDiff = 0, boardMine = null, boardFrom = "menu";
 const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "TH" : ["TH", "ST", "ND", "RD"][n % 10] || "TH");
 async function showBoard(diff, mine) {
   boardDiff = diff || 0; if (mine) boardMine = mine;
-  boardFrom = !$("over").hidden ? "over" : "menu";
+  if ($("board").hidden) boardFrom = !$("over").hidden ? "over" : "menu";
+  // straight from a battle: bring the share buttons along, and offer another round
+  const fromOver = boardFrom === "over";
+  if (fromOver && !$("boardShare").contains($("sharebox"))) $("boardShare").appendChild($("sharebox"));
+  $("boardAgain").hidden = !fromOver; $("boardBack").className = fromOver ? "go ghost" : "go"; $("boardBack").textContent = fromOver ? "Battle report" : "Back";
   $("menu").hidden = true; $("over").hidden = true; $("board").hidden = false;
   $("boardTabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.v === boardDiff));
   $("boardSrc").textContent = LB.url ? "Public leaderboard · everyone's best" : "Leaderboard · this device";
@@ -3651,7 +3658,9 @@ async function showBoard(diff, mine) {
 }
 $("boardTabs").querySelectorAll("button").forEach(b => b.addEventListener("click", () => showBoard(+b.dataset.v)));
 $("boardBtn").addEventListener("click", () => showBoard(0));
-$("boardBack").addEventListener("click", () => { $("board").hidden = true; if (boardFrom === "over") $("over").hidden = false; else $("menu").hidden = false; });
+function boardHome() { if ($("boardShare").contains($("sharebox"))) $("againBtn").before($("sharebox")); }
+$("boardBack").addEventListener("click", () => { boardHome(); $("board").hidden = true; if (boardFrom === "over") $("over").hidden = false; else $("menu").hidden = false; });
+$("boardAgain").addEventListener("click", () => { boardHome(); $("board").hidden = true; $("againBtn").click(); });
 
 function showOver() {
   if (G.tutorial) { toMenu(); return; }
