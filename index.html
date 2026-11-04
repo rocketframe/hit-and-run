@@ -1664,6 +1664,7 @@ const isExp = (x, y) => { const cx = Math.floor(x / CFG.fogCell), cy = Math.floo
 // Per frame we only blit sprites, a few hundred particles and one fog layer.
 // ======================================================================
 const cvs = document.getElementById("game"), ctx = cvs.getContext("2d");
+let renderCtx = ctx;
 const mini = document.getElementById("mini"), mctx = mini.getContext("2d");
 let W = 0, H = 0, DPR = 1;
 const cam = { x: 0, y: 0, z: 1 };
@@ -2683,8 +2684,9 @@ function drawMisUnit(c, u, T, now) {
   c.restore();
 }
 function drawSpr(img, x, y, a, size) {
-  ctx.save(); ctx.translate(x, y); if (a) ctx.rotate(a);
-  ctx.drawImage(img, -size / 2, -size / 2, size, size); ctx.restore();
+  const c = renderCtx; // the world canvas: the screen, or the flat buffer in 3D view
+  c.save(); c.translate(x, y); if (a) c.rotate(a);
+  c.drawImage(img, -size / 2, -size / 2, size, size); c.restore();
 }
 
 // open sea all round; gentle swell rolling in to the beach
@@ -2704,7 +2706,7 @@ function drawWaves(c, now, z) {
   ring(1.5 + br * 3, 1.2, 0); c.stroke();
 }
 function render(dtReal) {
-  let c = TILT.on && flatCtx ? flatCtx : ctx;
+  let c = renderCtx = TILT.on && flatCtx ? flatCtx : ctx;
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.fillStyle = G && G.island ? SEA : "#07090a"; c.fillRect(0, 0, c.canvas.width, c.canvas.height);
   if (!G || !groundCvs) return;
@@ -3058,7 +3060,7 @@ function render(dtReal) {
   }
 
   // screen space: vignette, selection box
-  if (c !== ctx) { warpFlat(); c = ctx; }
+  if (c !== ctx) { warpFlat(); c = renderCtx = ctx; }
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.drawImage(vignetteCvs, 0, 0, cvs.width, cvs.height);
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
