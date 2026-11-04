@@ -109,7 +109,7 @@ body.classic #grp2{flex-wrap:wrap;justify-content:center;max-width:100%;gap:3px}
   linear-gradient(90deg,rgba(6,8,6,.9) 0%,rgba(6,8,6,.72) 45%,rgba(6,8,6,.35) 100%)}
 #menu .card{text-shadow:0 1px 3px rgba(0,0,0,.7);position:relative}
 /* rubber stamp: worn red ink, slightly rotated, thumps down on load */
-.stamp{position:absolute;top:34px;right:0;transform:rotate(-9deg);color:#f0473a;pointer-events:none;text-shadow:none;
+.stamp{position:absolute;top:4px;right:0;transform:rotate(-9deg);color:#f0473a;pointer-events:none;text-shadow:none;
   opacity:.95;will-change:transform}
 .stamp .st-in{border:3px solid currentColor;outline:1.5px solid currentColor;outline-offset:3px;border-radius:5px;padding:7px 12px 8px;display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(16,10,8,.6)}
 .stamp .st-k{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
@@ -117,7 +117,15 @@ body.classic #grp2{flex-wrap:wrap;justify-content:center;max-width:100%;gap:3px}
 .stamp .st-rule{width:100%;height:2px;background:currentColor;margin:4px 0 3px}
 .stamp.thump{animation:thump .42s cubic-bezier(.2,.9,.3,1.25) both}
 @keyframes thump{0%{transform:rotate(-14deg) scale(2.3);opacity:0}60%{transform:rotate(-8deg) scale(.94);opacity:.95}100%{transform:rotate(-9deg) scale(1);opacity:.92}}
-@media (max-width:420px){.stamp{top:30px;right:2px}.stamp b{font-size:25px}}
+body.splash #menu{overflow:hidden}
+body.splash #menu .card>*:not(h1):not(.stamp){opacity:0;pointer-events:none;animation:none}
+body.entering #menu .card>*:not(h1):not(.stamp){transition:opacity .5s ease .55s}
+#splash{position:fixed;inset:0;z-index:30;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#splash .go{position:absolute;left:50%;transform:translateX(-50%);min-width:180px;padding:14px 34px;font:800 20px/1 "Saira Condensed",sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#fff6e8;background:#b8322a;border:0;border-radius:6px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 22px rgba(184,50,42,.5);cursor:pointer;transition:opacity .3s;animation:goIn .6s ease .5s both}
+#splash .go:hover{background:#c93a30}
+#splash.out .go{opacity:0}
+@keyframes goIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translateX(-50%)}}
+@media (max-width:420px){.stamp{top:-2px;right:2px}.stamp b{font-size:25px}}
 .armyset{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:4px;padding:8px 10px;background:rgba(6,8,6,.45)}
 .arow{display:grid;grid-template-columns:78px 36px 1fr 36px 40px;align-items:center;gap:8px}
 .arow .an{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-dim);text-transform:uppercase}
@@ -281,12 +289,14 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
 
 <div class="screen" id="menu">
   <div class="card">
-    <div class="eyebrow">Field operations · prototype</div>
     <h1>Hit<br>and <span>Run</span></h1>
     <div class="stamp" id="stamp" hidden aria-live="polite"><div class="st-in"><span class="st-k">Battles fought</span><b id="stGames">0</b><span class="st-rule"></span><span class="st-k">Enemies killed</span><b id="stKills">0</b></div></div>
     <div class="sndhint" id="sndHint">Tap anywhere for sound</div>
     <p class="lede">Find the enemy in the fog, shoot first, keep your general alive, and take their base.</p>
     <details class="custom" id="custom"><summary><span>Custom game</span><em id="customSum"></em></summary>
+    <div class="opt"><label>Map</label>
+      <div class="seg" id="optMap"><button data-v="0" class="on">Plain</button><button data-v="1">Lakes</button><button data-v="2">Marsh</button><button data-v="3">Canyons</button></div>
+      <p class="fine" id="mapLine"></p></div>
     <div class="opt"><label>Enemy armies (AI)</label>
       <div class="seg" id="optPlayers"><button data-v="2" class="on">1</button><button data-v="3">2</button><button data-v="4">3</button></div></div>
     <div class="opt"><label>Game pace (army upgrades)</label>
@@ -486,7 +496,14 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 let G = null;
 
 const DIFF = { 1: { mult: 0.85, respawn: 1.2, smart: false }, 2: { mult: 1.1, respawn: 0.85, smart: true }, 3: { mult: 1.3, respawn: 0.65, smart: true }, 4: { mult: 1.8, respawn: 0.45, smart: true, think: 0.7 } };
-function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy) {
+const MAPS = [
+  { n: "Plain", line: "Open ground and rocks. The classic map." },
+  { n: "Lakes", k: 1, line: "Lakes slow soldiers down, and some drown on the way across." },
+  { n: "Marsh", k: 2, line: "Quicksand slows soldiers to a crawl and slowly sinks them." },
+  { n: "Canyons", k: 3, line: "Deep rifts: soldiers who get pushed in fall to their death." }
+];
+const HZ_CELL = 10;
+function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy, map) {
   const rng = mulberry32(seed);
   const S = nPlayers === 2 ? 1900 : 2300, inset = 200;
   const corners = [[inset, S - inset], [S - inset, inset], [S - inset, S - inset], [inset, inset]];
@@ -513,6 +530,40 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy) {
     }
     g.island = { c: h, R };
   }
+  // map hazards: built in one quadrant and mirrored like the rocks, so every corner faces the same ground
+  g.map = MAPS[map | 0] ? map | 0 : 0; g.haz = [];
+  if (MAPS[g.map].k) {
+    const hr = mulberry32((seed ^ 0x2b7e15) >>> 0), k = MAPS[g.map].k, h = S / 2, I = g.island, q = [];
+    const isleR = (x, y) => { const aa = Math.atan2(y - I.c, x - I.c); return I.R[Math.round(((aa + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2) * I.R.length) % I.R.length]; };
+    const fits = (x, y, r) => Math.hypot(x - inset, y - inset) > 330 + r && Math.hypot(x - h, y - h) < isleR(x, y) - r - 70 && x > 30 && y > 30;
+    const blob = (cx, cy, n, r0, r1, spread) => { const out = []; for (let i = 0; i < n; i++) { const a = hr() * 7, d = i ? hr() * spread : 0, r = r0 + hr() * (r1 - r0), x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d; if (fits(x, y, r)) out.push({ k, x, y, r }); } return out; };
+    const far = (x, y, m) => q.every(o => Math.hypot(o.x - x, o.y - y) > o.r + m);
+    if (k === 1) {
+      q.push({ k, x: h, y: h, r: 105 + hr() * 25 });
+      for (const [ox, oy] of [[-1, 0], [0, -1]]) q.push({ k, x: h + ox * 95, y: h + oy * 95, r: 55 + hr() * 15 });
+      for (let t = 0, made = 0; made < 2 && t < 60; t++) { const x = 140 + hr() * (h - 140), y = 140 + hr() * (h - 140); if (!fits(x, y, 70) || !far(x, y, 230)) continue; q.push(...blob(x, y, 3 + (hr() * 2 | 0), 38, 68, 60)); made++; }
+    } else if (k === 2) {
+      for (let t = 0, made = 0; made < 4 && t < 80; t++) { const x = 100 + hr() * (h - 100), y = 100 + hr() * (h - 100); if (!fits(x, y, 60) || !far(x, y, 170)) continue; q.push(...blob(x, y, 3 + (hr() * 2 | 0), 26, 48, 45)); made++; }
+    } else {
+      for (let t = 0, made = 0; made < 2 && t < 80; t++) {
+        let x = 160 + hr() * (h - 160), y = 160 + hr() * (h - 160), a = hr() * 7; if (!fits(x, y, 30) || !far(x, y, 200)) continue;
+        const L = 13 + (hr() * 9 | 0), seg = [];
+        for (let i = 0; i < L; i++) { const r = 11 + Math.sin(i / (L - 1) * Math.PI) * 9 + hr() * 3; if (!fits(x, y, r)) break; seg.push({ k, x, y, r }); a += (hr() - 0.5) * 0.7; x += Math.cos(a) * 15; y += Math.sin(a) * 15; }
+        if (seg.length > 6) { q.push(...seg); made++; }
+      }
+    }
+    const seen = new Set();
+    for (const o of q) for (const [mx, my] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+      const x = mx ? S - o.x : o.x, y = my ? S - o.y : o.y, key = Math.round(x) + "," + Math.round(y);
+      if (seen.has(key)) continue; seen.add(key); g.haz.push({ k: o.k, x, y, r: o.r });
+    }
+    g.hzW = Math.ceil(S / HZ_CELL); g.hz = new Uint8Array(g.hzW * g.hzW);
+    for (const o of g.haz) {
+      const x0 = Math.max(0, Math.floor((o.x - o.r) / HZ_CELL)), x1 = Math.min(g.hzW - 1, Math.floor((o.x + o.r) / HZ_CELL));
+      const y0 = Math.max(0, Math.floor((o.y - o.r) / HZ_CELL)), y1 = Math.min(g.hzW - 1, Math.floor((o.y + o.r) / HZ_CELL));
+      for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) if (Math.hypot((cx + 0.5) * HZ_CELL - o.x, (cy + 0.5) * HZ_CELL - o.y) < o.r) g.hz[cy * g.hzW + cx] = o.k;
+    }
+  }
   // rocks: generate one quadrant, mirror 4 ways for fairness
   const q = [];
   for (let tries = 0; q.length < (nPlayers === 2 ? 8 : 10) && tries < 400; tries++) {
@@ -520,6 +571,7 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy) {
     if (Math.hypot(x - inset, y - inset) < 340) continue;
     { const I = g.island, aa = Math.atan2(y - I.c, x - I.c), ri = Math.round(((aa + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2) * I.R.length) % I.R.length; if (Math.hypot(x - I.c, y - I.c) > I.R[ri] - r - 40) continue; }
     if (q.some(o => Math.hypot(o.x - x, o.y - y) < o.r + r + 50)) continue;
+    if (g.haz.some(o => Math.hypot(o.x - x, o.y - y) < o.r + r + 40)) continue;
     q.push({ x, y, r });
   }
   for (const o of q) for (const [mx, my] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
@@ -559,7 +611,7 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy) {
   g.nw = Math.ceil(S / NAV); g.block = new Uint8Array(g.nw * g.nw); g.fields = new Map();
   for (let cy = 0; cy < g.nw; cy++) for (let cx = 0; cx < g.nw; cx++) {
     const x = (cx + 0.5) * NAV, y = (cy + 0.5) * NAV;
-    if (g.rocks.some(r => Math.hypot(x - r.x, y - r.y) < r.r + 10)) g.block[cy * g.nw + cx] = 1;
+    if (g.rocks.some(r => Math.hypot(x - r.x, y - r.y) < r.r + 10) || g.haz.some(r => Math.hypot(x - r.x, y - r.y) < r.r + 8)) g.block[cy * g.nw + cx] = 1;
   }
   g.explored = new Uint8Array(g.gw * g.gh);
   g.soft = new Uint8Array(g.gw * g.gh);
@@ -717,7 +769,20 @@ function pathClear(x1, y1, x2, y2, rad) {
     const px = x1 + dx * t - r.x, py = y1 + dy * t - r.y, m = r.r + rad;
     if (px * px + py * py < m * m) return false;
   }
+  if (G.haz) for (const r of G.haz) {
+    let t = ((r.x - x1) * dx + (r.y - y1) * dy) / L2; t = clamp(t, 0, 1);
+    const px = x1 + dx * t - r.x, py = y1 + dy * t - r.y, m = r.r + rad + 4;
+    if (px * px + py * py < m * m) return false;
+  }
   return true;
+}
+// map hazard under a point: 0 none, 1 water, 2 quicksand, 3 rift
+function hazAt(x, y) {
+  if (!G.hz) return 0; const w = G.hzW;
+  return G.hz[clamp(Math.floor(y / HZ_CELL), 0, w - 1) * w + clamp(Math.floor(x / HZ_CELL), 0, w - 1)];
+}
+function hazDeath(u, how) {
+  killQuiet(u); pushFx({ k: "haz", how, x: u.x, y: u.y, owner: u.owner });
 }
 // direction to walk from (x,y) toward goal: straight if clear, else follow the flow field around rocks
 function navDir(x, y, gx, gy, rad, dvx, dvy) {
@@ -851,6 +916,7 @@ function crateSpot(mission) {
   for (let tries = 0; tries < 60; tries++) {
     const x = rr(150, G.S - 150), y = rr(150, G.S - 150);
     if (G.rocks.some(o => Math.hypot(x - o.x, y - o.y) < o.r + 50)) continue;
+    if (G.haz && G.haz.some(o => Math.hypot(x - o.x, y - o.y) < o.r + 45)) continue;
     if (!onLand(x, y, 90)) continue;
     if (G.players.some(p => Math.hypot(x - p.base.x, y - p.base.y) < (mission ? 650 : 450))) continue;
     if (G.crates.some(c => Math.hypot(x - c.x, y - c.y) < 300)) continue;
@@ -1133,6 +1199,7 @@ function step() {
   for (const u of G.units) {
     if (!u.alive) continue;
     const C = CFG[u.kind];
+    u.px = u.x; u.py = u.y;
     u.scanT -= dt; if (u.scanT <= 0) { u.scanT = 0.25; scan(u); }
     if (u.seen && !u.seen.alive) u.seen = null;
     if (u.tgt && !u.tgt.alive) u.tgt = null;
@@ -1151,7 +1218,7 @@ function step() {
     if (dist > stopAt) {
       u.idleT = 0;
       const [vx, vy] = navDir(u.x, u.y, gx, gy, C.r + 2, dx / dist, dy / dist);
-      const sp = Math.min(C.speed * dt, dist - stopAt + 0.5);
+      const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : 1), dist - stopAt + 0.5);
       u.x += vx * sp; u.y += vy * sp; u.moving = true; u.face = Math.atan2(vy, vx);
       if (G.island && !onLand(u.x, u.y, C.r + 2)) { const q = toLand(u.x, u.y, C.r + 2); u.x = q.x; u.y = q.y; }
     }
@@ -1168,6 +1235,15 @@ function step() {
       const dx = u.x - b.x, dy = u.y - b.y, d = Math.hypot(dx, dy) || 0.01, m = b.r + CFG[u.kind].r;
       if (d < m) { u.x = b.x + dx / d * m; u.y = b.y + dy / d * m; }
     }
+  }
+  // map hazards: rifts kill soldiers who end up in them, water drowns some, quicksand sinks slowly
+  if (G.hz) for (const u of G.units) {
+    if (!u.alive) continue; const hz = hazAt(u.x, u.y); if (!hz) continue;
+    const inf = u.kind === "inf";
+    if (u.owner === G.human && !G.attract && !(G.hzSeen & (1 << hz))) { G.hzSeen = (G.hzSeen || 0) | (1 << hz); pushFx({ k: "hazIn", hz, x: u.x, y: u.y, owner: u.owner }); }
+    if (hz === 3) { if (inf) hazDeath(u, "fall"); else if (hazAt(u.px, u.py) !== 3) { u.x = u.px; u.y = u.py; } }
+    else if (hz === 1) { if (inf && G.rng() < 0.07 * dt) hazDeath(u, "drown"); }
+    else { u.hp -= (inf ? 4 : maxHp(u) * 0.01) * dt; if (u.hp <= 0) hazDeath(u, "sink"); }
   }
   // firing
   for (const u of G.units) {
@@ -1688,6 +1764,37 @@ function buildWorld() {
     }
     cloudCvs.getContext("2d").putImageData(ci, 0, 0);
   }
+  if (G.haz && G.haz.length) { // map hazards painted into the ground: union of circles, rim first
+    const H = G.haz, all = (c, grow, f) => { c.beginPath(); for (const o of H) { const r = Math.max(1, o.r * (f || 1) + grow); c.moveTo(o.x + r, o.y); c.arc(o.x, o.y, r, 0, TAU); } };
+    const hr = mulberry32(777), k = H[0].k;
+    g.save(); g.setTransform(GK, 0, 0, GK, 0, 0);
+    if (k === 1) {
+      all(g, 16); g.fillStyle = "rgba(120,112,74,.45)"; g.fill();
+      all(g, 8); g.fillStyle = "rgba(176,160,112,.85)"; g.fill();
+      all(g, 2); g.fillStyle = "#2f7480"; g.fill();
+      all(g, -6); g.fillStyle = "#245e6c"; g.fill();
+      all(g, -18, 0.85); g.fillStyle = "#1b4a59"; g.fill();
+      g.save(); all(g, 0); g.clip(); g.strokeStyle = "rgba(220,240,240,.16)"; g.lineWidth = 1.4;
+      for (const o of H) for (let i = 0; i < 3; i++) { const a = hr() * 7, d = hr() * o.r * 0.7; g.beginPath(); g.arc(o.x + Math.cos(a) * d, o.y + Math.sin(a) * d, 6 + hr() * 10, Math.PI * 1.1, Math.PI * 1.9); g.stroke(); }
+      g.restore();
+    } else if (k === 2) {
+      all(g, 7); g.fillStyle = "rgba(70,56,30,.55)"; g.fill();
+      all(g, 0); g.fillStyle = "#a88a52"; g.fill();
+      all(g, -8, 0.8); g.fillStyle = "#97793f"; g.fill();
+      g.save(); all(g, 0); g.clip();
+      for (const o of H) for (let i = 0; i < 9; i++) { const a = hr() * 7, d = hr() * o.r; g.fillStyle = hr() < 0.5 ? "rgba(60,44,20,.3)" : "rgba(220,200,150,.25)"; g.beginPath(); g.ellipse(o.x + Math.cos(a) * d, o.y + Math.sin(a) * d, 3 + hr() * 6, 2 + hr() * 3, hr() * 3, 0, TAU); g.fill(); }
+      g.strokeStyle = "rgba(60,44,20,.35)"; g.lineWidth = 1.2;
+      for (const o of H) { g.beginPath(); g.arc(o.x, o.y, o.r * 0.45, 0, TAU); g.stroke(); }
+      g.restore();
+    } else {
+      all(g, 9); g.fillStyle = "rgba(40,34,24,.5)"; g.fill();
+      all(g, 3); g.fillStyle = "#5c5340"; g.fill();
+      all(g, 0); g.fillStyle = "#17130e"; g.fill();
+      all(g, -4, 0.7); g.fillStyle = "#050403"; g.fill();
+      g.save(); g.translate(-2, -2); all(g, 0); g.restore(); g.strokeStyle = "rgba(200,190,160,.22)"; g.lineWidth = 1.2; g.stroke();
+    }
+    g.restore();
+  }
   if (G.island) { // ocean around the island: deep water, shallows, foam and a sandy beach
     const I = G.island, n = I.R.length, poly = (c, off, keep) => { if (!keep) c.beginPath(); for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, rr = I.R[i] + off; c.lineTo(I.c + Math.cos(t) * rr, I.c + Math.sin(t) * rr); } c.closePath(); };
     g.save(); g.setTransform(GK, 0, 0, GK, 0, 0);
@@ -1764,6 +1871,12 @@ function consumeFx() {
     if (e.k === "level") {
       for (const u of G.units) if (u.alive && u.owner === e.owner && (G.attract || u.owner === me || isVis(u.x, u.y))) burst(u.x, u.y, "level");
       SND.fx(e); continue;
+    }
+    if (e.k === "hazIn") { tip("haz" + e.hz, ["", "Water slows your soldiers, and some drown on the way across. They walk around lakes on their own unless you send them in.", "Quicksand slows soldiers to a crawl and sinks them slowly. Get them out fast.", "Rifts are deadly: a soldier who gets pushed in falls. Keep crowds away from the edge."][e.hz], "bad"); continue; }
+    if (e.k === "haz") {
+      if (seen && e.how === "drown") addPart({ k: "ring", x: e.x, y: e.y, life: 0.7, max: 0.7, s: 26, c: "170,220,230" });
+      if (e.owner === me && !G.attract && performance.now() - (consumeFx.hzT || 0) > 6000) { consumeFx.hzT = performance.now(); toast({ drown: "Soldiers are drowning in the lake", fall: "A soldier fell into a rift", sink: "Soldiers are sinking in quicksand" }[e.how], "bad"); }
+      continue;
     }
     const pub = e.k === "crate" || e.k === "strike" || e.k === "strikeIn" || e.k === "open" || e.k === "trap" || e.k === "lost";
     if (!seen && !pub) continue;
@@ -2603,7 +2716,7 @@ function applyExpert() {
 function customSummary() {
   const el = $("customSum"); if (!el) return;
   const e = UI.opts.players - 1, pace = { 25: "Quick", 50: "Medium", 100: "Slow" }[UI.opts.up] || "";
-  el.textContent = `${e} ${e > 1 ? "enemies" : "enemy"} · ${pace} · ${UI.opts.me} vs ${UI.opts.army}`;
+  el.textContent = `${UI.opts.map ? MAPS[UI.opts.map].n + " · " : ""}${e} ${e > 1 ? "enemies" : "enemy"} · ${pace} · ${UI.opts.me} vs ${UI.opts.army}`;
 }
 // one-time hints the first time something happens (saved on this device)
 function tip(key, text, kind) {
@@ -2626,6 +2739,11 @@ UI.opts.misTypes = Object.keys(MIS.types);
 try { const v = JSON.parse(localStorage.getItem("hr-mistypes") || "null"); if (Array.isArray(v)) UI.opts.misTypes = v.filter(k => MIS.types[k]); } catch (e) {}
 try { const v = localStorage.getItem("hr-crates"); if (v !== null) UI.opts.crates = +v ? 1 : 0; } catch (e) {}
 try { const a = JSON.parse(localStorage.getItem("hr-army") || "{}"); if (a.me) UI.opts.me = clamp(a.me | 0, 1, 100); if (a.army) UI.opts.army = clamp(a.army | 0, 1, 100); } catch (e) {}
+UI.opts.map = 0; try { UI.opts.map = clamp(+localStorage.getItem("hr-map") | 0, 0, MAPS.length - 1); } catch (e) {}
+seg("optMap", "map");
+function mapLine() { $("mapLine").textContent = MAPS[UI.opts.map].line; customSummary(); }
+$("optMap").addEventListener("click", () => { try { localStorage.setItem("hr-map", UI.opts.map); } catch (e) {} mapLine(); });
+mapLine();
 seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optCrates", "crates"); seg("optMissions", "missions");
 $("optMissions").addEventListener("click", () => { try { localStorage.setItem("hr-missions", String(UI.opts.missions)); } catch (e) {} renderMisTypes(); });
 function renderMisTypes() {
@@ -2703,7 +2821,7 @@ function initGame(g) {
 function startAttract() {
   AC.vx = AC.vy = 0; AC.pickT = 0;
   setTimeout(resize, 0);
-  initGame(newGame(4, 50, (Math.random() * 1e9) >>> 0, 3, 30));
+  initGame(newGame(4, 50, (Math.random() * 1e9) >>> 0, 3, 30, 30, (Math.random() * MAPS.length) | 0));
   G.attract = true; G.players[0].ai = true; G.players[0].smart = true; G.players[0].mult = 1.3;
   document.body.classList.add("attract");
   cam.z = Math.min(W, H) < 600 ? 0.75 : 0.95; cam.x = G.S / 2; cam.y = G.S / 2; AC.tx = cam.x; AC.ty = cam.y;
@@ -2734,7 +2852,7 @@ function attractCam(dt) {
 function start() {
   TUT.stop(); setTimeout(resize, 0);
   document.body.classList.remove("attract");
-  initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me));
+  initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me, UI.opts.map));
   G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions && UI.opts.misTypes.length > 0 && (EXP() || loadLog().length >= 3); G.misTypes = UI.opts.misTypes.slice();
   G.players[G.human].autoSpread = !EXP(); G.players[G.human].autoEngage = !EXP(); UI.use = {};
   { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = UI.opts.split || 3; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
@@ -3677,6 +3795,39 @@ setInterval(() => { if (!document.hidden && !$("menu").hidden) loadCounters(); }
 setInterval(reportKills, 30000);
 loadCounters();
 window.addEventListener("pagehide", reportKills);
+// title splash: only the name and the stamp, centred, then everything slides into place.
+// The first tap also unlocks sound (browsers allow audio only after one).
+(function splash() {
+  if (navigator.webdriver && !/[?&]splash\b/.test(location.search)) return;
+  const card = $("menu").querySelector(".card"), h1 = card.querySelector("h1"), st = $("stamp");
+  const ov = document.createElement("div"); ov.id = "splash";
+  ov.innerHTML = '<button class="go" type="button">Enter</button>'; const go = ov.firstChild;
+  document.body.classList.add("splash"); document.body.appendChild(ov);
+  let done = false;
+  function fit() {
+    if (done) return;
+    card.style.transition = "none"; card.style.transform = "none";
+    const cr = card.getBoundingClientRect(), a = h1.getBoundingClientRect(), b = st.hidden ? a : st.getBoundingClientRect();
+    const L = Math.min(a.left, b.left), T = Math.min(a.top, b.top), R = Math.max(a.right, b.right), B = Math.max(a.bottom, b.bottom);
+    const vw = innerWidth, vh = innerHeight, w = R - L, h = B - T, sc = Math.min(1.3, (vw - 40) / w, (vh * 0.55) / h);
+    const gx = (L + R) / 2, gy = (T + B) / 2, ty = vh * 0.44;
+    card.style.transformOrigin = `${gx - cr.left}px ${gy - cr.top}px`;
+    card.style.transform = `translate(${vw / 2 - gx}px, ${ty - gy}px) scale(${sc})`;
+    go.style.top = (ty + h * sc / 2 + 34) + "px";
+  }
+  function enter() {
+    if (done) return; done = true; ov.classList.add("out"); ov.style.pointerEvents = "none";
+    card.style.transition = "transform .85s cubic-bezier(.65,0,.2,1)"; card.style.transform = "none";
+    document.body.classList.add("entering"); document.body.classList.remove("splash");
+    setTimeout(() => { ov.remove(); document.body.classList.remove("entering"); card.style.transition = card.style.transform = card.style.transformOrigin = ""; }, 1150);
+  }
+  fit(); requestAnimationFrame(fit);
+  addEventListener("resize", fit);
+  new MutationObserver(fit).observe(st, { attributes: true, attributeFilter: ["hidden"] });
+  if (document.fonts) document.fonts.ready.then(fit);
+  ov.addEventListener("click", enter);
+  addEventListener("keydown", e => { if (!done && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); enter(); } });
+})();
 // owner check: open the game with ?lbcheck to post one TEST score (army 50 vs 30) and see the server's answer
 if (/[?&]lbcheck\b/.test(location.search) && LB.url) (async () => {
   let out;
