@@ -1727,7 +1727,7 @@ const w2scr = (x, y) => flat2scr((x - cam.x) * cam.z + W / 2, (y - cam.y) * cam.
 // clips: name -> [block, frames]; atlas row = block * dirs + direction (0 = facing screen right, then clockwise in 45° steps)
 const MODEL3 = {
   4: { inf: { src: "sprites/ww-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
-       gen: { src: "sprites/ww-gen.png", S: 160, fx: 80, fy: 137.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, flag: true } },
+       gen: { src: "sprites/ww-gen.png", S: 160, fx: 80, fy: 137.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 23 } },
 };
 function model3(era, kind, pid) {
   const M = MODEL3[era] && MODEL3[era][kind]; if (!M) return null;
@@ -1753,7 +1753,7 @@ function drawStanding() {
     if (p0.x < -60 || p0.x > SW + 60 || p0.y < -60 || p0.y > SH + 60) continue;
     if (q.atl) { const A = q.atl.M, sc = A.wpp * A.k * k, w = A.S * sc, x0 = p0.x - A.fx * sc, y0 = p0.y - A.fy * sc - (q.hov || 0) * k;
       if (A.ring && !q.dead) { // real colours on the model; the team shows as a ring on the ground
-        const rx = 7.2 * k, ry = rx * Math.cos(TILT.th); c.globalAlpha = q.al * 0.3; c.fillStyle = q.atl.c; c.beginPath(); c.ellipse(p0.x, p0.y, rx, ry, 0, 0, TAU); c.fill();
+        const rx = (A.ringR || 7.2) * k, ry = rx * Math.cos(TILT.th); c.globalAlpha = q.al * 0.3; c.fillStyle = q.atl.c; c.beginPath(); c.ellipse(p0.x, p0.y, rx, ry, 0, 0, TAU); c.fill();
         c.globalAlpha = q.al * 0.95; c.strokeStyle = q.atl.c; c.lineWidth = Math.max(1, 1.3 * k); c.beginPath(); c.ellipse(p0.x, p0.y, rx, ry, 0, 0, TAU); c.stroke(); }
       c.globalAlpha = q.al; c.drawImage(q.atl.cv, q.col * A.S, q.row * A.S, A.S, A.S, x0, y0, w, w);
       if (q.fl) { c.globalCompositeOperation = "lighter"; c.globalAlpha = q.al * 0.5; c.drawImage(q.atl.cv, q.col * A.S, q.row * A.S, A.S, A.S, x0, y0, w, w); c.globalCompositeOperation = "source-over"; }
