@@ -284,7 +284,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
 </div>
 <div class="hud" id="toast"></div>
 <div id="alertEdge" aria-hidden="true"></div>
-<div id="killMenu" class="killmenu" hidden role="menu" aria-label="Who should be withdrawn"><div class="km-h">Withdraw who? No points for the enemy</div><button data-k="sel"></button><button data-k="view"></button><button data-k="all"></button><button data-k="gen" class="km-gen"></button></div>
+<div id="killMenu" class="killmenu" hidden role="menu" aria-label="Who should be withdrawn"><div class="km-h">Withdraw who? No points for the enemy</div><button data-k="sel"></button><button data-k="view"></button><button data-k="all"></button><button data-k="gen" class="km-gen"></button><button data-k="every" class="km-gen"></button></div>
 <button id="alertArrow" hidden aria-label="Go to the attack"><svg width="22" height="22" viewBox="0 0 22 22"><path d="M4 4 L19 11 L4 18 L8 11 Z" fill="#ff6a50"/></svg></button>
 <div class="hud" id="hint" hidden></div>
 <div class="hud" id="side"></div>
@@ -435,6 +435,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <section><h3>The general</h3><p>He sees and shoots much further than infantry, is a little faster, and has ten times the health. Soldiers near him hit 30% harder. Use him for sneaky long-range shots, and don't lose him.</p></section>
     <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
     <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li><b>ALL</b> picks everyone, general included. <b>ARMY</b> picks every soldier but leaves the general where he is.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li>With Basic controls, soldiers stop to fight any enemy their group spots, then carry on to where you sent them. With Expert controls you choose: <b>RUN &amp; GUN</b> keeps going and shoots whatever is in reach on the way; <b>ENGAGE</b> stops, and when anyone in the group spots an enemy the whole group closes in and fights until it's gone.</li><li>Tap the same spot <b>twice</b> to break off: they go straight there and only shoot on the way.</li><li><b>Press and hold</b> the map: let go to make your soldiers run there without stopping to fight (a few seconds, then they need to get their breath back), or drag to box-select. Hold on an enemy to make everyone you picked shoot at it, for example their general.</li></ul></section>
+    <section><h3>Press and hold</h3><ul><li><b>Hold, then let go</b> on open ground: the selected soldiers sprint there and ignore enemies on the way. Running uses the yellow stamina bar; when it runs out they walk until it refills.</li><li><b>Hold, then drag</b>: draw a box to select everyone inside it.</li><li><b>Hold on an enemy</b>: focus fire, so every selected soldier shoots that one target.</li><li><b>Tap the same spot twice</b>, quickly: break off a fight and go straight there, only shooting on the way.</li></ul></section>
     <section><h3>Basic and Expert controls</h3><p>The game starts with <b>Basic</b> controls: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. That is all you need to win. Soldiers fight any enemy they spot and spread out on their own when plague hits, and missions join after your first 3 battles.</p><p>Turn on <b>Expert</b> in Settings for formations, drawn routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. Sections marked <span class="xp">Expert</span> below need it.</p></section>
     <section><h3>Picking exactly who you want <span class="xp">Expert</span></h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, healing, rapid fire, sharpshooters with longer range, scouts that lift the fog, camouflage, or a strike you aim with <b>STRIKE</b>: a boulder, a cannonball or an airstrike, depending on your era). Some are bad (plague that spreads between soldiers standing close, a trap, lost orders, a signal fire that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
@@ -442,7 +443,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <section><h3>Squads <span class="xp">Expert</span></h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation. <b>Box</b> is plain. <b>Line</b> holds the line: 15% better aim while standing still. <b>Wedge</b> is the charge: 10% faster, and 25% harder hits for the first 3 seconds of a fight. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> puts the selected soldiers in a ring round the general. They follow him and take 15% less damage while they stay close.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
     <section><h3>Spread out <span class="xp">Expert</span></h3><p>With Basic controls this happens on its own when plague hits. In Expert, tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, strikes and traps. The general always gets right of way through his own soldiers.</p></section>
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
-    <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b>, then pick who goes: the selected soldiers, the ones on screen, or all of them. The general is only withdrawn if you pick him on his own. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
+    <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b>, then pick who goes: the selected soldiers, the ones on screen, all but the general, the general on his own, or everyone. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
     <section><h3>Level 9: the mystery weapon</h3><ul><li>The first army to reach <b>L9</b> gets a mystery weapon. It charges for 20 seconds while that army's general is alive, and then that army wins.</li><li>Everyone sees the countdown and where the general is. Kill him and the charge resets, and you get mercenaries and healers. It starts again when he is back from base. If he is already down when L9 is reached, it waits for him.</li><li>What the weapon is stays a surprise until it fires.</li></ul></section><section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> and moves up one age with each level: L1 <b>Stone Age</b> (slings), L2 <b>Bronze Age</b> (javelins, a chariot), L3 <b>Middle Ages</b> (bows, a castle, a horseman), L4 <b>Musket Age</b> (muskets, a star fort), L5 <b>World Wars</b> (rifles, a jeep, trenches), L6 <b>Modern Age</b> (assault rifles, a tank), L7 <b>Future</b> (lasers, a hover bike) and L8 <b>Space Age</b> (plasma, a mech walker).</li><li>The era is the look of each army's upgrades: stones, javelins, arrows and plasma fly for a moment before they land, bullets and lasers hit at once. So an enemy in a later age is an army several upgrades ahead of you.</li></ul></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
@@ -929,12 +930,12 @@ function addPoints(p, n) {
 
 function eliminate(owner, by) {
   const p = G.players[owner]; if (p.out) return;
-  p.out = true; p.base.alive = false; p.base.hp = 0;
+  p.out = true; p.base.alive = false; p.base.hp = 0; p.base.diedAt = G.time;
   for (const u of G.units) if (u.owner === owner) {
     if (u.alive) pushFx({ k: "death", x: u.x, y: u.y, a: u.face, owner, c: p.team.c, big: u.kind === "gen" });
     u.alive = false; u.respawn = Infinity;
   }
-  pushFx({ k: "boom", x: p.base.x, y: p.base.y, owner, c: p.team.c });
+  pushFx({ k: "boom", base: true, x: p.base.x, y: p.base.y, owner, c: p.team.c });
   if (owner === G.human) toast("Your base has fallen", "bad");
   else toast(p.team.name + " base destroyed" + (by === G.human ? " by you" : ""), by === G.human ? "gold" : "");
   const alive = G.players.filter(q => !q.out);
@@ -1017,10 +1018,10 @@ function levelUp(p) {
 // Kill the general and it resets (the killer gets mercenaries and a heal); it starts again when he respawns.
 // If it fires, every other army is wiped out and its owner wins.
 const DOOM = { lvl: 8, charge: 20, show: 10, baseAt: 3, // the finale runs 10s; the target base falls 3s before the end
-  names: ["Giant rubber duck", "Black hole", "Alien mothership", "Chicken rain"] };
+  names: ["Giant rubber duck", "Black hole", "Alien mothership", "Chicken rain"], pick: [1, 2] }; // T cut the duck and the chickens: only the black hole and the mothership fire
 function doomArm(p) {
   if (p.doom || G.attract || G.tutorial || p.out || G.doomFire) return;
-  p.doom = { t: DOOM.charge, on: false, w: Math.floor(G.rng() * DOOM.names.length), by: null, armT: G.time };
+  p.doom = { t: DOOM.charge, on: false, w: DOOM.pick[Math.floor(G.rng() * DOOM.pick.length)], by: null, armT: G.time };
   pushFx({ k: "doomArm", owner: p.id });
 }
 function doomReward(pid, x, y) {
@@ -1038,7 +1039,7 @@ function stepDoom(dt) {
     const end = F.t <= DOOM.baseAt;
     for (const u of G.units) if (u.alive && u.owner !== F.owner && F.t < DOOM.show - 1.5 && (end || G.rng() < dt * 0.3)) { u.alive = false; u.respawn = Infinity; u.seen = u.tgt = null; pushFx({ k: "death", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" }); }
     if (end && !F.fell) { F.fell = true;
-      for (const q of G.players) if (q.id !== F.owner && !q.out) { q.out = true; q.base.alive = false; q.base.hp = 0; pushFx({ k: "boom", x: q.base.x, y: q.base.y, owner: q.id, c: q.team.c }); }
+      for (const q of G.players) if (q.id !== F.owner && !q.out) { q.out = true; q.base.alive = false; q.base.hp = 0; q.base.diedAt = G.time; pushFx({ k: "boom", base: true, x: q.base.x, y: q.base.y, owner: q.id, c: q.team.c }); }
     }
     if (F.t <= 0 && !G.over) G.over = { win: F.owner === G.human, doom: F.w, by: F.owner };
     return;
@@ -1064,7 +1065,7 @@ function stepDoom(dt) {
 const BOTTLE = { first: [90, 150], gap: [150, 240], life: 90, msgs: [
   "Made for fun in just hours.",
   "If you can read this, someone should be guarding your general.",
-  "The duck is not a bug.",
+  "The black hole is not a bug.",
   "Double tap breaks off an order. You're welcome.",
   "Somewhere on this island is a secret. This bottle isn't it.",
   "Thanks for playing. Tell a friend."] };
@@ -3091,6 +3092,8 @@ function burst(x, y, kind, color, big, era) {
     for (let i = 0; i < 50; i++) { const a = rnd() * 7, s = 80 + rnd() * 420; addPart({ k: "spark", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5 + rnd() * 0.9, max: 1.4, s: 2.2, c: "255,180,80" }); }
     for (let i = 0; i < 26; i++) { const a = rnd() * 7, s = 20 + rnd() * 80; addPart({ k: "smoke", x: x + Math.cos(a) * 20, y: y + Math.sin(a) * 20, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 10, life: 2.5 + rnd() * 2, max: 4.5, s: 40, g: 50 }); }
     for (let i = 0; i < 20; i++) { const a = rnd() * 7, s = 60 + rnd() * 200; addPart({ k: "debris", x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, max: 1, s: 3.5, c: "#5a5648", rot: rnd() * 7 }); }
+    for (let i = 0; i < 26; i++) { const a = rnd() * 7, s = 40 + rnd() * 160; addPart({ k: "debris", x: x + Math.cos(a) * 30, y: y + Math.sin(a) * 30, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1.4 + rnd(), max: 2.4, s: 4 + rnd() * 4, c: ["#6b6252", "#4a4236", "#8a7a5c", "#2e2a24"][i % 4], rot: rnd() * 7 }); } // big chunks of wall
+    for (let i = 0; i < 8; i++) { const a = rnd() * 7, d = rnd() * 50; addPart({ k: "glow", x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, life: 0.5 + rnd() * 0.6, max: 1.1, s: 70 + rnd() * 70 }); } // fireballs
     decalCtx.drawImage(SPR.scorch, x - 120, y - 120, 240, 240);
   } else if (kind === "recall") {
     addPart({ k: "ring", x, y, life: 0.45, max: 0.45, s: -26, c: color });
@@ -3281,6 +3284,36 @@ function drawMisUnit(c, u, T, now) {
   }
   c.restore();
 }
+// a fallen base: its own fort art broken into shards pushed outward, charred, with rubble, fires that die down and smoke
+function ruinOf(p) {
+  const b = p.base, era = eraOf(p.id); if (b.ruin && b.ruin.era === era) return b.ruin.cv;
+  const E = SPR.team[p.id].eras[era], src = E.fort, S = 220, cv = document.createElement("canvas"); cv.width = cv.height = S; const g = cv.getContext("2d"), R = mulberry32(p.id * 977 + 13), C = S / 2;
+  const sc = g.createRadialGradient(C, C, 10, C, C, C); sc.addColorStop(0, "rgba(12,9,6,.95)"); sc.addColorStop(0.55, "rgba(28,20,12,.75)"); sc.addColorStop(1, "rgba(28,20,12,0)"); g.fillStyle = sc; g.fillRect(0, 0, S, S);
+  const n = 13; let a0 = R() * TAU;
+  for (let i = 0; i < n; i++) { const a1 = a0 + TAU / n * (0.7 + R() * 0.6), am = (a0 + a1) / 2, push = 6 + R() * 16, rot = (R() - 0.5) * 0.35;
+    g.save(); g.translate(C + Math.cos(am) * push, C + Math.sin(am) * push); g.rotate(rot);
+    g.beginPath(); g.moveTo(0, 0); const steps = 4; for (let k = 0; k <= steps; k++) { const a = a0 + (a1 - a0) * k / steps, rr = 80 * (0.8 + R() * 0.3); g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.clip();
+    g.drawImage(src, -75, -75, 150, 150); g.restore(); a0 = a1; }
+  g.globalCompositeOperation = "source-atop"; const ch = g.createRadialGradient(C, C, 0, C, C, C); ch.addColorStop(0, "rgba(10,7,4,.85)"); ch.addColorStop(0.6, "rgba(25,18,10,.55)"); ch.addColorStop(1, "rgba(40,30,20,.35)"); g.fillStyle = ch; g.fillRect(0, 0, S, S);
+  g.globalCompositeOperation = "source-over";
+  for (let i = 0; i < 140; i++) { const a = R() * TAU, d = Math.sqrt(R()) * 92, x = C + Math.cos(a) * d, y = C + Math.sin(a) * d, r = 1 + R() * (d < 50 ? 4.5 : 3), l = 30 + R() * 50;
+    g.fillStyle = `rgb(${l + 8},${l},${l - 8})`; g.beginPath(); for (let k = 0; k < 5; k++) { const t = k / 5 * TAU + R(); g.lineTo(x + Math.cos(t) * r, y + Math.sin(t) * r * 0.8); } g.fill(); }
+  for (let i = 0; i < 7; i++) { const a = R() * TAU, d = 20 + R() * 60; g.strokeStyle = "rgba(0,0,0,.55)"; g.lineWidth = 1 + R() * 1.5; g.beginPath(); g.moveTo(C + Math.cos(a) * d, C + Math.sin(a) * d); g.lineTo(C + Math.cos(a) * (d + 15 + R() * 20), C + Math.sin(a + 0.1) * (d + 12)); g.stroke(); }
+  const fires = []; for (let i = 0; i < 6; i++) { const a = R() * TAU, d = 10 + R() * 55; fires.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, s: 0.6 + R() * 0.7, ph: R() * 9 }); }
+  b.ruin = { era, cv, fires }; return cv;
+}
+function drawRuin(c, p, now) {
+  const b = p.base, cv = ruinOf(p), age = G.time - (b.diedAt != null ? b.diedAt : G.time - 60), burn = clamp(1 - age / 45, 0.15, 1), vis = isVis(b.x, b.y) || !!(G.attract || G.doomFire);
+  c.globalAlpha = 1; c.drawImage(cv, b.x - 110, b.y - 110, 220, 220);
+  if (!vis) return;
+  c.save(); c.globalCompositeOperation = "lighter";
+  for (const f of b.ruin.fires) { const x = b.x + f.x, y = b.y + f.y, fl = 0.75 + 0.25 * Math.sin(now * 9 + f.ph) * Math.sin(now * 13.7 + f.ph * 2), r = 16 * f.s * burn * fl;
+    const gd = c.createRadialGradient(x, y, 0, x, y, r * 2.2); gd.addColorStop(0, `rgba(255,190,90,${0.75 * burn})`); gd.addColorStop(0.35, `rgba(255,110,30,${0.45 * burn})`); gd.addColorStop(1, "rgba(255,60,10,0)"); c.fillStyle = gd; c.beginPath(); c.arc(x, y, r * 2.2, 0, TAU); c.fill();
+    for (let k = 0; k < 3; k++) { const t = (now * 1.6 + f.ph + k / 3) % 1, fx = x + Math.sin(now * 5 + k * 2 + f.ph) * 3 * f.s, fy = y - t * 14 * f.s * burn; c.fillStyle = `rgba(255,${150 + 60 * (1 - t)},60,${0.6 * (1 - t) * burn})`; c.beginPath(); c.arc(fx, fy, (4.5 - 3 * t) * f.s * burn + 0.5, 0, TAU); c.fill(); } }
+  c.restore();
+  const dt = Math.min(0.1, now - (b.ruin.lt || now)); b.ruin.lt = now;
+  for (const f of b.ruin.fires) if (rnd() < dt * (1.2 + 2.5 * burn) * f.s) addPart({ k: "smoke", x: b.x + f.x, y: b.y + f.y - 4, vx: 4 + rnd() * 6, vy: -14 - rnd() * 10, life: 3 + rnd() * 2, max: 5, s: (10 + rnd() * 10) * f.s, g: 18 });
+}
 function drawSpr(img, x, y, a, size) {
   const c = renderCtx; // the world canvas: the screen, or the flat buffer in 3D view
   c.save(); c.translate(x, y); if (a) c.rotate(a);
@@ -3340,7 +3373,7 @@ function render(dtReal) {
 
   // bases
   for (const p of G.players) {
-    const b = p.base; if (!b.alive) continue;
+    const b = p.base; if (!b.alive) { if ((seeAll || isExp(b.x, b.y)) && inView(b.x, b.y)) drawRuin(c, p, now); continue; }
     const ghost = !(p.id === G.human || vis(b.x, b.y));
     if (ghost && !(seeAll || isExp(b.x, b.y))) continue;
     if (!inView(b.x, b.y)) continue;
@@ -3823,8 +3856,7 @@ function drawDoom() {
   // dim the edges so the eye goes to the base
   { const v = c.createRadialGradient(bx, by, M * 0.25, bx, by, Math.max(SW, SH) * 0.8); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, `rgba(0,0,0,${0.45 * clamp(e / 1.5, 0, 1)})`); c.fillStyle = v; c.fillRect(0, 0, SW, SH); }
   if (e > hit && F.w !== 1) { // what is left of the base: a smoking crater
-    const cr = M * 0.09 * Math.min(1.6, Math.max(0.6, cam.z)); c.fillStyle = "rgba(20,14,10,.75)"; c.beginPath(); c.ellipse(bx, by, cr, cr * 0.8, 0, 0, TAU); c.fill();
-    c.fillStyle = "rgba(255,120,40,.35)"; c.beginPath(); c.ellipse(bx, by, cr * 0.45, cr * 0.35, 0, 0, TAU); c.fill();
+    const cr = M * 0.09 * Math.min(1.6, Math.max(0.6, cam.z)); // the ruin itself is drawn on the map (drawRuin); this adds the rising smoke column
     for (let i = 0; i < 9; i++) { const ph = ((e - hit) * 0.5 + i / 9) % 1, sx = bx + Math.sin(i * 2.3) * cr * 0.6 + ph * 20, sy = by - ph * M * 0.25; c.fillStyle = `rgba(60,55,50,${0.45 * (1 - ph)})`; c.beginPath(); c.arc(sx, sy, cr * (0.25 + ph * 0.5), 0, TAU); c.fill(); }
   }
   if (F.w === 0) { // giant rubber duck waddles to the base, jumps, sits on it, then waddles off
@@ -4153,13 +4185,13 @@ function killSets() {
   const mine = G.units.filter(u => u.alive && u.owner === G.human), inf = mine.filter(u => u.kind === "inf");
   const onScreen = u => { const { x: sx, y: sy } = w2scr(u.x, u.y); return sx > 0 && sx < SW && sy > 0 && sy < SH; };
   const g = G.gens[G.human];
-  return { sel: inf.filter(u => UI.sel.has(u.id)), view: inf.filter(onScreen), all: inf, gen: g && g.alive ? [g] : [] };
+  return { sel: inf.filter(u => UI.sel.has(u.id)), view: inf.filter(onScreen), all: inf, gen: g && g.alive ? [g] : [], every: g && g.alive ? [...inf, g] : inf };
 }
 function killSelected() {
   const m = $("killMenu");
   if (!m.hidden) { disarmKill(); return; }
-  const sets = killSets(), lab = { sel: "Selected soldiers", view: "Soldiers on screen", all: "All soldiers", gen: "The general" };
-  for (const b of m.querySelectorAll("button")) { const n = sets[b.dataset.k].length; b.textContent = lab[b.dataset.k] + (b.dataset.k === "gen" ? "" : " · " + n); b.disabled = !n; }
+  const sets = killSets(), lab = { sel: "Selected soldiers", view: "Soldiers on screen", all: "All but the general", gen: "The general", every: "Everyone, general too" };
+  for (const b of m.querySelectorAll("button")) { const n = sets[b.dataset.k].length; b.textContent = lab[b.dataset.k] + (b.dataset.k === "gen" ? "" : " · " + n); if (b.dataset.k === "every") b.hidden = !sets.gen.length; b.disabled = !n; }
   const r = $("killBtn").getBoundingClientRect(); m.hidden = false;
   const mw = m.offsetWidth, mh = m.offsetHeight;
   m.style.left = clamp(r.right - mw, 8, SW - mw - 8) + "px"; m.style.top = clamp(r.top - mh - 8, 8, SH - mh - 8) + "px";
@@ -4193,7 +4225,7 @@ function orderTo(wx, wy, forceMode, run) {
   const mode = forceMode || UI.mode, tnow = performance.now(), L = UI.lastOrd;
   // a second tap on the same spot straight after: break off and go there without stopping to fight
   const brk = !run && !forceMode && L && tnow - L.t < 1000 && Math.hypot(wx - L.x, wy - L.y) < Math.max(40, 50 / cam.z) && (mode === "attack" || G.players[G.human].autoEngage);
-  UI.lastOrd = brk || run ? null : { x: wx, y: wy, t: tnow };
+  UI.lastOrd = brk || run ? null : { x: wx, y: wy, t: tnow }; if (UI.tut) { if (run) UI.tut.run = 1; if (brk) UI.tut.brk = 1; }
   issue({ p: G.human, ids, x: wx, y: wy, mode, form: curForm(), run: run ? 1 : 0, brk: brk ? 1 : 0 });
   if (brk) toast("Break off! Straight there, no stopping to fight", "gold");
   if (UI.orderN === 6) tip("hold", "Try press and hold on the map: let go to make your soldiers run there, or drag to box-select. Hold on an enemy to make them all shoot at it.");
@@ -4241,7 +4273,7 @@ function holdRelease(sx, sy) {
   if (!ids.length) { toast("Pick a squad first"); return; }
   const t = holdEnemy(sx, sy), w = s2w(sx, sy);
   if (t) {
-    issue({ p: G.human, t: "focus", ids, tid: t.id }); UI.pings.push({ x: t.x, y: t.y, t: 0.7, mode: "attack" }); SND.order("attack"); SND.say("attack");
+    if (UI.tut) UI.tut.focus = 1; issue({ p: G.human, t: "focus", ids, tid: t.id }); UI.pings.push({ x: t.x, y: t.y, t: 0.7, mode: "attack" }); SND.order("attack"); SND.say("attack");
     toast(t.kind === "gen" ? "All guns on the enemy general!" : "Focus fire on that target", "gold"); return;
   }
   const P = G.players[G.human];
@@ -4283,7 +4315,7 @@ cvs.addEventListener("pointermove", e => {
   if (gesture.type === "carry") { UI.carry.x = e.clientX; UI.carry.y = e.clientY; const o = document.elementFromPoint(e.clientX, e.clientY), t = o && o.closest("[data-sel]"); UI.carry.over = t && isSqKey(t.dataset.sel) ? t.dataset.sel : null; return; }
   if (gesture.type === "held") {
     if (Math.hypot(e.clientX - gesture.sx, e.clientY - gesture.sy) <= 9) return;
-    gesture.type = "box"; UI.hold = null; UI.box = { x0: gesture.sx, y0: gesture.sy, x1: e.clientX, y1: e.clientY };
+    gesture.type = "box"; if (UI.tut) UI.tut.box = 1; UI.hold = null; UI.box = { x0: gesture.sx, y0: gesture.sy, x1: e.clientX, y1: e.clientY };
   }
   if (gesture.type === "pending" && Math.hypot(e.clientX - gesture.sx, e.clientY - gesture.sy) > 9) {
     clearTimeout(gesture.carryT); clearTimeout(gesture.holdT); UI.hold = null;
@@ -5239,6 +5271,9 @@ const TUT = (() => {
     { t: "Back to base", b: "Lost? Tap BASE to jump back home.", el: "#homeBtn", hand: "tap", ok: () => flags.home },
     { t: "Pick a squad", b: "Tap A to select squad A. Selected soldiers get a ring.", el: '[data-sel="0"]', hand: "tap", ok: () => UI.selKey === "0" },
     { t: "Give an order", b: "Now tap open ground where you want them to go. A tap on the same squad button twice finds them on the map.", hand: "tap", at: () => front(330), enter() { base0 = UI.orderN || 0; }, ok: () => (UI.orderN || 0) > base0 },
+    { t: "Run for it", b: "Press and hold on open ground until the ring fills, then let go. The squad sprints there and ignores enemies on the way. Running drains the yellow stamina bar, and tired soldiers walk until it fills up again.", hand: "hold", at: () => front(300), enter() { UI.tut = {}; }, ok: () => UI.tut && UI.tut.run },
+    { t: "Break off", b: "Stuck in a fight you don't want? Tap the same spot twice, quickly. The soldiers stop fighting and head straight there, only shooting on the way.", hand: "tap", at: () => front(260), enter() { UI.tut = {}; base0 = UI.orderN || 0; }, ok: () => UI.tut && (UI.tut.brk || (UI.orderN || 0) - base0 >= 3) },
+    { t: "Draw a box", b: "Press and hold, then drag without letting go. Everyone inside the box gets selected.", hand: "hold", enter() { UI.tut = {}; }, ok: () => UI.tut && UI.tut.box },
     { t: "Whole army", b: "Tap ALL to select everyone, general included. ARMY picks every soldier but leaves the general where he is.", el: '[data-sel="all"]', hand: "tap", ok: () => UI.selKey === "all" },
     { x: 1, t: "Two kinds of orders", b: "RUN & GUN keeps moving and shoots on the way. ENGAGE stops, and the whole group closes in on any enemy one of them spots. Tap it to switch to ENGAGE.", el: "#modeBtn", hand: "tap", ok: () => UI.mode === "attack" },
     { t: "Enemy scouts!", b: "Red soldiers ahead. With your army selected, tap right on them to attack.", hand: "tap",
@@ -5246,6 +5281,10 @@ const TUT = (() => {
         const p = pushOutOfRocks(clamp(cx + f.x * 240, 60, G.S - 60), clamp(cy + f.y * 240, 60, G.S - 60), 30); scouts = spawnRed(4, p.x, p.y, 14); },
       at: () => { const a = scouts.filter(u => u.alive); return a.length ? { x: a.reduce((s, u) => s + u.x, 0) / a.length, y: a.reduce((s, u) => s + u.y, 0) / a.length } : null; },
       ok: () => scouts.every(u => !u.alive) },
+    { t: "Focus fire", b: "Tap ALL, then press and hold right on one of the red soldiers and let go. Every selected soldier shoots at that one target. It's the fastest way to bring down an enemy general.", hand: "hold",
+      enter() { UI.tut = {}; const a = myAlive().filter(u => u.kind === "inf"), f = G.players[G.human].fwd, cx = a.reduce((s, u) => s + u.x, 0) / a.length, cy = a.reduce((s, u) => s + u.y, 0) / a.length;
+        const p = pushOutOfRocks(clamp(cx + f.x * 220 + f.y * 90, 60, G.S - 60), clamp(cy + f.y * 220 - f.x * 90, 60, G.S - 60), 30); scouts = spawnRed(3, p.x, p.y, 30); },
+      at: () => { const a = scouts.filter(u => u.alive); return a.length ? a[0] : null; }, ok: () => (UI.tut && UI.tut.focus) || scouts.every(u => !u.alive) },
     { t: "Your general", b: "Tap GEN. The general sees and shoots much further, has ten times the health, and soldiers near him hit 30% harder. Keep him alive.", el: '[data-sel="gen"]', hand: "tap", ok: () => UI.selKey === "gen" },
     { t: "Sniper shot", b: "A lone enemy is hiding further out. Send your general toward it. He'll hit it from far away.", hand: "tap",
       enter() { const g = G.gens[G.human], f = G.players[G.human].fwd, p = { x: clamp(g.x + f.x * 480 - f.y * 160, 60, G.S - 60), y: clamp(g.y + f.y * 480 + f.x * 160, 60, G.S - 60) }; [lone] = spawnRed(1, p.x, p.y, 12); },
@@ -5259,6 +5298,9 @@ const TUT = (() => {
     { t: "Supply crate", b: "A crate is parachuting in. Send a soldier over it to open it. Most crates help, some bite. Gold ★ mission crates are always good, so race the enemy for them.", hand: "tap",
       enter() { const f = front(300), p = pushOutOfRocks(f.x - G.players[G.human].fwd.y * 120, f.y + G.players[G.human].fwd.x * 120, 40); crate = { id: 999, x: p.x, y: p.y, kind: "medkit", mission: false, land: G.time + 2, until: Infinity }; G.crates.push(crate); },
       at: () => crate && G.crates.includes(crate) ? crate : null, ok: () => crate && !G.crates.includes(crate) },
+    { x: 1, t: "Expert extras", b: "Drag from a squad letter across the map to draw a route. FORM switches between box, line (better aim standing still) and wedge (faster, hits hard on contact). RALLY sets where respawned soldiers gather. GUARD puts soldiers in a ring around the general, so he takes 15% less damage.", next: true },
+    { t: "Through the ages", b: "Each army level moves your side through history: Stone Age, Bronze Age, Middle Ages, Muskets, World Wars, Modern, Future and Space. Weapons, generals and bases change as you go. Try the 3D view in Settings to see them up close.", next: true },
+    { t: "The mystery weapon", b: "At level 9 a mystery weapon starts charging. Keep your general alive for 20 seconds and it wipes out every enemy base. If an enemy gets there first, hunt down their general: killing him resets the charge and earns you reinforcements.", next: true },
     { t: "The minimap", b: "Tap or drag on the minimap to jump anywhere. Your fog of war clears wherever your soldiers can see.", el: "#mini", hand: "tap", ok: () => flags.mini },
     { t: "Your mission", b: "Find and destroy every enemy base. Each kill is a point, and every upgrade makes your whole army tougher and deadlier. Bigger, tougher enemies score more on the leaderboard. Good luck!", next: true, last: true }
   ];
