@@ -23,3 +23,6 @@ grant select, insert on public.scores to anon;
 notify pgrst, 'reload schema';
 -- the result below should list my_army and score
 select column_name from information_schema.columns where table_schema = 'public' and table_name = 'scores' order by ordinal_position;
+
+-- country flags (update 6)
+alter table public.scores add column if not exists country text check (country is null or country ~ '^[A-Z]{2}$');

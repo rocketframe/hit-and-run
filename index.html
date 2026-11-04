@@ -235,6 +235,10 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
 .ab.ok{flex:1;background:var(--khaki);color:#17170f;border:0}
 .ab:disabled{opacity:.45}
 #nameInput{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.ctry{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.ctry select{flex:1;min-width:0;background:rgba(0,0,0,.45);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:6px 8px;font:13px system-ui,sans-serif;letter-spacing:0;text-transform:none}
+.flag{display:inline-flex;align-items:center;justify-content:center;width:20px;height:14px;font-size:9px;line-height:1;letter-spacing:0;color:var(--ink-dim);vertical-align:-2px}.flag img{width:20px;height:14px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+.arcade-t td.nm .flag{margin-right:6px}
 .arcade-msg{font-family:var(--mono);font-size:11.5px;color:var(--ink-dim);min-height:1.2em}
 .arcade-msg.good{color:#9fe07a}.arcade-msg.bad{color:var(--danger)}
 .shares{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
@@ -469,6 +473,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <div class="arcade" id="nameEntry">
       <div class="arcade-h">Enter your name</div>
       <div class="slots" id="slots"></div>
+      <label class="ctry">Country <span id="ctryFlag" class="flag"></span><select id="ctrySel" aria-label="Your country"></select></label>
       <div class="arcade-row">
         <button class="ab" id="nameType">Type</button>
         <button class="ab" id="nameDel" aria-label="Delete letter">⌫</button>
@@ -5395,7 +5400,7 @@ $("nameOk").addEventListener("click", async () => {
   if (!nm) { msg.className = "arcade-msg bad"; msg.textContent = "Enter at least one letter."; return; }
   try { localStorage.setItem("hr-name", nm); } catch (e) {}
   $("nameOk").disabled = true; $("nameOk").textContent = "Sending…";
-  const row = { ...pendingEntry, name: nm };
+  const row = { ...pendingEntry, name: nm, country: myCountry || undefined };
   try {
     const saved = await lbSubmit(row);
     msg.className = "arcade-msg good"; msg.textContent = "Score posted.";
@@ -5519,6 +5524,23 @@ if (/[?&]lbcheck\b/.test(location.search) && LB.url) (async () => {
 })();
 document.addEventListener("visibilitychange", () => { if (document.hidden) reportKills(); });
 
+// ---- country: guessed once from the IP (free api.country.is), then from the browser language; the player can change it ----
+const CTRY_CODES = "AD AE AF AG AL AM AO AR AT AU AZ BA BB BD BE BF BG BH BI BJ BN BO BR BS BT BW BY BZ CA CD CF CG CH CI CL CM CN CO CR CU CV CY CZ DE DJ DK DM DO DZ EC EE EG ER ES ET FI FJ FM FR GA GB GD GE GH GM GN GQ GR GT GW GY HK HN HR HT HU ID IE IL IN IQ IR IS IT JM JO JP KE KG KH KI KM KN KP KR KW KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MG MH MK ML MM MN MO MR MT MU MV MW MX MY MZ NA NE NG NI NL NO NP NR NZ OM PA PE PG PH PK PL PR PS PT PW PY QA RO RS RU RW SA SB SC SD SE SG SI SK SL SM SN SO SR SS ST SV SY SZ TD TG TH TJ TL TM TN TO TR TT TV TW TZ UA UG US UY UZ VA VC VE VN VU WS XK YE ZA ZM ZW".split(" ");
+const ctryName = (() => { let dn = null; try { dn = new Intl.DisplayNames(["en"], { type: "region" }); } catch (e) {} return c => { try { return (dn && dn.of(c)) || c; } catch (e) { return c; } }; })();
+const flagHTML = c => c && /^[A-Z]{2}$/.test(c) ? `<span class="flag" title="${ctryName(c)}"><img src="https://flagcdn.com/w40/${c.toLowerCase()}.png" alt="${c}" loading="lazy" onerror="this.replaceWith('${c}')"></span>` : "";
+let myCountry = ""; try { myCountry = localStorage.getItem("hr-country") || ""; } catch (e) {}
+const setCountry = (c, chosen) => { myCountry = c || ""; try { localStorage.setItem("hr-country", myCountry); if (chosen) localStorage.setItem("hr-country-set", "1"); } catch (e) {} const sel = $("ctrySel"); if (sel) { sel.value = myCountry; $("ctryFlag").innerHTML = myCountry ? flagHTML(myCountry).replace(/^<span class="flag"[^>]*>|<\/span>$/g, "") : ""; } };
+(function initCountry() {
+  const sel = $("ctrySel"), opts = CTRY_CODES.map(c => [c, ctryName(c)]).sort((a, b) => a[1].localeCompare(b[1]));
+  sel.innerHTML = `<option value="">Don't show</option>` + opts.map(([c, n]) => `<option value="${c}">${n}</option>`).join("");
+  sel.addEventListener("change", () => setCountry(sel.value, true));
+  let chosen = false; try { chosen = localStorage.getItem("hr-country-set") === "1"; } catch (e) {}
+  if (chosen) { setCountry(myCountry); return; }
+  const lang = ((navigator.languages && navigator.languages[0]) || navigator.language || "").split("-")[1];
+  if (!myCountry && lang && CTRY_CODES.includes(lang.toUpperCase())) setCountry(lang.toUpperCase()); else setCountry(myCountry);
+  if (ON_CLAUDE) return;
+  fetch("https://api.country.is/").then(r => r.ok ? r.json() : null).then(j => { const c = j && String(j.country || "").toUpperCase(); if (c && CTRY_CODES.includes(c)) { let ch = false; try { ch = localStorage.getItem("hr-country-set") === "1"; } catch (e) {} if (!ch) setCountry(c); } }).catch(() => {});
+})();
 // ---- leaderboard data ----
 function localBoard() { try { return JSON.parse(localStorage.getItem("hr-board") || "[]"); } catch (e) { return []; } }
 async function lbSubmit(row) {
@@ -5530,7 +5552,10 @@ async function lbSubmit(row) {
   }
   const body = { name: row.name, diff: row.diff, enemies: row.enemies, army: row.army, secs: Math.max(1, row.secs), kills: row.kills, win: row.win };
   if (row.my_army && row.my_army !== 30) body.my_army = row.my_army;
-  const res = await fetch(LB.url + "/rest/v1/scores", { method: "POST", headers: { ...lbHead(), "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify(body) });
+  if (row.country) body.country = row.country;
+  const post = b => fetch(LB.url + "/rest/v1/scores", { method: "POST", headers: { ...lbHead(), "Content-Type": "application/json", Prefer: "return=representation" }, body: JSON.stringify(b) });
+  let res = await post(body);
+  if (!res.ok && body.country && res.status === 400) { delete body.country; res = await post(body); } // the country column isn't in the database yet
   if (!res.ok) { const e = new Error("submit " + res.status); e.status = res.status; try { e.detail = (await res.json()).message; } catch (x) {} throw e; }
   return (await res.json())[0];
 }
@@ -5560,7 +5585,7 @@ async function showBoard(diff, mine) {
   try { rows = await lbTop(boardDiff); } catch (e) { t.innerHTML = `<tbody><tr><td>Couldn't load the leaderboard. Check your connection.</td></tr></tbody>`; return; }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   t.innerHTML = `<thead><tr><th>Rank</th><th>Name</th><th style="text-align:right">Score</th><th>Skill</th><th>Enemies</th><th>Time</th></tr></thead><tbody>` +
-    (rows.length ? rows.map((r, i) => `<tr class="${i < 3 ? "top" + (i + 1) : ""}${boardMine && r.id === boardMine.id ? " me" : ""}"><td class="rk">${ord(i + 1)}</td><td class="nm">${esc(r.name)}</td><td class="sc">${fmtN(r.score)}</td><td>${DIFF_NAME[r.diff] || ""}</td><td>${r.my_army || 30} v ${r.enemies > 1 ? r.enemies + "×" : ""}${r.army}${r.win ? "" : " ✕"}</td><td>${fmtT(r.secs)}</td></tr>`).join("")
+    (rows.length ? rows.map((r, i) => `<tr class="${i < 3 ? "top" + (i + 1) : ""}${boardMine && r.id === boardMine.id ? " me" : ""}"><td class="rk">${ord(i + 1)}</td><td class="nm">${flagHTML(r.country)}${esc(r.name)}</td><td class="sc">${fmtN(r.score)}</td><td>${DIFF_NAME[r.diff] || ""}</td><td>${r.my_army || 30} v ${r.enemies > 1 ? r.enemies + "×" : ""}${r.army}${r.win ? "" : " ✕"}</td><td>${fmtT(r.secs)}</td></tr>`).join("")
       : `<tr><td colspan="6">No scores yet. Be the first.</td></tr>`) + `</tbody>`;
   const me = t.querySelector("tr.me"); if (me) me.scrollIntoView({ block: "center" });
 }
