@@ -5,7 +5,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%2311160f%22/%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23e8c05a%22%20stroke-width%3D%224%22%20stroke-linecap%3D%22round%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2219%22/%3E%3Cpath%20d%3D%22M32%204v12M32%2048v12M4%2032h12M48%2032h12%22/%3E%3C/g%3E%3Cpath%20fill%3D%22%23ff5b4f%22%20d%3D%22M32%2021.5l3.1%206.6%207.2.8-5.4%204.9%201.5%207.1-6.4-3.7-6.4%203.7%201.5-7.1-5.4-4.9%207.2-.8z%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700;800&family=Big+Shoulders+Stencil+Display:wght@900&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>html,body{margin:0;padding:0;height:100%;background:#07090a}</style></head><body>
 <style>
 /* Layout: full-bleed field map canvas; HUD floats on the edges like a field commander's overlay. Single dark look by choice. */
@@ -131,7 +131,7 @@ body.entering #menu .card>*:not(h1):not(.stamp){transition:opacity .5s ease .55s
 #menuSnd.off{opacity:.45;text-decoration:line-through}
 body.splash #menuSnd{opacity:0;pointer-events:none}
 @keyframes goIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translateX(-50%)}}
-@media (max-width:420px){.stamp{top:-2px;right:2px}.stamp b{font-size:25px}}
+@media (max-width:420px){.stamp{top:-4px;right:-2px}.stamp .st-k{font-size:9px}.stamp .st-in{padding:5px 9px 6px}.stamp b{font-size:25px}}
 .armyset{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:4px;padding:8px 10px;background:rgba(6,8,6,.45)}
 .arow{display:grid;grid-template-columns:78px 36px 1fr 36px 40px;align-items:center;gap:8px}
 .arow .an{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-dim);text-transform:uppercase}
@@ -145,7 +145,8 @@ body.attract .hud{display:none!important}
 .seg button{font-size:16px}
 .card{width:min(460px,100%);display:flex;flex-direction:column;gap:18px}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--khaki);text-transform:uppercase}
-h1{font-size:clamp(56px,16vw,92px);line-height:.82;margin:0;font-weight:800;letter-spacing:-.01em;text-transform:uppercase;text-wrap:balance}
+h1 .tgun{display:inline-block;height:.8em;width:auto;vertical-align:baseline;margin-left:.02em;fill:currentColor;overflow:visible}
+h1{font-family:'Big Shoulders Stencil Display','Saira Condensed',sans-serif;font-size:clamp(56px,15.5vw,100px);line-height:.84;margin:0;font-weight:900;letter-spacing:-.01em;text-transform:uppercase;text-wrap:balance}
 h1 span{color:var(--khaki)}
 h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:800}
 .lede{font-size:17px;line-height:1.35;color:var(--ink-dim);margin:0;font-weight:500;max-width:38ch}
@@ -296,7 +297,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
 <div class="screen" id="menu">
   <button class="ib" id="menuSnd" aria-label="Sound on or off">♪</button>
   <div class="card">
-    <h1>Hit<br>and <span>Run</span></h1>
+    <h1 aria-label="Hit and Run">Hi<svg class="tgun" viewBox="0 0 134 150" aria-hidden="true"><mask id="tgm"><rect x="-10" y="-10" width="160" height="170" fill="#fff"/><path d="M20 35 L140 35" stroke="#000" stroke-width="3.5"/><path d="M40 98 L112 91" stroke="#000" stroke-width="4"/><path d="M31.5 0 V40" stroke="#000" stroke-width="3"/><path d="M89.5 0 V30" stroke="#000" stroke-width="3"/></mask> <g mask="url(#tgm)"> <path d="M0 2 L32 7 V30 L5 40 H0 Z"/> <path d="M30 2 H90 V33 H30 Z"/><path d="M40 0 H50 V5 H40 Z"/> <path d="M88 8 H114 V27 H88 Z"/> <path d="M112 13 H134 V21 H112 Z"/><path d="M125 4 H130 V13 H125 Z"/> <path d="M50 30 H80 Q84 92 102 143 L72 150 Q56 96 50 30 Z"/> <path d="M33 28 H46 L39 60 H27 Z"/> </g></svg><br>and <span>Run</span></h1>
     <div class="stamp" id="stamp" hidden aria-live="polite"><div class="st-in"><span class="st-k">Battles fought</span><b id="stGames">0</b><span class="st-rule"></span><span class="st-k">Enemies killed</span><b id="stKills">0</b></div></div>
     <p class="lede">Find the enemy in the fog, shoot first, keep your general alive, and take their base.</p>
     <details class="custom" id="custom"><summary><span>Custom game</span><em id="customSum"></em></summary>
