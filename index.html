@@ -4471,8 +4471,10 @@ function typeChar(ch) {
   ch = ch.toUpperCase(); if (!CHARS.includes(ch)) return;
   nameArr[nameCur] = ch; nameCur = Math.min(NAME_LEN - 1, nameCur + 1); renderSlots();
 }
+// until the score is posted, the only way on is to enter a name; if posting fails, the way out comes back
+const navLock = on => { $("againBtn").hidden = on; $("menuBtn").hidden = on; };
 function startNameEntry(entry) {
-  pendingEntry = entry; postedRow = null;
+  pendingEntry = entry; postedRow = null; navLock(true);
   const saved = loadName().toUpperCase().slice(0, NAME_LEN);
   nameArr = Array.from({ length: NAME_LEN }, (_, i) => saved[i] && CHARS.includes(saved[i]) ? saved[i] : (i === 0 && !saved ? "A" : " "));
   nameCur = saved ? Math.min(NAME_LEN - 1, saved.length - 1) : 0;
@@ -4505,14 +4507,14 @@ $("nameOk").addEventListener("click", async () => {
     const saved = await lbSubmit(row);
     msg.className = "arcade-msg good"; msg.textContent = "Score posted.";
     $("nameOk").textContent = "Posted";
-    boardMine = saved; postedRow = saved;
+    boardMine = saved; postedRow = saved; navLock(false);
     $("nameOk").disabled = false; $("nameOk").textContent = "See your rank";
     showBoard(saved.diff, saved);
   } catch (e) {
     msg.className = "arcade-msg bad";
     console.warn("leaderboard submit failed", e.status, e.detail);
     msg.textContent = "Couldn't post your score right now. Please try again in a moment.";
-    $("nameOk").disabled = false; $("nameOk").textContent = "Try again";
+    $("nameOk").disabled = false; $("nameOk").textContent = "Try again"; navLock(false);
   }
 });
 
@@ -4697,7 +4699,7 @@ function showOver() {
   setShareLinks();
   reportKills();
   startNameEntry({ score, diff: G.diff, enemies, army: G.enemyArmy, my_army: G.myArmy, secs, kills: me.kills, win });
-  if (G.slowmo) { $("nameEntry").hidden = true; }
+  if (G.slowmo) { $("nameEntry").hidden = true; navLock(false); }
   { const entry = log[log.length - 1]; let asked = null; try { asked = localStorage.getItem("hr-tel"); } catch (e) {}
     if (asked === "1") logGame(entry);
     $("telAsk").hidden = !(asked === null && LB.url && !G.slowmo); $("telAsk").dataset.n = String(log.length - 1); }
