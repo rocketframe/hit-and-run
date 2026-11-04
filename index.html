@@ -935,7 +935,9 @@ function damage(t, amount, by) {
 }
 
 // extra numbers for the end of the battle
-function gStats() { return G.st || (G.st = { dealt: 0, taken: 0, genKills: 0, genLost: 0, bases: 0, crates: 0, misWon: 0, misLost: 0, strikes: 0, low: Infinity }); }
+function gStats() { return G.st || (G.st = { dealt: 0, taken: 0, genKills: 0, genLost: 0, bases: 0, crates: 0, misWon: 0, misLost: 0, strikes: 0, low: Infinity, walk: 0, spawned: 0, taps: 0 }); }
+// every tap or click during a battle counts
+document.addEventListener("pointerdown", () => { if (G && !G.attract && !G.over && !G.tutorial) gStats().taps++; }, true);
 function addPoints(p, n) {
   p.points += n;
   while (p.points >= (p.level - (p.bonus || 0) + 1) * G.upEvery) {
@@ -1363,6 +1365,7 @@ function step() {
     if (u.respawn <= 0 && p.base.alive) {
       const a = Math.atan2(p.fwd.y, p.fwd.x) + (G.rng() - 0.5) * 1.6, dd = p.base.r + 22 + G.rng() * 40;
       u.x = p.base.x + Math.cos(a) * dd; u.y = p.base.y + Math.sin(a) * dd;
+      if (u.owner === G.human && !G.attract) gStats().spawned++;
       u.tx = u.x; u.ty = u.y; u.hp = maxHp(u); u.alive = true; u.idleT = 0; u.mode = "attack"; u.cd = CFG[u.kind].cd; u.escort = false; u.path = null;
       if (!p.ai) rejoin(u, p);
       if (u.kind === "gen" && u.owner === G.human && !G.attract) genBack();
@@ -1407,7 +1410,7 @@ function step() {
       const [vx, vy] = navDir(u.x, u.y, gx, gy, C.r + 2, dx / dist, dy / dist);
       const P = G.players[u.owner], runK = u.run && !P.tired ? 1.8 : 1; if (runK > 1) P.ran = true;
       const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * runK * (u.form === "wedge" ? FORM_FX.wedge.speed : 1) * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : 1), dist - stopAt + 0.5);
-      u.x += vx * sp; u.y += vy * sp; u.moving = true; u.face = u.walk = Math.atan2(vy, vx);
+      u.x += vx * sp; u.y += vy * sp; u.moving = true; u.face = u.walk = Math.atan2(vy, vx); if (u.owner === G.human && !G.attract) gStats().walk += sp;
       if (G.island && !onLand(u.x, u.y, C.r + 2)) { const q = toLand(u.x, u.y, C.r + 2); u.x = q.x; u.y = q.y; }
     }
   }
@@ -5771,7 +5774,8 @@ $("boardAgain").addEventListener("click", () => { boardHome(); $("board").hidden
 // after the battle: the whole map is revealed and the player can look around before the score screen
 function statLines(me) {
   const st = gStats(), t = Math.floor(G.time), n = Object.values(UI.use || {}).reduce((a, b) => a + b, 0), L = [];
-  L.push(["Time", fmtT(t)], ["Kills", me.kills], ["Losses", me.losses], ["Army level", me.level + 1]);
+  const wm = st.walk / 15.5; // 15.5 map units = 1 m at the soldiers' scale
+  L.push(["Time", fmtT(t)], ["Kills", me.kills], ["Soldiers died", me.losses], ["Respawned", st.spawned], ["Army level", me.level + 1], ["Taps", fmtN(st.taps)], ["Distance marched", wm >= 1000 ? (wm / 1000).toFixed(1) + " km" : Math.round(wm) + " m"]);
   L.push(["Damage dealt", fmtN(Math.round(st.dealt))], ["Damage taken", fmtN(Math.round(st.taken))]);
   if (st.genKills) L.push(["Generals killed", st.genKills]); L.push(["Your general fell", st.genLost ? st.genLost + "×" : "never"]);
   if (st.bases) L.push(["Bases destroyed", st.bases]);
@@ -5785,7 +5789,7 @@ function enterReview() {
   const me = G.players[G.human];
   $("epTitle").firstChild.textContent = G.over.win ? "Victory" : "Defeated";
   $("epSub").textContent = (G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen") + " · map revealed";
-  $("epStats").innerHTML = statLines(me).slice(0, 8).map(([k, v]) => `${k} <b>${v}</b>`).join(" · ") + `<div class="ep-hint">Drag to look around the battlefield.</div>`;
+  $("epStats").innerHTML = statLines(me).slice(0, 9).map(([k, v]) => `${k} <b>${v}</b>`).join(" · ") + `<div class="ep-hint">Drag to look around the battlefield.</div>`;
   document.body.classList.add("ended"); $("endPanel").hidden = false;
 }
 function leaveReview() { cvs.style.transform = ""; document.body.classList.remove("ended"); $("endPanel").hidden = true; }
