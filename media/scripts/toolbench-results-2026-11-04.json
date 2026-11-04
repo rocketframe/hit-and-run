@@ -1,0 +1,159 @@
+[
+{
+ "diff": 1,
+ "perVariant": 60,
+ "sum": {
+  "basic": {
+   "games": 60,
+   "winRate": 28.3,
+   "ci95": 11.4,
+   "timeouts": 39,
+   "avgWinSecs": 203,
+   "kd": 0.58,
+   "genDeaths": 11.53
+  },
+  "army": {
+   "games": 60,
+   "winRate": 33.3,
+   "ci95": 11.9,
+   "timeouts": 32,
+   "avgWinSecs": 175,
+   "kd": 0.56,
+   "genDeaths": 0.13
+  },
+  "engage": {
+   "games": 60,
+   "winRate": 61.7,
+   "ci95": 12.3,
+   "timeouts": 23,
+   "avgWinSecs": 551,
+   "kd": 1.43,
+   "genDeaths": 6.73
+  },
+  "guard": {
+   "games": 60,
+   "winRate": 26.7,
+   "ci95": 11.2,
+   "timeouts": 30,
+   "avgWinSecs": 191,
+   "kd": 0.58,
+   "genDeaths": 0.07
+  },
+  "rally": {
+   "games": 60,
+   "winRate": 23.3,
+   "ci95": 10.7,
+   "timeouts": 39,
+   "avgWinSecs": 192,
+   "kd": 0.58,
+   "genDeaths": 11.9
+  },
+  "wedge": {
+   "games": 60,
+   "winRate": 21.7,
+   "ci95": 10.4,
+   "timeouts": 44,
+   "avgWinSecs": 213,
+   "kd": 0.77,
+   "genDeaths": 10.62
+  },
+  "line": {
+   "games": 60,
+   "winRate": 11.7,
+   "ci95": 8.1,
+   "timeouts": 47,
+   "avgWinSecs": 161,
+   "kd": 0.59,
+   "genDeaths": 13.25
+  },
+  "regroup": {
+   "games": 60,
+   "winRate": 31.7,
+   "ci95": 11.8,
+   "timeouts": 36,
+   "avgWinSecs": 303,
+   "kd": 0.84,
+   "genDeaths": 10.65
+  }
+ }
+}
+,
+{
+ "diff": 2,
+ "perVariant": 40,
+ "sum": {
+  "basic": {
+   "games": 40,
+   "winRate": 0,
+   "ci95": 0,
+   "timeouts": 9,
+   "avgWinSecs": null,
+   "kd": 0.51,
+   "genDeaths": 10.85
+  },
+  "army": {
+   "games": 40,
+   "winRate": 2.5,
+   "ci95": 4.8,
+   "timeouts": 9,
+   "avgWinSecs": 263,
+   "kd": 0.47,
+   "genDeaths": 1.4
+  },
+  "engage": {
+   "games": 40,
+   "winRate": 10,
+   "ci95": 9.3,
+   "timeouts": 28,
+   "avgWinSecs": 865,
+   "kd": 0.85,
+   "genDeaths": 11.07
+  },
+  "guard": {
+   "games": 40,
+   "winRate": 0,
+   "ci95": 0,
+   "timeouts": 3,
+   "avgWinSecs": null,
+   "kd": 0.45,
+   "genDeaths": 1.1
+  },
+  "rally": {
+   "games": 40,
+   "winRate": 2.5,
+   "ci95": 4.8,
+   "timeouts": 7,
+   "avgWinSecs": 367,
+   "kd": 0.44,
+   "genDeaths": 10.75
+  },
+  "wedge": {
+   "games": 40,
+   "winRate": 0,
+   "ci95": 0,
+   "timeouts": 23,
+   "avgWinSecs": null,
+   "kd": 0.68,
+   "genDeaths": 10.82
+  },
+  "line": {
+   "games": 40,
+   "winRate": 0,
+   "ci95": 0,
+   "timeouts": 13,
+   "avgWinSecs": null,
+   "kd": 0.45,
+   "genDeaths": 11.65
+  },
+  "regroup": {
+   "games": 40,
+   "winRate": 5,
+   "ci95": 6.8,
+   "timeouts": 15,
+   "avgWinSecs": 681,
+   "kd": 0.63,
+   "genDeaths": 12.13
+  }
+ }
+}
+]
