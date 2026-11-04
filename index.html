@@ -1795,7 +1795,8 @@ function drawStanding() {
       c.save(); c.globalAlpha = q.al; q.draw(c, P, k); c.restore(); continue; }
     if (q.atl) { const A = q.atl.M, sc = A.wpp * A.k * k, w = A.S * sc, x0 = p0.x - A.fx * sc, y0 = p0.y - A.fy * sc - (q.hov || 0) * k;
       if (A.ring && !q.dead) { // real colours on the model; the team shows as a ring on the ground
-        const rx = (A.ringR || 7.2) * k, ry = rx * Math.cos(TILT.th); c.globalAlpha = q.al * 0.3; c.fillStyle = q.atl.c; c.beginPath(); c.ellipse(p0.x, p0.y, rx, ry, 0, 0, TAU); c.fill();
+        const rx = (A.ringR || 7.2) * k * (q.gen ? 1.3 : 1), ry = rx * Math.cos(TILT.th);
+        if (q.gen) { c.globalAlpha = q.al * 0.7; c.strokeStyle = q.atl.c; c.lineWidth = Math.max(1, 0.9 * k); c.beginPath(); c.ellipse(p0.x, p0.y, rx * 1.18, ry * 1.18, 0, 0, TAU); c.stroke(); } // generals get a double ring c.globalAlpha = q.al * 0.3; c.fillStyle = q.atl.c; c.beginPath(); c.ellipse(p0.x, p0.y, rx, ry, 0, 0, TAU); c.fill();
         c.globalAlpha = q.al * 0.95; c.strokeStyle = q.atl.c; c.lineWidth = Math.max(1, 1.3 * k); c.beginPath(); c.ellipse(p0.x, p0.y, rx, ry, 0, 0, TAU); c.stroke(); }
       c.globalAlpha = q.al; c.drawImage(q.atl.cv, q.col * A.S, q.row * A.S, A.S, A.S, x0, y0, w, w);
       if (q.fl) { c.globalCompositeOperation = "lighter"; c.globalAlpha = q.al * 0.5; c.drawImage(q.atl.cv, q.col * A.S, q.row * A.S, A.S, A.S, x0, y0, w, w); c.globalCompositeOperation = "source-over"; }
@@ -3516,7 +3517,7 @@ function render(dtReal) {
     if (u.mis) drawMisUnit(c, u, T, now);
     else if (c !== ctx && model3(eraOf(u.owner), gen ? "gen" : "inf", u.owner)) { const A = model3(eraOf(u.owner), gen ? "gen" : "inf", u.owner), M = A.M, sa = G.time - (u.shotAt == null ? -99 : u.shotAt), a = u.moving && u.walk != null && sa > 0.36 ? u.walk : u.face;
       const dir = ((Math.round((a || 0) / (TAU / M.dirs)) % M.dirs) + M.dirs) % M.dirs, cl = M.clips, [blk, nf, f] = cl.fire && sa < 0.36 ? [...cl.fire, Math.min(cl.fire[1] - 1, Math.floor(sa / 0.09))] : cl.walk && u.moving ? [...cl.walk, Math.floor(now * 10 + u.id * 0.37) % cl.walk[1]] : cl.aim ? [...cl.aim, 0] : [...(cl.idle || [0, 1]), 0];
-      STAND.push({ atl: A, col: f, row: blk * M.dirs + dir, x: u.x, y: u.y, al: c.globalAlpha, fl: u.flash > 0, hov: gen && T.hover ? 3 : 0 }); }
+      STAND.push({ atl: A, col: f, row: blk * M.dirs + dir, x: u.x, y: u.y, al: c.globalAlpha, fl: u.flash > 0, hov: gen && T.hover ? 3 : 0, gen: u.kind === "gen" }); }
     else if (c !== ctx && T.bb) { const sa = G.time - (u.shotAt == null ? -99 : u.shotAt), fr = sa < 0.09 ? FIG_A : sa < 0.24 ? FIG_A + 1 : sa < 0.5 || (u.tgt && !u.moving) ? FIG_A + 2 : u.moving ? 1 + (Math.floor(now * 11 + u.id * 0.37) % FIG_N) : 0, set = u.flash > 0 ? (gen ? T.bb.genW : T.bb.infW) : (gen ? T.bb.gen : T.bb.inf); STAND.push({ bb: set[fr], sc: gen ? 1.1 : 1.25, x: u.x, y: u.y, a: u.moving && u.walk != null && fr < FIG_A ? u.walk : u.face, u, al: c.globalAlpha, hov: gen && T.hover ? 3 + Math.sin(now * 3 + u.id) * 1.2 : 0 }); }
     else if (c !== ctx) STAND.push({ img, x: u.x, y: u.y + bob, a: u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), sz: gen ? (T.genSz || 44) : 28, al: c.globalAlpha, hov: gen && T.hover ? 3 + Math.sin(now * 3 + u.id) * 1.2 : 0 });
     else drawSpr(img, u.x, u.y + bob + (gen && T.hover ? Math.sin(now * 3 + u.id) * 1.2 : 0), u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), gen ? (T.genSz || 44) : 28);
