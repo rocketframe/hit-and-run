@@ -433,7 +433,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <section><h3>Picking exactly who you want <span class="xp">Expert</span></h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, healing, rapid fire, sharpshooters with longer range, scouts that lift the fog, camouflage, or a strike you aim with <b>STRIKE</b>: a boulder, a cannonball or an airstrike, depending on your era). Some are bad (plague that spreads between soldiers standing close, a trap, lost orders, a signal fire that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
     <section><h3>Missions</h3><p>Every couple of minutes new orders bring a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Supplies:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply cart (a sled, wagon, truck or drone, by era) moves home only while your soldiers walk next to it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it, for 30 seconds.</li><li><b>Rescue:</b> find the missing scout in the marked area, then walk him home.</li><li><b>Assassinate:</b> an enemy captain with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> destroy the supply camp near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
-    <section><h3>Squads <span class="xp">Expert</span></h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation. <b>Box</b> is plain. <b>Line</b> holds the line: 15% better aim while standing still. <b>Wedge</b> is the charge: 10% faster, and 25% harder hits for the first 3 seconds of a fight. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> makes the selected soldiers escort the general.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
+    <section><h3>Squads <span class="xp">Expert</span></h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation. <b>Box</b> is plain. <b>Line</b> holds the line: 15% better aim while standing still. <b>Wedge</b> is the charge: 10% faster, and 25% harder hits for the first 3 seconds of a fight. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> puts the selected soldiers in a ring round the general. They follow him and take 15% less damage while they stay close.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
     <section><h3>Spread out <span class="xp">Expert</span></h3><p>With Basic controls this happens on its own when plague hits. In Expert, tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, strikes and traps. The general always gets right of way through his own soldiers.</p></section>
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b>, then pick who goes: the selected soldiers, the ones on screen, or all of them. The general is only withdrawn if you pick him on his own. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
@@ -710,7 +710,10 @@ function applyCmd(c) {
   } else if (c.t === "escort") {
     const g = G.gens[c.p]; if (!g || !g.alive) return;
     const list = us.filter(u => u.kind !== "gen");
-    list.forEach((u, i) => { const a = i / list.length * TAU2; u.escort = true; u.path = null; u.eox = Math.cos(a) * (42 + (i % 2) * 24); u.eoy = Math.sin(a) * (42 + (i % 2) * 24); u.mode = "move"; });
+    // a tidy ring round the general: one ring for up to 14 guards, a second ring outside it for the rest
+    const n = list.length, inner = Math.min(n, 14), outer = n - inner;
+    list.forEach((u, i) => { const ring = i < inner ? 0 : 1, k = ring ? i - inner : i, m = ring ? outer : inner, a = k / m * TAU2 + ring * Math.PI / m, r = ring ? Math.max(70, outer * 24 / TAU2) : Math.max(40, inner * 22 / TAU2);
+      u.escort = true; u.path = null; u.eox = Math.cos(a) * r; u.eoy = Math.sin(a) * r; u.mode = "move"; });
     return;
   }
   if (c.t === "focus") { // hold on an enemy: everyone picked goes after that one target first
@@ -887,6 +890,7 @@ function scan(u) {
 function damage(t, amount, by) {
   if (!t.alive) return;
   if (t.kind === "truck") amount *= 0.35; // armoured
+  if (t.escort) { const g = G.gens[t.owner]; if (g && g.alive && d2(t, g) < GUARD_R * GUARD_R) amount *= 0.85; } // guards in the ring hold firm
   t.hp -= amount; t.flash = 0.12; t.hitAt = G.time;
   if (t.owner === G.human && by !== G.human && !G.attract) alertHit(t.x, t.y);
   if (t.hp > 0) return;
@@ -1705,6 +1709,21 @@ const tvOf = dy => dy * TILT.p / (Math.cos(TILT.th) * TILT.p + dy * Math.sin(TIL
 function scr2flat(x, y) { if (!TILT.on) return { x, y }; const v = tvOf(y - SH * TILT.oy), f = (TILT.p - v * Math.sin(TILT.th)) / TILT.p; return { x: W / 2 + (x - SW / 2) * f, y: H / 2 + v }; }
 function flat2scr(x, y) { if (!TILT.on) return { x, y }; const v = y - H / 2, d = TILT.p - v * Math.sin(TILT.th), f = d / TILT.p; return { x: SW / 2 + (x - W / 2) / f, y: SH * TILT.oy + v * Math.cos(TILT.th) * TILT.p / d }; }
 const w2scr = (x, y) => flat2scr((x - cam.x) * cam.z + W / 2, (y - cam.y) * cam.z + H / 2);
+// 3D view: soldiers are drawn after the tilt, upright, so they stand on the board instead of lying flat on it
+const STAND = [];
+function drawStanding() {
+  const c = ctx, s = Math.sin(TILT.th);
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  STAND.sort((a, b) => a.y - b.y);
+  for (const q of STAND) {
+    const fx = (q.x - cam.x) * cam.z + W / 2, fy = (q.y - cam.y) * cam.z + H / 2, f = (TILT.p - (fy - H / 2) * s) / TILT.p, k = cam.z / f;
+    const p0 = flat2scr(fx, fy), p1 = flat2scr(fx + Math.cos(q.a) * 10, fy + Math.sin(q.a) * 10);
+    if (p0.x < -60 || p0.x > SW + 60 || p0.y < -60 || p0.y > SH + 60) continue;
+    const sz = q.sz * k, lift = (2.5 + q.hov) * k;
+    c.globalAlpha = q.al; c.save(); c.translate(p0.x, p0.y - lift); c.rotate(Math.atan2(p1.y - p0.y, p1.x - p0.x)); c.drawImage(q.img, -sz / 2, -sz / 2, sz, sz); c.restore();
+  }
+  c.globalAlpha = 1; STAND.length = 0;
+}
 function warpFlat() {
   const c = ctx, s = Math.sin(TILT.th), p = TILT.p, B = 3, oy = SH * TILT.oy;
   c.setTransform(DPR, 0, 0, DPR, 0, 0); c.fillStyle = SEA; c.fillRect(0, 0, SW, SH);
@@ -1716,6 +1735,7 @@ function warpFlat() {
 }
 // formation perks (Expert): line aims better standing still, wedge moves faster and charges; box is plain
 const FORM_FX = { line: { aim: 1.15 }, wedge: { speed: 1.1, dmg: 1.25, chargeT: 3 } };
+const GUARD_R = 130; // guards this close to their general take 15% less damage
 function eraOfLevel(l) { let e = 0; while (e < ERAS.length - 1 && l >= ERAS[e + 1].at) e++; return e; }
 const eraOf = pid => G.eraFix != null ? G.eraFix : eraOfLevel(G.players[pid].level);
 
@@ -2800,13 +2820,17 @@ function render(dtReal) {
     c.stroke();
   }
   drawBottle(c, now);
+  if (!seeAll && myGen && myGen.alive) { let r = 0; for (const u of G.units) if (u.alive && u.escort && u.owner === G.human) r = Math.max(r, Math.hypot(u.eox, u.eoy));
+    if (r) { c.strokeStyle = "rgba(243,215,124,.28)"; c.lineWidth = 1.5 / z; c.setLineDash([3 / z, 6 / z]); c.beginPath(); c.arc(myGen.x, myGen.y, r + 12, now * 0.3, now * 0.3 + TAU); c.stroke(); c.setLineDash([]); } }
   // soldiers
   for (const u of showU) {
     const T = SPR.team[u.owner].eras[eraOf(u.owner)], gen = u.kind === "gen";
     const img = u.flash > 0 ? (gen ? T.genW : T.infW) : (gen ? T.gen : T.inf);
     const bob = u.moving ? Math.sin(now * 14 + u.id) * 0.6 : 0;
     if (u.camo > G.time) c.globalAlpha = 0.45;
-    if (u.mis) drawMisUnit(c, u, T, now); else drawSpr(img, u.x, u.y + bob + (gen && T.hover ? Math.sin(now * 3 + u.id) * 1.2 : 0), u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), gen ? (T.genSz || 44) : 28);
+    if (u.mis) drawMisUnit(c, u, T, now);
+    else if (c !== ctx) STAND.push({ img, x: u.x, y: u.y + bob, a: u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), sz: gen ? (T.genSz || 44) : 28, al: c.globalAlpha, hov: gen && T.hover ? 3 + Math.sin(now * 3 + u.id) * 1.2 : 0 });
+    else drawSpr(img, u.x, u.y + bob + (gen && T.hover ? Math.sin(now * 3 + u.id) * 1.2 : 0), u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), gen ? (T.genSz || 44) : 28);
     c.globalAlpha = 1;
     if (gen && u.oldie && !u.mis) { // ten deaths in: a head bandage with a spot of red
       c.save(); c.translate(u.x, u.y + bob); c.rotate(u.face); const hx = T.genSz ? -2 : 0.8;
@@ -3060,7 +3084,7 @@ function render(dtReal) {
   }
 
   // screen space: vignette, selection box
-  if (c !== ctx) { warpFlat(); c = renderCtx = ctx; }
+  if (c !== ctx) { warpFlat(); c = renderCtx = ctx; drawStanding(); }
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.drawImage(vignetteCvs, 0, 0, cvs.width, cvs.height);
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -3464,7 +3488,7 @@ $("regroupBtn").addEventListener("click", () => { const ids = selIds(); if (!ids
 $("guardBtn").addEventListener("click", () => {
   const ids = selIds().filter(id => G.unitById.get(id).kind !== "gen"); const g = G.gens[G.human];
   if (!ids.length) { toast("Pick a squad first"); return; } if (!g.alive) { toast("Your general is down"); return; }
-  issue({ p: G.human, t: "escort", ids }); SND.say("move"); toast(ids.length + " soldiers now guard the general", "gold"); closeTray();
+  issue({ p: G.human, t: "escort", ids }); SND.say("move"); toast(ids.length + " soldiers form a ring round the general and take 15% less damage there", "gold"); closeTray();
 });
 $("rallyBtn").addEventListener("click", () => { UI.rallyMode = !UI.rallyMode; UI.strikeMode = false; SND.ui(); refreshBar(); });
 function setMore(open) { const b = $("moreBtn"); b.firstChild.textContent = open ? "▾" : "⋯"; b.lastChild.textContent = open ? "fewer" : "all orders"; b.classList.toggle("on", open); b.setAttribute("aria-label", open ? "Show fewer buttons" : "Show all orders"); }
@@ -3913,7 +3937,7 @@ function togglePause() {
 // AUDIO: synthesized effects + adaptive score (calm when quiet, tense in battle)
 // ======================================================================
 const SND = (() => {
-  let ac = null, master, sfxBus, musBus, comp, noise, verb, verbIn;
+  let ac = null, master, sfxBus, musBus, comp, noise, verb, verbIn, gateM, gateS;
   let pref = { m: 1, s: 1, v: 1 };
   const urlStyle = (location.search.match(/[?&]music=(\w+)/) || [])[1];
   try { Object.assign(pref, JSON.parse(localStorage.getItem("hr-sound") || "{}")); } catch (e) {}
@@ -3939,6 +3963,8 @@ const SND = (() => {
     for (let c = 0; c < 2; c++) { const ch = ir.getChannelData(c); for (let i = 0; i < L; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / L, 3.2); }
     verb = ac.createConvolver(); verb.buffer = ir; const vg = ac.createGain(); vg.gain.value = 0.32; verb.connect(vg); vg.connect(master);
     verbIn = verb;
+    gateM = ac.createGain(); gateM.gain.value = pref.m ? 1 : 0; gateM.connect(verbIn);
+    gateS = ac.createGain(); gateS.gain.value = pref.s ? 1 : 0; gateS.connect(verbIn);
     music.start();
   }
   // browsers only allow sound after the first tap or key press, so start on any gesture anywhere
@@ -3952,10 +3978,11 @@ const SND = (() => {
   function env(g, t, a, peak, dcy) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dcy); }
   function out(gain, pan, wet, bus) {
     const p = ac.createStereoPanner ? ac.createStereoPanner() : null;
-    if (p) { p.pan.value = clamp(pan, -1, 1); gain.connect(p); p.connect(bus); if (wet) p.connect(wetSend(wet)); }
+    if (p) { p.pan.value = clamp(pan, -1, 1); gain.connect(p); p.connect(bus); if (wet) p.connect(wetSend(wet, bus)); }
     else { gain.connect(bus); }
   }
-  function wetSend(w) { const g = ac.createGain(); g.gain.value = w; g.connect(verbIn); return g; }
+  // reverb sends pass through a gate per bus, so muting music or effects also mutes their echo
+  function wetSend(w, bus) { const g = ac.createGain(); g.gain.value = w; g.connect(bus === musBus ? gateM : gateS); return g; }
   function nz(t, dur, type, f, q, peak, a, pan, wet, bus = sfxBus, f2) {
     const s = ac.createBufferSource(); s.buffer = noise; s.playbackRate.value = 0.8 + Math.random() * 0.4;
     const fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.setValueAtTime(f, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur); fl.Q.value = q;
@@ -4553,7 +4580,8 @@ const SND = (() => {
   S.music = music;
   S.setPref = (k, v) => {
     pref[k] = v ? 1 : 0; save();
-    if (ac) { sfxBus.gain.setTargetAtTime(pref.s ? 0.8 : 0, now(), 0.05); musBus.gain.setTargetAtTime(pref.m ? 0.55 : 0, now(), 0.05); }
+    if (ac) { sfxBus.gain.setTargetAtTime(pref.s ? 0.8 : 0, now(), 0.05); musBus.gain.setTargetAtTime(pref.m ? 0.55 : 0, now(), 0.05);
+      gateM.gain.setTargetAtTime(pref.m ? 1 : 0, now(), 0.05); gateS.gain.setTargetAtTime(pref.s ? 1 : 0, now(), 0.05); }
   };
   S.reset = () => { heat = 0; lastHp = null; };
   return S;
