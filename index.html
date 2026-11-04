@@ -97,10 +97,10 @@ body.classic #grp2{flex-wrap:wrap;justify-content:center;max-width:100%;gap:3px}
 .cb .k{display:none}
 @media (hover:hover) and (pointer:fine){ .cb .k{display:inline;font-family:var(--mono);font-size:9px;color:var(--ink-dim);margin-left:3px} }
 
-#toast{left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 150px);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none;width:calc(100vw - 32px)}
-#toast div{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 12px;font-size:15px;font-weight:700;letter-spacing:.03em;animation:tin .25s ease-out;white-space:normal;text-align:center;max-width:calc(100vw - 32px);width:max-content}
+#toast{left:calc(env(safe-area-inset-left,0px) + 8px);top:var(--toastTop,90px);display:flex;flex-direction:column;align-items:flex-start;gap:3px;pointer-events:none;width:min(300px,calc(100vw - 180px))}
+#toast div{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:4px 9px;font-size:12.5px;font-weight:700;letter-spacing:.02em;animation:tin .25s ease-out;white-space:normal;text-align:left;max-width:100%;width:max-content;opacity:.92}
 #toast div.gold{border-color:var(--khaki);color:var(--khaki)}
-@media (max-width:760px){#toast{left:10px;right:158px;width:auto;transform:none;top:calc(env(safe-area-inset-top,0px) + 96px)}#toast div{font-size:13px;padding:5px 10px;max-width:100%;box-sizing:border-box}}
+@media (max-width:760px){#toast{width:min(260px,calc(100vw - 170px))}#toast div{font-size:12px;padding:4px 8px;max-width:100%;box-sizing:border-box}}
 #toast div.bad{border-color:var(--danger);color:var(--danger)}
 @keyframes tin{from{opacity:0;transform:translateY(-6px)}}
 @media (prefers-reduced-motion:reduce){#toast div{animation:none}}
@@ -421,6 +421,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div id="boardShare"></div>
     <p class="fine" id="boardNote"></p>
     <button class="go" id="boardAgain" hidden>Play again</button>
+    <button class="go ghost" id="boardMenu" hidden>Main menu</button>
     <button class="go" id="boardBack">Back</button>
   </div>
 </div>
@@ -456,7 +457,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b>, then pick who goes: the selected soldiers, the ones on screen, all but the general, the general on his own, or everyone. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
-    <section><h3>Level 9: the mystery weapon</h3><ul><li>The first army to reach <b>L9</b> gets a mystery weapon. It charges for 20 seconds while that army's general is alive, and then that army wins.</li><li>Everyone sees the countdown and where the general is. Kill him and the charge resets, and you get mercenaries and healers. It starts again when he is back from base. If he is already down when L9 is reached, it waits for him.</li><li>What the weapon is stays a surprise until it fires.</li></ul></section><section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> and moves up one age with each level: L1 <b>Stone Age</b> (slings), L2 <b>Bronze Age</b> (javelins, a chariot), L3 <b>Middle Ages</b> (bows, a castle, a horseman), L4 <b>Musket Age</b> (muskets, a star fort), L5 <b>World Wars</b> (rifles, a jeep, trenches), L6 <b>Modern Age</b> (assault rifles, a tank), L7 <b>Future</b> (lasers, a hover bike) and L8 <b>Space Age</b> (plasma, a mech walker).</li><li>The era is the look of each army's upgrades: stones, javelins, arrows and plasma fly for a moment before they land, bullets and lasers hit at once. So an enemy in a later age is an army several upgrades ahead of you.</li></ul></section>
+    <section><h3>Level 9: the Endgame</h3><ul><li>The first army to reach <b>L9</b> gets the Endgame, a black hole. It charges for 20 seconds while that army's general is alive, and then that army wins.</li><li>Everyone sees the countdown and where the general is. Kill him and the charge resets, and you get mercenaries and healers. It starts again when he is back from base. If he is already down when L9 is reached, it waits for him.</li><li>What the weapon is stays a surprise until it fires.</li></ul></section><section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> and moves up one age with each level: L1 <b>Stone Age</b> (slings), L2 <b>Bronze Age</b> (javelins, a chariot), L3 <b>Middle Ages</b> (bows, a castle, a horseman), L4 <b>Musket Age</b> (muskets, a star fort), L5 <b>World Wars</b> (rifles, a jeep, trenches), L6 <b>Modern Age</b> (assault rifles, a tank), L7 <b>Future</b> (lasers, a hover bike) and L8 <b>Space Age</b> (plasma, a mech walker).</li><li>The era is the look of each army's upgrades: stones, javelins, arrows and plasma fly for a moment before they land, bullets and lasers hit at once. So an enemy in a later age is an army several upgrades ahead of you.</li></ul></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
     <section><h3>Marks on your soldiers</h3><ul><li><b>Pale ring</b>: selected.</li><li><b>Bar underneath</b>: health, shown once a soldier is hurt.</li><li><b>Gold ring and arc</b>: mercenary. The arc shows how long they stay.</li><li><b>Green bubbles and dashed ring</b>: plague. It jumps to soldiers close by, so SPREAD out.</li><li><b>Dot above the head</b>: a crate effect. <b style="color:#ff9a3c">Orange</b> rapid fire, <b style="color:#6fd3ff">blue</b> sharpshooters, <b style="color:#9a9a9a">grey</b> orders lost, blinking <b style="color:#ff3b30">red</b> signal fire (the enemy can see you).</li><li>Your army level is the <b>L</b> number at the top left.</li></ul></section>
     <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: [ and ] to slow down or speed up time, \ for normal speed, shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, Z army (all but the general), I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
@@ -3044,13 +3045,6 @@ function buildWorld() {
     gr.addColorStop(0, "rgba(0,0,0,.55)"); gr.addColorStop(1, "rgba(0,0,0,0)");
     g.fillStyle = gr; g.beginPath(); g.arc(o.x + o.r * 0.25, o.y + o.r * 0.3, o.r * 1.6, 0, 7); g.fill();
   }
-  // map grid references, very faint
-  const step = 200;
-  g.strokeStyle = "rgba(233,229,211,.045)"; g.lineWidth = 1.5;
-  for (let x = 0; x <= S; x += step) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, S); g.stroke(); }
-  for (let y = 0; y <= S; y += step) { g.beginPath(); g.moveTo(0, y); g.lineTo(S, y); g.stroke(); }
-  g.fillStyle = "rgba(233,229,211,.13)"; g.font = "600 18px 'JetBrains Mono', monospace";
-  for (let cx = 0; cx * step < S; cx++) for (let cy = 0; cy * step < S; cy++) g.fillText(String.fromCharCode(65 + cx) + (cy + 1), cx * step + 8, cy * step + 22);
   g.restore();
 
   // rock sprites
@@ -3918,16 +3912,16 @@ function doomFx(e) {
   const me = G.human, mine = e.owner === me, P = G.players[e.owner], nm = P.team.name;
   if (e.k === "doomArm") {
     SND.doom("arm");
-    if (mine) { toast("Level 9! Mystery weapon armed. Keep your general alive for " + DOOM.charge + "s to win", "gold"); tip("doom", "Your mystery weapon charges while your general lives. Every enemy can see him now and will come for him. Guard him!"); }
-    else { toast(nm + " reached level 9! Kill their general before the mystery weapon fires", "bad"); tip("doomE", "When an army reaches level 9 its general carries a mystery weapon. Kill him before the countdown ends, or that army wins."); }
+    if (mine) { toast("Level 9! Endgame armed. Keep your general alive for " + DOOM.charge + "s to win", "gold"); tip("doom", "Your Endgame charges while your general lives. Every enemy can see him now and will come for him. Guard him!"); }
+    else { toast(nm + " reached level 9! Kill their general before their Endgame fires", "bad"); tip("doomE", "When an army reaches level 9 its general carries the Endgame. Kill him before the countdown ends, or that army wins."); }
   } else if (e.k === "doomGo") {
     if (e.fresh) return; SND.doom("arm");
-    toast(mine ? "Your general is back: the mystery weapon is charging" : nm + "'s mystery weapon is charging again!", mine ? "gold" : "bad");
+    toast(mine ? "Your general is back: the Endgame is charging" : nm + "'s Endgame is charging again!", mine ? "gold" : "bad");
   } else if (e.k === "doomStop") {
     SND.doom("stop");
-    if (mine) toast("Your general fell and the mystery weapon fizzled. It recharges when he's back", "bad");
-    else if (e.by === me) { toast("Mystery weapon stopped! Mercenaries and healers join you", "gold"); burst(e.x, e.y, "open"); }
-    else toast(nm + "'s mystery weapon was stopped");
+    if (mine) toast("Your general fell and the Endgame fizzled. It recharges when he's back", "bad");
+    else if (e.by === me) { toast("Endgame stopped! Mercenaries and healers join you", "gold"); burst(e.x, e.y, "open"); }
+    else toast(nm + "'s Endgame was stopped");
   } else if (e.k === "doomFire") {
     if (G.doomFire) G.doomFire.r0 = performance.now();
     $("toast").innerHTML = "";
@@ -3945,7 +3939,9 @@ function drawDoomMarks(c, z, now) {
       c.beginPath(); c.arc(g.x, g.y, 30 + pu * 6, 0, TAU); c.stroke();
       c.strokeStyle = "#ffd24a"; c.lineWidth = 4 / Math.max(z, 0.6); c.beginPath(); c.arc(g.x, g.y, 40, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.stroke();
       c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.25 + 0.25 * pu; c.strokeStyle = "rgba(255,80,60,1)"; c.lineWidth = 6 / Math.max(z, 0.6);
-      c.beginPath(); c.moveTo(g.x, g.y - 40); c.lineTo(g.x, g.y - 700); c.stroke(); c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
+      if (TILT.on) { const gx = g.x, gy = g.y, al = 0.25 + 0.25 * pu; STAND.push({ x: gx, y: gy + 1, al: 1, draw: (gg, P, k) => { const [x0, y0] = P(gx, gy, 30), [x1, y1] = P(gx, gy, 520); gg.globalCompositeOperation = "lighter"; gg.globalAlpha = al; gg.strokeStyle = "rgba(255,80,60,1)"; gg.lineWidth = 6 * k; gg.beginPath(); gg.moveTo(x0, y0); gg.lineTo(x1, y1); gg.stroke(); } }); }
+      else { c.beginPath(); c.moveTo(g.x, g.y - 40); c.lineTo(g.x, g.y - 700); c.stroke(); }
+      c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
       c.font = `900 ${Math.max(16, 15 / z)}px system-ui,sans-serif`; c.textAlign = "center"; c.textBaseline = "middle";
       c.lineWidth = 4 / Math.max(z, 0.6); c.strokeStyle = "rgba(0,0,0,.8)"; const txt = Math.ceil(d.t) + "s"; c.strokeText(txt, g.x, g.y - 56); c.fillStyle = "#ffd24a"; c.fillText(txt, g.x, g.y - 56);
     } else if (!d.on) {
@@ -3987,7 +3983,7 @@ function drawDoom() {
     let txt = null, mine = false, urgent = 0;
     for (const p of G.players) { const d = p.doom; if (!d || p.out) continue;
       const nm = p.id === G.human ? "Your" : p.team.name + "'s"; mine = p.id === G.human;
-      txt = d.on ? `${nm} mystery weapon fires in ${Math.ceil(d.t)}s · ${mine ? "keep your general alive!" : "kill their general!"}` : `${nm} mystery weapon arms when ${mine ? "your" : "their"} general returns`;
+      txt = d.on ? `${nm} Endgame fires in ${Math.ceil(d.t)}s · ${mine ? "keep your general alive!" : "kill their general!"}` : `${nm} Endgame arms when ${mine ? "your" : "their"} general returns`;
       urgent = d.on ? 1 - d.t / DOOM.charge : 0; if (d.on) break; }
     if (!txt) return;
     c.font = "800 13px system-ui,sans-serif"; const w = Math.min(SW - 24, c.measureText(txt).width + 34), x = SW / 2, y = 78, pu = 0.5 + 0.5 * Math.sin(now * (4 + urgent * 10));
@@ -4570,6 +4566,7 @@ function renderScore() {
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
   const t = Math.floor(G.time), mm = String(Math.floor(t / 60)).padStart(2, "0"), ss = String(t % 60).padStart(2, "0");
   $("clock").textContent = mm + ":" + ss;
+  if (el._tb !== html) { const sb = el.getBoundingClientRect(); if (sb.height) { el._tb = html; document.documentElement.style.setProperty("--toastTop", Math.round(sb.bottom + 6) + "px"); } }
 }
 
 // ======================================================================
@@ -4972,7 +4969,14 @@ const SND = (() => {
     else if (k === "stop") { tone(t, "sawtooth", 700, 60, 0.9, 0.12, 0.01, 0, 0.3); nz(t, 0.5, "lowpass", 800, 0.7, 0.2, 0.01, 0, 0.3); }
     else if (k === "fire") {
       if (w === 0) for (let i = 0; i < 6; i++) { const q = t + 0.3 + i * 0.7; tone(q, "sawtooth", 520, 380, 0.22, 0.14, 0.01, 0, 0.3); tone(q, "square", 1040, 700, 0.18, 0.04, 0.01, 0, 0.3); tone(q + 0.35, "sine", 70, 40, 0.3, 0.4, 0.005, 0, 0.2); }
-      else if (w === 1) { tone(t, "sine", 220, 28, 4, 0.5, 0.3, 0, 0.5); nz(t, 4, "lowpass", 400, 0.9, 0.4, 1.2, 0, 0.6, sfxBus, 60); }
+      else if (w === 1) { // black hole: a growing drone and a pull of air for ~6.5s, a sharp inhale, then the base-shattering boom and the crumble
+        tone(t, "sine", 62, 31, 6.6, 0.42, 1.5, 0, 0.5); tone(t, "sine", 64, 32.5, 6.6, 0.3, 1.8, 0, 0.5); tone(t + 0.5, "triangle", 124, 58, 6, 0.08, 2, 0, 0.6);
+        for (let i = 0; i < 5; i++) tone(t + 0.8 + i * 1.1, "sine", 420 - i * 40, 180 - i * 20, 1.4, 0.035, 0.4, i % 2 ? 0.5 : -0.5, 0.8);
+        nz(t, 6.6, "bandpass", 2400, 1.4, 0.22, 3, 0, 0.6, sfxBus, 160); nz(t + 1, 5.8, "lowpass", 220, 0.8, 0.35, 2.5, 0, 0.4, sfxBus, 70);
+        nz(t + 6.45, 0.55, "highpass", 900, 0.7, 0.35, 0.4, 0, 0.3, sfxBus, 3500);
+        const b = t + 7; tone(b, "sine", 95, 24, 1.8, 0.75, 0.005, 0, 0.4); tone(b, "square", 60, 30, 0.35, 0.12, 0.005, 0, 0.3, sfxBus, 400);
+        nz(b, 2.6, "lowpass", 1400, 0.7, 0.8, 0.005, 0, 0.6, sfxBus, 70); nz(b + 0.2, 3, "bandpass", 600, 0.9, 0.18, 0.3, 0, 0.7, sfxBus, 150);
+        for (let i = 0; i < 9; i++) nz(b + 0.6 + i * 0.28 + Math.random() * 0.15, 0.25, "bandpass", 300 + Math.random() * 500, 2, 0.08, 0.01, Math.random() * 1.4 - 0.7, 0.5); }
       else if (w === 2) { for (let i = 0; i < 10; i++) tone(t + i * 0.4, "sine", 380 + (i % 2) * 160, 380 + ((i + 1) % 2) * 160, 0.45, 0.12, 0.05, 0, 0.6); tone(t, "sawtooth", 55, 55, 4, 0.08, 0.5, 0, 0.4); }
       else for (let i = 0; i < 16; i++) { const q = t + 0.4 + i * 0.22 + Math.random() * 0.1, f = 700 + Math.random() * 400; tone(q, "triangle", f, f * 0.7, 0.12, 0.12, 0.005, Math.random() * 1.6 - 0.8, 0.2); }
     }
@@ -5461,7 +5465,7 @@ const TUT = (() => {
       at: () => crate && G.crates.includes(crate) ? crate : null, ok: () => crate && !G.crates.includes(crate) },
     { x: 1, t: "Expert extras", b: "Drag from a squad letter across the map to draw a route. FORM switches between box, line (better aim standing still) and wedge (faster, hits hard on contact). RALLY sets where respawned soldiers gather. GUARD puts soldiers in a ring around the general, so he takes 15% less damage.", next: true },
     { t: "Through the ages", b: "Each army level moves your side through history: Stone Age, Bronze Age, Middle Ages, Muskets, World Wars, Modern, Future and Space. Weapons, generals and bases change as you go. Try the 3D view in Settings to see them up close.", next: true },
-    { t: "The mystery weapon", b: "At level 9 a mystery weapon starts charging. Keep your general alive for 20 seconds and it wipes out every enemy base. If an enemy gets there first, hunt down their general: killing him resets the charge and earns you reinforcements.", next: true },
+    { t: "The Endgame", b: "At level 9 the Endgame starts charging. Keep your general alive for 20 seconds and it wipes out every enemy base. If an enemy gets there first, hunt down their general: killing him resets the charge and earns you reinforcements.", next: true },
     { t: "The minimap", b: "Tap or drag on the minimap to jump anywhere. Your fog of war clears wherever your soldiers can see.", el: "#mini", hand: "tap", ok: () => flags.mini },
     { t: "Your mission", b: "Find and destroy every enemy base. Each kill is a point, and every upgrade makes your whole army tougher and deadlier. Bigger, tougher enemies score more on the leaderboard. Good luck!", next: true, last: true }
   ];
@@ -5839,7 +5843,7 @@ async function showBoard(diff, mine) {
   // straight from a battle: bring the share buttons along, and offer another round
   const fromOver = boardFrom === "over";
   if (fromOver && !$("boardShare").contains($("sharebox"))) $("boardShare").appendChild($("sharebox"));
-  $("boardAgain").hidden = !fromOver; $("boardBack").className = fromOver ? "go ghost" : "go"; $("boardBack").textContent = fromOver ? "Battle report" : "Back";
+  $("boardAgain").hidden = !fromOver; $("boardMenu").hidden = !fromOver; $("boardBack").className = fromOver ? "go ghost" : "go"; $("boardBack").textContent = fromOver ? "Battle report" : "Back";
   $("menu").hidden = true; $("over").hidden = true; $("board").hidden = false;
   $("boardTabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.v === boardDiff));
   $("boardSrc").textContent = LB.url ? "Public leaderboard · everyone's best" : "Leaderboard · this device";
@@ -5859,6 +5863,7 @@ $("boardBtn").addEventListener("click", () => showBoard(0));
 function boardHome() { if ($("boardShare").contains($("sharebox"))) $("againBtn").before($("sharebox")); }
 $("boardBack").addEventListener("click", () => { boardHome(); $("board").hidden = true; if (boardFrom === "over") $("over").hidden = false; else $("menu").hidden = false; });
 $("boardAgain").addEventListener("click", () => { boardHome(); $("board").hidden = true; $("againBtn").click(); });
+$("boardMenu").addEventListener("click", () => { SND.ui(); boardHome(); $("board").hidden = true; toMenu(); });
 
 // after the battle: the whole map is revealed and the player can look around before the score screen
 const statTable = L => `<dl class="stt">${L.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
@@ -5888,6 +5893,7 @@ $("epScore").addEventListener("click", () => { SND.ui(); leaveReview(); showOver
 function showOver() {
   leaveReview();
   if (G.tutorial) { toMenu(); return; }
+  document.body.classList.add("ended"); // keep the battle controls hidden behind the score screens
   UI.paused = true;
   const me = G.players[G.human];
   $("overTitle").textContent = G.over.win ? "Victory" : "Defeated";
@@ -5971,7 +5977,7 @@ $("overAbout").addEventListener("click", () => openAbout("over"));
 $("aboutBack").addEventListener("click", () => { $("about").hidden = true; $(aboutFrom).hidden = false; });
 $("tutBtn").addEventListener("click", () => TUT.start());
 $("howTut").addEventListener("click", () => TUT.start());
-const toMenu = () => { TUT.stop(); reportKills(); loadCounters(); $("pause").hidden = true; $("over").hidden = true; $("menu").hidden = false; showBest(); startAttract(); };
+const toMenu = () => { document.body.classList.remove("ended"); TUT.stop(); reportKills(); loadCounters(); $("pause").hidden = true; $("over").hidden = true; $("menu").hidden = false; showBest(); startAttract(); };
 $("quitBtn").addEventListener("click", toMenu);
 $("menuBtn").addEventListener("click", toMenu);
 document.addEventListener("visibilitychange", () => { if (document.hidden && G && !UI.paused && !G.over) togglePause(); });
