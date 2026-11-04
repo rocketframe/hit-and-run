@@ -398,7 +398,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <section><h3>Your army</h3><p>Your soldiers come in squads A, B and C, plus one general (the star). Fallen soldiers respawn at your base after a few seconds, and the general takes longer. Out of combat, everyone slowly patches up.</p></section>
     <section><h3>The general</h3><p>He sees and shoots much further than infantry, is a little faster, and has ten times the health. Soldiers near him hit 30% harder. Use him for sneaky long-range shots, and don't lose him.</p></section>
     <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
-    <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li><b>ALL</b> picks everyone, general included. <b>ARMY</b> picks every soldier but leaves the general where he is.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li>With Basic controls, soldiers stop to fight any enemy they spot, then carry on to where you sent them. With Expert controls you choose: switch <b>RUN &amp; GUN</b> (move and shoot on the way) to <b>ENGAGE</b> (stop to chase anything they see).</li></ul></section>
+    <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick their squad.</li><li><b>ALL</b> picks everyone, general included. <b>ARMY</b> picks every soldier but leaves the general where he is.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li>With Basic controls, soldiers stop to fight any enemy their group spots, then carry on to where you sent them. With Expert controls you choose: <b>RUN &amp; GUN</b> keeps going and shoots whatever is in reach on the way; <b>ENGAGE</b> stops, and when anyone in the group spots an enemy the whole group closes in and fights until it's gone.</li><li><b>Press and hold</b> the map: let go to make your soldiers run there (a few seconds, then they need to get their breath back), or drag to box-select. Hold on an enemy to make everyone you picked shoot at it, for example their general.</li></ul></section>
     <section><h3>Basic and Expert controls</h3><p>The game starts with <b>Basic</b> controls: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. That is all you need to win. Soldiers fight any enemy they spot and spread out on their own when plague hits, and missions join after your first 3 battles.</p><p>Turn on <b>Expert</b> in Settings for formations, drawn routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. Sections marked <span class="xp">Expert</span> below need it.</p></section>
     <section><h3>Picking exactly who you want <span class="xp">Expert</span></h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, a medkit, rapid fire, sniper rounds, a recon flare that lifts the fog, camouflage, or an airstrike you aim with <b>STRIKE</b>). Some are bad (plague that spreads between soldiers standing close, a booby trap, a jammed radio, a flare that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
@@ -715,8 +715,9 @@ function applyCmd(c) {
     let bi = 0, bd = 1e18; free.forEach((q, i) => { const dd = (u.x - uc.x - (q.x - cs.x)) ** 2 + (u.y - uc.y - (q.y - cs.y)) ** 2; if (dd < bd) { bd = dd; bi = i; } });
     pick.set(u, free[bi]); free.splice(bi, 1);
   }
+  const gid = G.grpN = (G.grpN || 0) + 1;
   us.forEach(u => {
-    let x, y;
+    let x, y; u.grp = gid;
     if (u.kind === "gen" && hasGen) ({ x, y } = genSlot); else ({ x, y } = pick.get(u));
     u.fdx = fx; u.fdy = fy;
     if (!c.keep || true) { u.escort = false; }
@@ -1207,6 +1208,9 @@ function step() {
     }
   }
 
+  // shared spotting: what anyone in a group sees, the whole group knows about (attack-move pulls the back rows in)
+  const spot = new Map();
+  for (const u of G.units) if (u.alive && u.seen && u.seen.alive !== false) { const k = u.grp || (50000 + u.owner * 100 + (u.squad | 0)); let a = spot.get(k); if (!a) spot.set(k, a = []); if (!a.includes(u.seen)) a.push(u.seen); }
   // per-unit: scan, move
   for (const u of G.units) {
     if (!u.alive) continue;
@@ -1220,9 +1224,15 @@ function step() {
     if (u.path && u.path.length && (u.x - u.tx) ** 2 + (u.y - u.ty) ** 2 < 14 * 14) { const q = u.path.shift(), pt = pushOutOfRocks(clamp(q.x, 10, G.S - 10), clamp(q.y, 10, G.S - 10), 9); u.tx = pt.x; u.ty = pt.y; }
     let gx = u.tx, gy = u.ty, stopAt = 3;
     // Basic controls: soldiers on a move order engage on their own when they spot an enemy
-    if ((u.mode === "attack" || (u.mode === "move" && G.players[u.owner].autoEngage && !u.escort && !u.mis)) && u.seen) {
-      gx = u.seen.x; gy = u.seen.y;
-      stopAt = (u.seen.isBase ? rangeOf(u) + u.seen.r - 14 : rangeOf(u) * 0.8);
+    const engages = u.mode === "attack" || (u.mode === "move" && G.players[u.owner].autoEngage && !u.escort && !u.mis);
+    let foe = engages ? u.seen : null;
+    if (engages && !foe && !u.run) { // nobody in my own sight: go help whoever in my group has found one nearby
+      const a = spot.get(u.grp || (50000 + u.owner * 100 + (u.squad | 0)));
+      if (a) { let bd = 480 * 480; for (const v of a) { if (v.isBase ? !v.alive : !v.alive) continue; const dd = d2(u, v); if (dd < bd) { bd = dd; foe = v; } } }
+    }
+    if (foe) {
+      gx = foe.x; gy = foe.y;
+      stopAt = (foe.isBase ? rangeOf(u) + foe.r - 14 : rangeOf(u) * 0.8);
     }
     if (u.focus) { gx = u.focus.x; gy = u.focus.y; stopAt = rangeOf(u) * 0.8; }
     const dx = gx - u.x, dy = gy - u.y, dist = Math.hypot(dx, dy);
@@ -3603,7 +3613,7 @@ const TUT = (() => {
     { t: "Pick a squad", b: "Tap A to select squad A. Selected soldiers get a ring.", el: '[data-sel="0"]', hand: "tap", ok: () => UI.selKey === "0" },
     { t: "Give an order", b: "Now tap open ground where you want them to go. A tap on the same squad button twice finds them on the map.", hand: "tap", at: () => front(330), enter() { base0 = UI.orderN || 0; }, ok: () => (UI.orderN || 0) > base0 },
     { t: "Whole army", b: "Tap ALL to select everyone, general included. ARMY picks every soldier but leaves the general where he is.", el: '[data-sel="all"]', hand: "tap", ok: () => UI.selKey === "all" },
-    { x: 1, t: "Two kinds of orders", b: "RUN & GUN moves to the spot and shoots on the way. ENGAGE stops to chase and fight anything it sees. Tap it to switch to ENGAGE.", el: "#modeBtn", hand: "tap", ok: () => UI.mode === "attack" },
+    { x: 1, t: "Two kinds of orders", b: "RUN & GUN keeps moving and shoots on the way. ENGAGE stops, and the whole group closes in on any enemy one of them spots. Tap it to switch to ENGAGE.", el: "#modeBtn", hand: "tap", ok: () => UI.mode === "attack" },
     { t: "Enemy scouts!", b: "Red soldiers ahead. With your army selected, tap right on them to attack.", hand: "tap",
       enter() { const a = myAlive().filter(u => u.kind === "inf"), f = G.players[G.human].fwd, cx = a.reduce((s, u) => s + u.x, 0) / a.length, cy = a.reduce((s, u) => s + u.y, 0) / a.length;
         const p = pushOutOfRocks(clamp(cx + f.x * 240, 60, G.S - 60), clamp(cy + f.y * 240, 60, G.S - 60), 30); scouts = spawnRed(4, p.x, p.y, 14); },

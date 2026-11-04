@@ -1,0 +1,33 @@
+{
+ "diff": 2,
+ "perVariant": 16,
+ "sum": {
+  "basic": {
+   "games": 16,
+   "winRate": 0,
+   "ci95": 0,
+   "timeouts": 1,
+   "avgWinSecs": null,
+   "kd": 0.33,
+   "genDeaths": 13.06
+  },
+  "engage": {
+   "games": 16,
+   "winRate": 12.5,
+   "ci95": 16.2,
+   "timeouts": 12,
+   "avgWinSecs": 496,
+   "kd": 0.71,
+   "genDeaths": 11.5
+  },
+  "auto": {
+   "games": 16,
+   "winRate": 6.3,
+   "ci95": 11.9,
+   "timeouts": 7,
+   "avgWinSecs": 1146,
+   "kd": 0.69,
+   "genDeaths": 12.25
+  }
+ }
+}
