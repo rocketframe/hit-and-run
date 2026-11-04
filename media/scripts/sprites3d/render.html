@@ -16,7 +16,7 @@ window.renderAtlas = async (opts) => {
   root.scale.multiplyScalar(k); const b2 = new THREE.Box3().setFromObject(root), ctr = b2.getCenter(new THREE.Vector3()); root.position.x -= ctr.x; root.position.z -= ctr.z; root.position.y -= b2.min.y;
   if (opts.yaw) root.rotation.y = opts.yaw;
   root.traverse(o => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; if (opts.tint) o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone(); const ms = Array.isArray(o.material) ? o.material : [o.material];
-    for (const m of ms) { if (opts.tint) for (const [rx, hex] of Object.entries(opts.tint)) if (new RegExp(rx, "i").test(m.name) || new RegExp(rx, "i").test(o.name)) { m.color = new THREE.Color(hex); if (m.map && opts.tintMap === false) m.map = null; } } } });
+    for (const m of ms) { if (opts.tint) for (const [rx, hex] of Object.entries(opts.tint)) if (new RegExp(rx, "i").test(m.name) || new RegExp(rx, "i").test(o.name)) { m.color = new THREE.Color(hex); m.vertexColors = false; m.needsUpdate = true; if (m.map && opts.tintMap === false) m.map = null; } } } });
   await new Promise(r => setTimeout(r, opts.wait || 0));
   const scene = new THREE.Scene(), holder = new THREE.Group(); holder.add(root); scene.add(holder);
   // optional prop held between the hands (rifle): origin at the right hand, barrel pointing at the left hand
@@ -30,13 +30,15 @@ window.renderAtlas = async (opts) => {
   if (opts.props) for (const P of opts.props) { let bn = null; root.traverse(o => { if (!bn && o.isBone && new RegExp(P.bone).test(o.name)) bn = o; }); if (!bn) { console.log("no bone", P.bone); continue; }
     root.updateMatrixWorld(true); const ws = new THREE.Vector3(); bn.getWorldScale(ws); const g = procProp(P.proc); g.scale.setScalar(1 / ws.x); if (P.at) g.position.set(P.at[0] / ws.x, P.at[1] / ws.x, P.at[2] / ws.x); if (P.rot) g.rotation.set(...P.rot); bn.add(g); }
   // seated rider on a vehicle: { model, height, at: [x, y, z], yaw, idle: anim index, pose: { boneRegex: [rx, ry, rz] } }
+  let riderBone = null, riderOff = null, riderAt = null, riderB0 = null;
+  let pinBone = null, pin0 = null; if (opts.pin) root.traverse(o => { if (!pinBone && o.isBone && new RegExp(opts.pin).test(o.name)) pinBone = o; });
   if (opts.rider) { const R = opts.rider, rb = await load(R.model), rr = rb.scene || rb; const bx = new THREE.Box3().setFromObject(rr), bs = bx.getSize(new THREE.Vector3()); rr.scale.multiplyScalar(R.height / bs.y);
     const rm = new THREE.AnimationMixer(rr); if (R.idle != null && rb.animations[R.idle]) { rm.clipAction(rb.animations[R.idle]).play(); rm.setTime(R.t || 0); }
     rr.updateMatrixWorld(true); const b3 = new THREE.Box3().setFromObject(rr), c3 = b3.getCenter(new THREE.Vector3()); rr.position.x -= c3.x; rr.position.z -= c3.z; rr.position.y -= b3.min.y;
     const pv = new THREE.Group(); pv.add(rr); if (R.yaw) pv.rotation.y = R.yaw;
     if (R.pose) for (const [rx, e] of Object.entries(R.pose)) rr.traverse(o => { if (o.isBone && new RegExp(rx).test(o.name)) o.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...e))); });
-    if (R.hide) rr.traverse(o => { if (new RegExp(R.hide).test(o.name)) o.visible = false; });
-    const off = new THREE.Group(); off.add(pv); off.position.set(...(R.at || [0, 0, 0])); root.parent.add(off); root.userData.rider = off; }
+    if (R.hide) rr.traverse(o => { const mn = o.material ? [].concat(o.material).map(m => m.name).join(" ") : ""; if (new RegExp(R.hide).test(o.name) || (o.isMesh && new RegExp(R.hide).test(mn))) o.visible = false; });
+    const off = new THREE.Group(); off.add(pv); off.position.set(...(R.at || [0, 0, 0])); root.parent.add(off); root.userData.rider = off; if (R.bone) { root.traverse(o => { if (!riderBone && o.isBone && new RegExp(R.bone).test(o.name)) riderBone = o; }); riderOff = off; riderAt = new THREE.Vector3(...(R.at || [0, 0, 0])); } }
   // waving cloth: { mesh: regex for the cloth, pole: regex for the pole, amp (fraction of the cloth length), waves }
   let wave = null;
   if (opts.wave) { const W = opts.wave; let cl = null, po = null; root.traverse(o => { if (o.isMesh && new RegExp(W.mesh).test(o.name)) cl = o; if (o.isMesh && new RegExp(W.pole).test(o.name)) po = o; });
@@ -84,7 +86,7 @@ window.renderAtlas = async (opts) => {
       for (let f = 0; f < c.frames; f++) { if (act) { mixer.setTime(((c.t0 || 0) + (c.loop === false ? f / Math.max(1, c.frames - 1) : f / c.frames) * (c.span || 1)) * dur); }
         if (opts.inPlace !== false) root.traverse(o => { if (o.isBone && !o.parent.isBone) { o.position.x = o.userData.x0 ?? (o.userData.x0 = o.position.x); o.position.z = o.userData.z0 ?? (o.userData.z0 = o.position.z); } });
         if (c.rock) { const ph = f / c.frames * Math.PI * 2; root.userData.y0 ??= root.position.y; root.rotation.x = c.rock[0] * Math.sin(ph); root.position.y = root.userData.y0 + c.rock[1] * Math.abs(Math.sin(ph)); if (c.rock[2]) root.rotation.z = c.rock[2] * Math.sin(ph); }
-        doWave(f / c.frames * Math.PI * 2); placeProp(); rnd.render(scene, cam); ag.drawImage(rnd.domElement, f * S, r * S);
+        doWave(f / c.frames * Math.PI * 2); if (pinBone) { root.position.x = root.position.z = 0; scene.updateMatrixWorld(true); const pp = root.parent.worldToLocal(new THREE.Vector3().setFromMatrixPosition(pinBone.matrixWorld)); if (!pin0) pin0 = new THREE.Vector3(); root.position.x -= (pp.x - pin0.x) / (root.parent.scale.x || 1); root.position.z -= (pp.z - pin0.z) / (root.parent.scale.z || 1); } placeProp(); if (riderBone) { scene.updateMatrixWorld(true); const bp = riderOff.parent.worldToLocal(new THREE.Vector3().setFromMatrixPosition(riderBone.matrixWorld)); if (!riderB0) riderB0 = bp.clone(); riderOff.position.copy(riderAt).add(bp.sub(riderB0)); } rnd.render(scene, cam); ag.drawImage(rnd.domElement, f * S, r * S);
         if (mg) { for (const [o, , m] of swaps) o.material = m; rnd.render(scene, cam); mg.drawImage(rnd.domElement, f * S, r * S); for (const [o, m0] of swaps) o.material = m0; } }
       r++;
     }
