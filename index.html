@@ -1742,6 +1742,9 @@ function model3(era, kind, pid) {
   }
   return M.t[pid];
 }
+// fog over standing terrain (rocks, base pieces): same strength as the flat fog layer, 0 clear .. ~0.95 unexplored
+const fogAt = (x, y) => { if (!G || G.attract || G.doomFire || !G.soft) return 0; const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return 0; const i = cy * G.gw + cx; if (G.seaMask && G.seaMask[i]) return 0; return (G.explored[i] ? 150 : 242) / 255 * (1 - G.soft[i] / 255); };
+const darkOf = cv => cv.dk || (cv.dk = (() => { const d = document.createElement("canvas"); d.width = cv.width; d.height = cv.height; const g = d.getContext("2d"); g.drawImage(cv, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = "rgb(10,13,16)"; g.fillRect(0, 0, d.width, d.height); return d; })());
 const STAND = [], FALL3 = []; // FALL3: soldiers falling over in the 3D view (model sprites with a die clip)
 function drawStanding() {
   const c = ctx, s = Math.sin(TILT.th);
@@ -1762,7 +1765,8 @@ function drawStanding() {
     if (q.bb) { // upright billboard, feet on the ground, mirrored to face its way on screen
       const sc = q.sc || 1, w = q.bb.bw * k * sc, h = q.bb.bh * k * sc; let fl = false;
       if (q.u) { const dx = p1.x - p0.x; if (Math.abs(dx) > 0.15 * Math.hypot(dx, p1.y - p0.y)) q.u.flip = dx < 0; fl = !!q.u.flip; } // keep the last side when walking straight up or down the screen
-      c.globalAlpha = q.al; c.save(); c.translate(p0.x, p0.y - (q.hov || 0) * k); if (fl) c.scale(-1, 1); c.drawImage(q.bb, -w / 2, -h, w, h); c.restore(); continue; }
+      const fa = q.fog ? fogAt(q.x, q.y) : 0; if (fa > 0.9) continue; const ay = q.bb.ay || 1;
+      c.globalAlpha = q.al; c.save(); c.translate(p0.x, p0.y - (q.hov || 0) * k); if (fl) c.scale(-1, 1); c.drawImage(q.bb, -w / 2, -h * ay, w, h); if (fa > 0.02) { c.globalAlpha = q.al * fa; c.drawImage(darkOf(q.bb), -w / 2, -h * ay, w, h); } c.restore(); continue; }
     const sz = q.sz * k, lift = (2.5 + q.hov) * k;
     c.globalAlpha = q.al; c.save(); c.translate(p0.x, p0.y - lift); c.rotate(Math.atan2(p1.y - p0.y, p1.x - p0.x)); c.drawImage(q.img, -sz / 2, -sz / 2, sz, sz); c.restore();
   }
@@ -3332,7 +3336,7 @@ function render(dtReal) {
     const E = SPR.team[p.id].eras[eraOf(p.id)], BB = c !== ctx && E.bb, S = BB ? BB.ground : E.fort;
     c.globalAlpha = ghost ? 0.5 : 1;
     c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
-    if (BB) for (const v of BB.pieces) STAND.push({ bb: v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha });
+    if (BB) for (const v of BB.pieces) STAND.push({ bb: v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
     if (!ghost) {
       // turret (the 3D village has no gun to show)
       if (!BB) { c.save(); c.translate(b.x, b.y); c.rotate(b.aim || -Math.PI / 4);
@@ -3361,7 +3365,7 @@ function render(dtReal) {
   for (const o of G.rocks) {
     if (!inView(o.x, o.y)) continue;
     const s = o.spr.size; c.drawImage(o.spr, o.x - s / 2, o.y - s / 2, s, s);
-    if (c !== ctx) STAND.push({ bb: o.bb3 || (o.bb3 = boulder3(o)), x: o.x, y: o.y + o.r * 0.35, al: 1 });
+    if (c !== ctx) STAND.push({ bb: o.bb3 || (o.bb3 = boulder3(o)), x: o.x, y: o.y + o.r * 0.35, al: 1, fog: true });
   }
 
   // selection rings + shadows
