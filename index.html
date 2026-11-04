@@ -419,6 +419,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) via Poly Pizza · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -1718,6 +1719,25 @@ function scr2flat(x, y) { if (!TILT.on) return { x, y }; const v = tvOf(y - SH *
 function flat2scr(x, y) { if (!TILT.on) return { x, y }; const v = y - H / 2, d = TILT.p - v * Math.sin(TILT.th), f = d / TILT.p; return { x: SW / 2 + (x - W / 2) / f, y: SH * TILT.oy + v * Math.cos(TILT.th) * TILT.p / d }; }
 const w2scr = (x, y) => flat2scr((x - cam.x) * cam.z + W / 2, (y - cam.y) * cam.z + H / 2);
 // 3D view: soldiers are drawn after the tilt, upright, so they stand on the board instead of lying flat on it
+// ---- 3D view: sprites pre-rendered from real 3D models (media/scripts/sprites3d in the repo). Until they load, the drawn art stands in.
+// clips: name -> [block, frames]; atlas row = block * dirs + direction (0 = facing screen right, then clockwise in 45° steps)
+const MODEL3 = {
+  4: { inf: { src: "sprites/ww-inf.png", mask: "sprites/ww-inf-mask.png", S: 112, fx: 56, fy: 103.6, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4] } },
+       gen: { src: "sprites/ww-gen.png", S: 160, fx: 80, fy: 137.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, flag: true } },
+};
+function model3(era, kind, pid) {
+  const M = MODEL3[era] && MODEL3[era][kind]; if (!M) return null;
+  if (!M.st) { M.st = 1; M.t = {}; const im = new Image(), mk = M.mask ? new Image() : null; let n = mk ? 2 : 1; const done = () => { if (--n === 0) M.st = 2; };
+    im.onload = done; im.onerror = () => { M.st = 3; }; im.src = M.src; M.img = im; if (mk) { mk.onload = done; mk.onerror = () => { M.st = 3; }; mk.src = M.mask; M.mk = mk; } }
+  if (M.st !== 2) return null;
+  if (!M.t[pid]) { // tint the team parts in this player's colour, keeping the shading
+    const cv = document.createElement("canvas"); cv.width = M.img.width; cv.height = M.img.height; const g = cv.getContext("2d"); g.drawImage(M.img, 0, 0);
+    if (M.mk) { const t = document.createElement("canvas"); t.width = cv.width; t.height = cv.height; const tg = t.getContext("2d"); tg.drawImage(M.mk, 0, 0); tg.globalCompositeOperation = "source-in"; tg.fillStyle = G.players[pid].team.c; tg.fillRect(0, 0, t.width, t.height);
+      g.globalCompositeOperation = "color"; g.drawImage(t, 0, 0); g.globalCompositeOperation = "destination-in"; g.drawImage(M.img, 0, 0); }
+    M.t[pid] = { cv, M, c: G.players[pid].team.c };
+  }
+  return M.t[pid];
+}
 const STAND = [];
 function drawStanding() {
   const c = ctx, s = Math.sin(TILT.th);
@@ -1727,6 +1747,11 @@ function drawStanding() {
     const fx = (q.x - cam.x) * cam.z + W / 2, fy = (q.y - cam.y) * cam.z + H / 2, f = (TILT.p - (fy - H / 2) * s) / TILT.p, k = cam.z / f;
     const p0 = flat2scr(fx, fy), p1 = flat2scr(fx + Math.cos(q.a) * 10, fy + Math.sin(q.a) * 10);
     if (p0.x < -60 || p0.x > SW + 60 || p0.y < -60 || p0.y > SH + 60) continue;
+    if (q.atl) { const A = q.atl.M, sc = A.wpp * A.k * k, w = A.S * sc, x0 = p0.x - A.fx * sc, y0 = p0.y - A.fy * sc - (q.hov || 0) * k;
+      c.globalAlpha = q.al; c.drawImage(q.atl.cv, q.col * A.S, q.row * A.S, A.S, A.S, x0, y0, w, w);
+      if (q.fl) { c.globalCompositeOperation = "lighter"; c.globalAlpha = q.al * 0.5; c.drawImage(q.atl.cv, q.col * A.S, q.row * A.S, A.S, A.S, x0, y0, w, w); c.globalCompositeOperation = "source-over"; }
+      if (A.flag) { const fx = p0.x - 6 * k, fy = p0.y - A.fy * sc * 0.62; c.globalAlpha = q.al; c.strokeStyle = "#222"; c.lineWidth = Math.max(1, 0.8 * k); c.beginPath(); c.moveTo(fx, fy); c.lineTo(fx, fy - 26 * k); c.stroke(); c.fillStyle = q.atl.c; c.beginPath(); c.moveTo(fx, fy - 26 * k); c.lineTo(fx + 12 * k, fy - 22 * k); c.lineTo(fx, fy - 18 * k); c.fill(); }
+      continue; }
     if (q.bb) { // upright billboard, feet on the ground, mirrored to face its way on screen
       const sc = q.sc || 1, w = q.bb.bw * k * sc, h = q.bb.bh * k * sc; let fl = false;
       if (q.u) { const dx = p1.x - p0.x; if (Math.abs(dx) > 0.15 * Math.hypot(dx, p1.y - p0.y)) q.u.flip = dx < 0; fl = !!q.u.flip; } // keep the last side when walking straight up or down the screen
@@ -3361,6 +3386,9 @@ function render(dtReal) {
     const bob = u.moving ? Math.sin(now * 14 + u.id) * 0.6 : 0;
     if (u.camo > G.time) c.globalAlpha = 0.45;
     if (u.mis) drawMisUnit(c, u, T, now);
+    else if (c !== ctx && model3(eraOf(u.owner), gen ? "gen" : "inf", u.owner)) { const A = model3(eraOf(u.owner), gen ? "gen" : "inf", u.owner), M = A.M, sa = G.time - (u.shotAt == null ? -99 : u.shotAt), a = u.moving && u.walk != null && sa > 0.36 ? u.walk : u.face;
+      const dir = ((Math.round((a || 0) / (TAU / M.dirs)) % M.dirs) + M.dirs) % M.dirs, cl = M.clips, [blk, nf, f] = cl.fire && sa < 0.36 ? [...cl.fire, Math.min(cl.fire[1] - 1, Math.floor(sa / 0.09))] : cl.walk && u.moving ? [...cl.walk, Math.floor(now * 10 + u.id * 0.37) % cl.walk[1]] : cl.aim ? [...cl.aim, 0] : [...(cl.idle || [0, 1]), 0];
+      STAND.push({ atl: A, col: f, row: blk * M.dirs + dir, x: u.x, y: u.y, al: c.globalAlpha, fl: u.flash > 0, hov: gen && T.hover ? 3 : 0 }); }
     else if (c !== ctx && T.bb) { const sa = G.time - (u.shotAt == null ? -99 : u.shotAt), fr = sa < 0.09 ? FIG_A : sa < 0.24 ? FIG_A + 1 : sa < 0.5 || (u.tgt && !u.moving) ? FIG_A + 2 : u.moving ? 1 + (Math.floor(now * 11 + u.id * 0.37) % FIG_N) : 0, set = u.flash > 0 ? (gen ? T.bb.genW : T.bb.infW) : (gen ? T.bb.gen : T.bb.inf); STAND.push({ bb: set[fr], sc: gen ? 1.1 : 1.25, x: u.x, y: u.y, a: u.moving && u.walk != null && fr < FIG_A ? u.walk : u.face, u, al: c.globalAlpha, hov: gen && T.hover ? 3 + Math.sin(now * 3 + u.id) * 1.2 : 0 }); }
     else if (c !== ctx) STAND.push({ img, x: u.x, y: u.y + bob, a: u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), sz: gen ? (T.genSz || 44) : 28, al: c.globalAlpha, hov: gen && T.hover ? 3 + Math.sin(now * 3 + u.id) * 1.2 : 0 });
     else drawSpr(img, u.x, u.y + bob + (gen && T.hover ? Math.sin(now * 3 + u.id) * 1.2 : 0), u.face + (gen && T.trot && u.moving ? Math.sin(now * 15 + u.id) * 0.05 : 0), gen ? (T.genSz || 44) : 28);

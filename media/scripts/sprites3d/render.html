@@ -1,0 +1,54 @@
+<!doctype html><html><head><meta charset="utf8">
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script></head>
+<body style="margin:0;background:#0000">
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+// Renders a model into a sprite atlas: rows = clips x directions, cols = frames.
+// opts: { model, clips: [{name, file?, index?, frames, loop}], dirs, size (px per cell), elev (deg), height (world units the model should stand), tint: {matchName: hex} }
+window.renderAtlas = async (opts) => {
+  const load = f => new Promise((res, rej) => (f.toLowerCase().endsWith(".fbx") ? new FBXLoader() : new GLTFLoader()).load(f, res, undefined, rej));
+  const base = opts.model === "__test__" ? testModel(THREE) : await load(opts.model), root = base.scene || base, anims = [...(base.animations || [])];
+  for (const c of opts.clips) if (c.file) { const a = await load(c.file); c.clip = (a.animations || [])[0]; } else if (c.index != null) c.clip = anims[c.index]; else if (c.match) c.clip = anims.find(a => new RegExp(c.match, "i").test(a.name));
+  // normalise size: feet on the ground, given height
+  const box = new THREE.Box3().setFromObject(root), sz = box.getSize(new THREE.Vector3()), k = opts.height / (opts.dim === "len" ? Math.max(sz.x, sz.z) : sz.y);
+  root.scale.multiplyScalar(k); const b2 = new THREE.Box3().setFromObject(root), ctr = b2.getCenter(new THREE.Vector3()); root.position.x -= ctr.x; root.position.z -= ctr.z; root.position.y -= b2.min.y;
+  if (opts.yaw) root.rotation.y = opts.yaw;
+  root.traverse(o => { if (o.isMesh) { o.castShadow = false; o.frustumCulled = false; const ms = Array.isArray(o.material) ? o.material : [o.material];
+    for (const m of ms) { if (opts.tint) for (const [rx, hex] of Object.entries(opts.tint)) if (new RegExp(rx, "i").test(m.name) || new RegExp(rx, "i").test(o.name)) { m.color = new THREE.Color(hex); if (m.map && opts.tintMap === false) m.map = null; } } } });
+  const scene = new THREE.Scene(), holder = new THREE.Group(); holder.add(root); scene.add(holder);
+  scene.add(new THREE.HemisphereLight(0xf4f0e4, 0x4a4a38, 1.6)); const sun = new THREE.DirectionalLight(0xfff2dc, 2.6); sun.position.set(-4, 8, 5); scene.add(sun); const rim = new THREE.DirectionalLight(0xb8d0ff, 0.8); rim.position.set(5, 3, -6); scene.add(rim);
+  const S = opts.size, ext = opts.extent || opts.height * 0.75, cam = new THREE.OrthographicCamera(-ext, ext, ext * 1.15 + opts.height * 0.25, -ext * 1.15 + opts.height * 0.25, 0.1, 1000);
+  const el = (opts.elev || 43) * Math.PI / 180, dist = 50; cam.position.set(0, Math.sin(el) * dist + opts.height * 0.4, Math.cos(el) * dist); cam.lookAt(0, opts.height * 0.4, 0);
+  const rows = opts.clips.length * opts.dirs, cols = Math.max(...opts.clips.map(c => c.frames));
+  const rnd = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); rnd.setPixelRatio(1); rnd.setSize(S, S); rnd.outputColorSpace = THREE.SRGBColorSpace; rnd.setClearColor(0, 0);
+  const atlas = document.createElement("canvas"); atlas.width = cols * S; atlas.height = rows * S; const ag = atlas.getContext("2d");
+  const mixer = new THREE.AnimationMixer(root);
+  // ground point: where the feet are in each cell (for anchoring in the game)
+  cam.updateMatrixWorld(); cam.updateProjectionMatrix(); const foot = new THREE.Vector3(0, 0, 0).project(cam), fx = (foot.x + 1) / 2 * S, fy = (1 - foot.y) / 2 * S;
+  let r = 0;
+  for (const c of opts.clips) {
+    mixer.stopAllAction(); const act = c.clip ? mixer.clipAction(c.clip) : null; if (act) { act.reset(); act.play(); }
+    const dur = c.clip ? c.clip.duration : 1;
+    for (let d = 0; d < opts.dirs; d++) {
+      holder.rotation.y = -d / opts.dirs * Math.PI * 2 + Math.PI / 2; // dir 0 faces screen-right, counting clockwise on screen
+      for (let f = 0; f < c.frames; f++) { if (act) { mixer.setTime(((c.t0 || 0) + (c.loop === false ? f / Math.max(1, c.frames - 1) : f / c.frames) * (c.span || 1)) * dur); }
+        if (opts.inPlace !== false) root.traverse(o => { if (o.isBone && !o.parent.isBone) { o.position.x = o.userData.x0 ?? (o.userData.x0 = o.position.x); o.position.z = o.userData.z0 ?? (o.userData.z0 = o.position.z); } });
+        rnd.render(scene, cam); ag.drawImage(rnd.domElement, f * S, r * S); }
+      r++;
+    }
+  }
+  return { png: atlas.toDataURL("image/png"), cols, rows, size: S, foot: [fx, fy], clips: opts.clips.map(c => ({ name: c.name, frames: c.frames })), dirs: opts.dirs, worldPerPx: ext * 2 / S };
+};
+function testModel(T) { const g = new T.Group(), m = c => new T.MeshStandardMaterial({ color: c, roughness: 0.7 });
+  const body = new T.Mesh(new T.BoxGeometry(0.5, 0.7, 0.3), m(0x4ea8ff)); body.position.y = 1.15; g.add(body);
+  const head = new T.Mesh(new T.SphereGeometry(0.15, 16, 12), m(0xc29470)); head.position.y = 1.65; g.add(head);
+  const legL = new T.Mesh(new T.BoxGeometry(0.16, 0.8, 0.16), m(0x6f6a4a)); legL.name = "legL"; legL.geometry.translate(0, -0.4, 0); legL.position.set(0, 0.8, 0.12); g.add(legL);
+  const legR = legL.clone(); legR.name = "legR"; legR.position.z = -0.12; g.add(legR);
+  const gun = new T.Mesh(new T.BoxGeometry(0.9, 0.06, 0.06), m(0x222222)); gun.position.set(0.4, 1.25, 0.2); g.add(gun);
+  const q = a => new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), a).toArray();
+  const clip = new T.AnimationClip("walk", 1, [new T.QuaternionKeyframeTrack("legL.quaternion", [0, 0.5, 1], [...q(0.5), ...q(-0.5), ...q(0.5)]), new T.QuaternionKeyframeTrack("legR.quaternion", [0, 0.5, 1], [...q(-0.5), ...q(0.5), ...q(-0.5)])]);
+  return { scene: g, animations: [clip] }; }
+window.ready = true;
+</script></body></html>
