@@ -431,7 +431,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Chara Design 01 by SheeroChana (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -2480,6 +2480,8 @@ function rally3(t, ph = 0) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R
 // whole-base models for some eras (3D view): one baked view, ground centre at (gx, gy), footprint radius 1 = r world units
 const BASE3 = { 0: { src: "sprites/st-base.png", S: 256, H: 251, gx: 128, gy: 133.2, wpp: 0.009765625, r: 64 }, // log palisade with Basic Stone Age Houses (CristianPiotto, CC-BY), built in three.js
   1: { src: "sprites/br-base.png", S: 256, H: 251, gx: 128, gy: 133.2, wpp: 0.009765625, r: 64 }, // mud-brick town with a temple, built in three.js
+  3: { src: "sprites/mu-base.png", S: 320, H: 331, gx: 160, gy: 171.2, wpp: 0.004375, r: 145 }, // Santa Luzia Fort by GSXNet (CC-BY-NC)
+  4: { src: "sprites/ww-base.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 54 }, // Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY)
   2: { src: "sprites/castle.png", S: 256, H: 317, gx: 128, gy: 214.7, wpp: 0.009765625, r: 64 }, // Castle by hamidkhan224, CC-BY
   6: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 }, // Dome Structure by trashbinkr
   7: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 } };
@@ -2941,6 +2943,20 @@ function spaceSprites(T) {
   }, 2);
   return { inf, gen, fort, genSz: 60, trot: true };
 }
+// rocky headlands cut from a photogrammetry reef (rock reef and beach by Metazeon), laid on the coast 8-fold symmetric
+const REEF = { img: null, ok: false, W: 510, H: 195, top: 45, w: [510, 410, 443], k: 0.42 };
+function paintReef(g) {
+  const I = G.island; if (!I) return;
+  if (!REEF.img) { REEF.img = new Image(); REEF.img.onload = () => { REEF.ok = true; if (groundCvs && G && G.island) { const g2 = groundCvs.getContext("2d"); g2.save(); g2.setTransform(GK, 0, 0, GK, 0, 0); paintReef(g2); g2.restore(); if (miniGround) miniGround.getContext("2d").drawImage(groundCvs, 0, 0, miniGround.width, miniGround.width); } }; REEF.img.src = "sprites/reef.png"; }
+  if (!REEF.ok) return;
+  const rr = mulberry32((G.S * 31 + 7) >>> 0), n = I.R.length, Q = Math.PI / 4, spots = [];
+  const m = 2 + Math.floor(rr() * 2); for (let i = 0; i < m; i++) spots.push({ a: (i + 0.25 + rr() * 0.5) / m * Q, p: Math.floor(rr() * 3), sc: 0.85 + rr() * 0.35 });
+  for (const sp of spots) for (let q = 0; q < 8; q++) {
+    const mir = q % 2 === 1, a = (mir ? Math.floor(q / 2) * Math.PI / 2 + Math.PI / 2 - sp.a : Math.floor(q / 2) * Math.PI / 2 + sp.a);
+    const t = ((a % TAU) + TAU) % TAU, R = I.R[Math.round(t / TAU * n) % n], x = I.c + Math.cos(t) * R, y = I.c + Math.sin(t) * R, k = REEF.k * sp.sc, w = REEF.w[sp.p];
+    g.save(); g.translate(x, y); g.rotate(t + Math.PI / 2); if (mir) g.scale(-1, 1);
+    g.drawImage(REEF.img, 0, sp.p * REEF.H, w, REEF.H, -w / 2 * k, (-REEF.top - 6) * k, w * k, REEF.H * k); g.restore(); }
+}
 // ---------- world (terrain, rocks) ----------
 function buildWorld() {
   buildSprites();
@@ -3113,6 +3129,7 @@ function buildWorld() {
     g.restore();
     g.beginPath(); g.rect(-20, -20, S + 40, S + 40); poly(g, 0, true); // the sea outside
     g.fillStyle = SEA; g.fill("evenodd");
+    paintReef(g);
     for (const [off, lw, col] of [[10, 22, "rgba(60,140,150,.35)"], [4, 8, "rgba(110,190,190,.35)"], [1, 2.2, "rgba(230,240,230,.55)"], [16, 1.4, "rgba(200,230,230,.18)"], [30, 1.2, "rgba(200,230,230,.1)"]]) { g.strokeStyle = col; g.lineWidth = lw; poly(g, off); g.stroke(); }
     g.restore();
   }
@@ -3466,7 +3483,7 @@ function render(dtReal) {
     if (B3) STAND.push({ bb: B3, x: b.x, y: b.y, al: c.globalAlpha, fog: true });
     if (BB) { const F3 = rally3(TEAM.indexOf(p.team), p.id * 3); if (F3) STAND.push({ bb: F3, sc: 1.7, x: b.x - 72, y: b.y + 8, al: c.globalAlpha }); } // the team colour flies on a flag
     if (!ghost && b.hp < (b.max || CFG.base.hp) * 0.6) { if (BB) STAND.push({ draw: (g, P, k) => baseBurn(g, b, now, P, k), x: b.x, y: b.y + 40, al: 1 }); else baseBurn(c, b, now, (x, y, h) => [x, y - h], 1); }
-    else if (BB) for (const v of BB.pieces) STAND.push({ bb: (v.hut != null && hut3(v.hut)) || v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
+    if (BB && !B3) for (const v of BB.pieces) STAND.push({ bb: (v.hut != null && hut3(v.hut)) || v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
     if (!ghost) {
       // turret (the 3D village has no gun to show)
       if (!BB) { c.save(); c.translate(b.x, b.y); c.rotate(b.aim || -Math.PI / 4);

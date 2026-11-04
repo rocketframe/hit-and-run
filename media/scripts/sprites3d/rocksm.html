@@ -12,6 +12,11 @@ window.renderRocks = async (file, N, S, o = {}) => {
       const bb = new THREE.Box3().setFromBufferAttribute(pos), lim = bb.min.y + (bb.max.y - bb.min.y) * o.dropGround, n = idx ? idx.count : pos.count;
       for (let t = 0; t < n; t += 3) { const ids = [0, 1, 2].map(k => idx ? idx.getX(t + k) : t + k); if (ids.every(i => pos.getY(i) < lim) || (o.dropBox && ids.every(i => Math.abs(pos.getX(i)) > bb.max.x * 0.98 && Math.abs(pos.getZ(i)) > bb.max.z * 0.98))) continue; keep.push(...ids); }
       g0.setIndex(keep); }); }
+  if (o.clipR) { root.updateMatrixWorld(true); const wb = new THREE.Box3().setFromObject(root), wc = wb.getCenter(new THREE.Vector3()), wsz = wb.getSize(new THREE.Vector3());
+    const cx = wc.x + (o.cx || 0) * wsz.x, cz = wc.z + (o.cz || 0) * wsz.z, R = Math.max(wsz.x, wsz.z) / 2 * o.clipR, v = new THREE.Vector3();
+    root.traverse(m => { if (!m.isMesh) return; const g0 = m.geometry, idx = g0.index, pos = g0.attributes.position, keep = [], n = idx ? idx.count : pos.count;
+      for (let t = 0; t < n; t += 3) { const ids = [0, 1, 2].map(k => idx ? idx.getX(t + k) : t + k); let x = 0, z = 0; for (const q of ids) { v.fromBufferAttribute(pos, q).applyMatrix4(m.matrixWorld); x += v.x; z += v.z; } if (Math.hypot(x / 3 - cx, z / 3 - cz) < R) keep.push(...ids); }
+      g0.setIndex(keep); }); }
   const box = new THREE.Box3().setFromObject(root), sz = box.getSize(new THREE.Vector3()), k = 2 / Math.max(sz.x, sz.z); root.scale.multiplyScalar(k);
   const b2 = new THREE.Box3().setFromObject(root), c = b2.getCenter(new THREE.Vector3()); root.position.set(-c.x, -b2.min.y, -c.z);
   const holder = new THREE.Group(); holder.add(root); const scene = new THREE.Scene(); scene.add(holder);
