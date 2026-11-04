@@ -420,7 +420,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY) and Armor for Man and Horse by the Cleveland Museum of Art (CC0), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -1736,6 +1736,7 @@ const MODEL3 = {
        inf: { src: "sprites/me-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Mixamo Erika Archer
   5: { inf: { src: "sprites/ww-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/md-gen.png", S: 160, fx: 80, fy: 142.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 24 } }, // Tank by Quaternius
+  6: { gen: { src: "sprites/fu-gen.png", S: 160, fx: 80, fy: 114, wpp: 0.0325, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // HoverBikeTVS by Vijaysarathi, CC-BY
   7: { gen: { src: "sprites/sp-gen.png", S: 160, fx: 80, fy: 127.8, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // Mech Assault Walker by Alimayo Arango
 };
 function model3(era, kind, pid) {
