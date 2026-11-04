@@ -2468,7 +2468,7 @@ function drawBaseBar(g, [x, y], k, f, gh, hot) {
   g.restore();
 }
 // rally flag in the 3D view: Flag in the Wind by YouniqueIdeaStudio (CC-BY), one baked view per team colour, pole at the centre
-const RALLY3 = { src: "sprites/rally.png", w: 80, h: 72, N: 8, ay: 70 / 72, bw: 47, bh: 42.2, cv: [] }; // rows = teams, 8 waving frames
+const RALLY3 = { src: "sprites/flag8.png", w: 80, h: 72, N: 8, ay: 70 / 72, bw: 47, bh: 42.2, cv: [] }; // rows = teams, 8 waving frames
 function rally3(t, ph = 0) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
   const f = Math.floor(performance.now() / 110 + ph) % R.N, key = t * R.N + f;
   if (!R.cv[key]) { const cv = document.createElement("canvas"); cv.width = R.w; cv.height = R.h; cv.getContext("2d").drawImage(R.img, f * R.w, t * R.h, R.w, R.h, 0, 0, R.w, R.h); cv.bw = R.bw; cv.bh = R.bh; cv.ay = R.ay; R.cv[key] = cv; }
