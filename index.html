@@ -420,7 +420,7 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle by Quaternius via Poly Pizza · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle and Rock Medium by Quaternius via Poly Pizza · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -2407,6 +2407,11 @@ function eraBB(T, era) {
 }
 // ---- 3D view: rocks, crates and mission vehicles standing up ----
 const BB3 = {};
+// baked rock model (Rock Medium by Quaternius) in 6 variants: cells S x H, ground centre at (gx, gy), wpp world units (footprint radius 1) per px
+const ROCK3 = { src: "sprites/rocks.png", S: 128, H: 133, N: 6, gx: 64, gy: 86.2, wpp: 0.0203125 };
+function rock3(o) { const R = ROCK3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
+  const i = Math.floor(Math.abs(o.x * 7 + o.y * 3)) % R.N, cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, i * R.S, 0, R.S, R.H, 0, 0, R.S, R.H);
+  const f = R.wpp * o.r * 1.12; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; return cv; }
 function boulder3(o) { const r = o.r, rr = mulberry32(Math.floor(o.x * 7 + o.y * 3)); return bbSprite(r * 2.3, r * 1.7, g => {
   const n = 9, pts = []; for (let i = 0; i <= n; i++) { const a = Math.PI + i / n * Math.PI, q = r * (0.85 + rr() * 0.25); pts.push([Math.cos(a) * q * 1.08, Math.sin(a) * q * 0.72 * (1 + (i > 2 && i < 7 ? 0.25 : 0))]); }
   const gr = g.createLinearGradient(-r, -r * 1.2, r, 0); gr.addColorStop(0, "#a8a490"); gr.addColorStop(0.5, "#6d6a5a"); gr.addColorStop(1, "#2e2d26"); g.fillStyle = gr;
@@ -3364,8 +3369,9 @@ function render(dtReal) {
   // rocks
   for (const o of G.rocks) {
     if (!inView(o.x, o.y)) continue;
-    const s = o.spr.size; c.drawImage(o.spr, o.x - s / 2, o.y - s / 2, s, s);
-    if (c !== ctx) STAND.push({ bb: o.bb3 || (o.bb3 = boulder3(o)), x: o.x, y: o.y + o.r * 0.35, al: 1, fog: true });
+    if (c !== ctx && !o.bb3m) o.bb3m = rock3(o);
+    const s = o.spr.size; if (!(c !== ctx && o.bb3m)) c.drawImage(o.spr, o.x - s / 2, o.y - s / 2, s, s); // the 3D model brings its own shadow
+    if (c !== ctx) { STAND.push(o.bb3m ? { bb: o.bb3m, x: o.x, y: o.y, al: 1, fog: true } : { bb: o.bb3 || (o.bb3 = boulder3(o)), x: o.x, y: o.y + o.r * 0.35, al: 1, fog: true }); }
   }
 
   // selection rings + shadows
