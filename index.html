@@ -120,10 +120,16 @@ body.classic #grp2{flex-wrap:wrap;justify-content:center;max-width:100%;gap:3px}
 body.splash #menu{overflow:hidden}
 body.splash #menu .card>*:not(h1):not(.stamp){opacity:0;pointer-events:none;animation:none}
 body.entering #menu .card>*:not(h1):not(.stamp){transition:opacity .5s ease .55s}
-#splash{position:fixed;inset:0;z-index:30;cursor:pointer;-webkit-tap-highlight-color:transparent}
-#splash .go{position:absolute;left:50%;transform:translateX(-50%);min-width:180px;padding:14px 34px;font:800 20px/1 "Saira Condensed",sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#fff6e8;background:#b8322a;border:0;border-radius:6px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 22px rgba(184,50,42,.5);cursor:pointer;transition:opacity .3s;animation:goIn .6s ease .5s both}
-#splash .go:hover{background:#c93a30}
+#splash{position:fixed;inset:0;z-index:30;-webkit-tap-highlight-color:transparent}
+#splash .picks{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:12px;transition:opacity .3s;animation:goIn .6s ease .5s both}
+#splash .picks button{min-width:150px;padding:14px 22px;font:800 19px/1 "Saira Condensed",sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--ink,#ece6d6);background:rgba(12,14,10,.55);border:1.5px solid rgba(236,230,214,.45);border-radius:6px;cursor:pointer}
+#splash .picks button.pri{color:#fff6e8;background:#b8322a;border-color:#b8322a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 22px rgba(184,50,42,.5)}
+#splash .picks button.pri:hover{background:#c93a30}
 #splash.out .go{opacity:0}
+@media (max-width:380px){#splash .picks button{min-width:0;padding:13px 16px;font-size:17px}}
+#menuSnd{position:fixed;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:12;background:rgba(12,14,10,.6)}
+#menuSnd.off{opacity:.45;text-decoration:line-through}
+body.splash #menuSnd{opacity:0;pointer-events:none}
 @keyframes goIn{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translateX(-50%)}}
 @media (max-width:420px){.stamp{top:-2px;right:2px}.stamp b{font-size:25px}}
 .armyset{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:4px;padding:8px 10px;background:rgba(6,8,6,.45)}
@@ -288,10 +294,10 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
 </div>
 
 <div class="screen" id="menu">
+  <button class="ib" id="menuSnd" aria-label="Sound on or off">♪</button>
   <div class="card">
     <h1>Hit<br>and <span>Run</span></h1>
     <div class="stamp" id="stamp" hidden aria-live="polite"><div class="st-in"><span class="st-k">Battles fought</span><b id="stGames">0</b><span class="st-rule"></span><span class="st-k">Enemies killed</span><b id="stKills">0</b></div></div>
-    <div class="sndhint" id="sndHint">Tap anywhere for sound</div>
     <p class="lede">Find the enemy in the fog, shoot first, keep your general alive, and take their base.</p>
     <details class="custom" id="custom"><summary><span>Custom game</span><em id="customSum"></em></summary>
     <div class="opt"><label>Map</label>
@@ -3801,7 +3807,10 @@ window.addEventListener("pagehide", reportKills);
   if (navigator.webdriver && !/[?&]splash\b/.test(location.search)) return;
   const card = $("menu").querySelector(".card"), h1 = card.querySelector("h1"), st = $("stamp");
   const ov = document.createElement("div"); ov.id = "splash";
-  ov.innerHTML = '<button class="go" type="button">Enter</button>'; const go = ov.firstChild;
+  const silent = !SND.pref.m && !SND.pref.s && !SND.pref.v;
+  ov.innerHTML = '<div class="picks"><button type="button" data-on="1">Sound on</button><button type="button" data-on="0">Silent</button></div>'; const go = ov.firstChild;
+  // the last choice is the bright one, so returning players tap the same spot
+  go.querySelector(`[data-on="${silent ? 0 : 1}"]`).classList.add("pri");
   document.body.classList.add("splash"); document.body.appendChild(ov);
   let done = false;
   function fit() {
@@ -3825,8 +3834,9 @@ window.addEventListener("pagehide", reportKills);
   addEventListener("resize", fit);
   new MutationObserver(fit).observe(st, { attributes: true, attributeFilter: ["hidden"] });
   if (document.fonts) document.fonts.ready.then(fit);
-  ov.addEventListener("click", enter);
-  addEventListener("keydown", e => { if (!done && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); enter(); } });
+  const pick = on => { setSound(on); enter(); };
+  go.querySelectorAll("button").forEach(b => b.addEventListener("click", () => pick(b.dataset.on === "1")));
+  addEventListener("keydown", e => { if (!done && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pick(!silent); } });
 })();
 // owner check: open the game with ?lbcheck to post one TEST score (army 50 vs 30) and see the server's answer
 if (/[?&]lbcheck\b/.test(location.search) && LB.url) (async () => {
@@ -3955,10 +3965,12 @@ window.addEventListener("keydown", e => {
 });
 function refreshSnd() {
   document.querySelectorAll("[data-snd]").forEach(b => { const on = SND.pref[b.dataset.snd]; b.classList.toggle("off", !on); b.textContent = ({ m: "Music", s: "Effects", v: "Voices" })[b.dataset.snd] + (on ? " on" : " off"); });
-  $("sndBtn").classList.toggle("off", !SND.pref.m && !SND.pref.s && !SND.pref.v);
+  const off = !SND.pref.m && !SND.pref.s && !SND.pref.v; $("sndBtn").classList.toggle("off", off); $("menuSnd").classList.toggle("off", off);
 }
 document.querySelectorAll("[data-snd]").forEach(b => b.addEventListener("click", () => { SND.setPref(b.dataset.snd, !SND.pref[b.dataset.snd]); refreshSnd(); }));
-$("sndBtn").addEventListener("click", () => { const on = !(SND.pref.m || SND.pref.s || SND.pref.v); SND.setPref("m", on); SND.setPref("s", on); SND.setPref("v", on); if (!on && window.speechSynthesis) speechSynthesis.cancel(); refreshSnd(); });
+function setSound(on) { SND.setPref("m", on); SND.setPref("s", on); SND.setPref("v", on); if (!on && window.speechSynthesis) speechSynthesis.cancel(); refreshSnd(); }
+const toggleSound = () => setSound(!(SND.pref.m || SND.pref.s || SND.pref.v));
+$("sndBtn").addEventListener("click", toggleSound); $("menuSnd").addEventListener("click", toggleSound);
 refreshSnd();
 $("resumeBtn").addEventListener("click", togglePause);
 $("howBtn").addEventListener("click", () => { $("menu").hidden = true; $("howto").hidden = false; $("howto").scrollTop = 0; });
