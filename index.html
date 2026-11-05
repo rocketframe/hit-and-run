@@ -387,6 +387,9 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="opt"><label>3D view</label>
       <div class="seg" id="opt3d"><button data-v="0" class="on">Off</button><button data-v="1">On</button></div>
       <p class="fine">Tilts the battlefield like a tabletop. Off is the classic top-down view.</p></div>
+    <div class="opt"><label>Graphics</label>
+      <div class="seg" id="optGfx"><button data-v="9" class="on">Auto</button><button data-v="2">High</button><button data-v="1">Medium</button><button data-v="0">Low</button></div>
+      <p class="fine">Auto lowers the detail by itself if the game runs slowly. Low is for older phones: no photo sea, no fine ground detail, simpler waves.</p></div>
     <div class="opt"><label>Sound</label>
       <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button><button class="go ghost" data-snd="v">Voices</button></div></div>
     <button class="go" id="setBack">Done</button>
@@ -1102,7 +1105,7 @@ function stepDoom(dt) {
     }
     d.t -= dt;
     if (d.t <= 0) {
-      let tb = null; if (p.id !== G.human) tb = G.players[G.human].base; else for (const q of G.players) if (q.id !== p.id && !q.out && (!tb || d2(q.base, p.base) < d2(tb, p.base))) tb = q.base;
+      const tb = doomTarget(p).base;
       G.doomFire = { owner: p.id, w: d.w, t: DOOM.show, t0: G.time, x: gen.x, y: gen.y, tx: tb.x, ty: tb.y }; pushFx({ k: "doomFire", owner: p.id, w: d.w }); return; }
   }
 }
@@ -1812,6 +1815,7 @@ function model3(era, kind, pid) {
   if (!M.st) { M.st = 1; M.t = {}; const im = new Image(), mk = M.mask ? new Image() : null; let n = mk ? 2 : 1; const done = () => { if (--n === 0) M.st = 2; };
     im.onload = done; im.onerror = () => { M.st = 3; }; im.src = M.src; M.img = im; if (mk) { mk.onload = done; mk.onerror = () => { M.st = 3; }; mk.src = M.mask; M.mk = mk; } }
   if (M.st !== 2) return null;
+  if (!M.t[pid] && !M.mk) M.t[pid] = { cv: M.img, M, c: G.players[pid].team.c };
   if (!M.t[pid]) { // tint the team parts in this player's colour, keeping the shading
     const cv = document.createElement("canvas"); cv.width = M.img.width; cv.height = M.img.height; const g = cv.getContext("2d"); g.drawImage(M.img, 0, 0);
     if (M.mk) { const t = document.createElement("canvas"); t.width = cv.width; t.height = cv.height; const tg = t.getContext("2d"); tg.drawImage(M.mk, 0, 0); tg.globalCompositeOperation = "source-in"; tg.fillStyle = G.players[pid].team.c; tg.fillRect(0, 0, t.width, t.height);
@@ -3565,7 +3569,7 @@ function render(dtReal) {
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.fillStyle = G && G.island ? SEA : "#07090a"; c.fillRect(0, 0, c.canvas.width, c.canvas.height);
   if (!G || !groundCvs) return;
-  if (TILT.on && !G.pre3) { G.pre3 = 1; for (let e = 0; e < 8; e++) { model3(e, "inf", 0); model3(e, "gen", 0); base3(e); } } // load every era's models up front, so an upgrade never flashes the drawn versions
+  if (TILT.on) for (const p of G.players) { const e = Math.min(7, eraOf(p.id) + 1); if (G.pre3 !== undefined && G.pre3[p.id] === e) continue; (G.pre3 || (G.pre3 = {}))[p.id] = e; for (const k of [e - 1, e]) { model3(k, "inf", 0); model3(k, "gen", 0); base3(k); } } // fetch each army's current and next era early, so an upgrade never flashes the drawn versions
   const now = performance.now() / 1000, P = QP[qLevel()];
   consumeFx(); stepParts(dtReal || 0.016);
   shake.a *= 0.88; const sx = (rnd() - 0.5) * shake.a, sy = (rnd() - 0.5) * shake.a;
@@ -4084,6 +4088,27 @@ function doomFx(e) {
     SND.doom("fire", e.w);
   }
 }
+// the base an Endgame will hit: yours if it's an enemy's, otherwise the nearest enemy base
+function doomTarget(p) { let t = null; if (p.id !== G.human) t = G.players[G.human]; else for (const q of G.players) if (q.id !== p.id && !q.out && (!t || d2(q.base, p.base) < d2(t.base, p.base))) t = q; return t; }
+// lock-on: a targeting line arcs from the general over to the target base as it charges, and a reticle closes in on the base
+function drawDoomLock(c, z, now, p, g, f) {
+  const T = doomTarget(p); if (!T) return; const b = T.base, k = 1 - f, lw = 1 / Math.max(z, 0.5), mine = p.id === G.human, col = mine ? "255,210,74" : "255,70,55";
+  const dx = b.x - g.x, dy = b.y - g.y, L = Math.hypot(dx, dy) || 1, cx = (g.x + b.x) / 2 - dy / L * L * 0.28, cy = (g.y + b.y) / 2 + dx / L * L * 0.28 - L * 0.12;
+  const Q = t => [(1 - t) * (1 - t) * g.x + 2 * (1 - t) * t * cx + t * t * b.x, (1 - t) * (1 - t) * g.y + 2 * (1 - t) * t * cy + t * t * b.y];
+  // the arc, drawn out as the charge builds, with pulses running along it toward the target
+  const reach = Math.min(1, k * 1.6); c.save(); c.lineCap = "round";
+  c.strokeStyle = `rgba(${col},.22)`; c.lineWidth = 9 * lw; c.beginPath(); for (let t = 0; t <= reach + 1e-6; t += 0.02) { const [x, y] = Q(Math.min(t, reach)); t ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke();
+  c.strokeStyle = `rgba(${col},.85)`; c.lineWidth = 2.2 * lw; c.setLineDash([14 * lw, 10 * lw]); c.lineDashOffset = -now * 60 * lw; c.stroke(); c.setLineDash([]);
+  c.fillStyle = `rgba(${col},.95)`; for (let i = 0; i < 4; i++) { const t = ((now * 0.45 + i / 4) % 1) * reach, [x, y] = Q(t); c.beginPath(); c.arc(x, y, 4 * lw * (1 + k), 0, TAU); c.fill(); }
+  // the reticle: four brackets that spin and close in, then lock solid in the last 3 seconds
+  const locked = f * DOOM.charge <= 3, r = locked ? 70 : 70 + 200 * Math.pow(f, 0.8), rot = locked ? 0 : now * 1.4, pu = 0.5 + 0.5 * Math.sin(now * (locked ? 14 : 5));
+  c.translate(b.x, b.y); c.rotate(rot); c.strokeStyle = `rgba(${col},${(0.55 + 0.45 * pu).toFixed(2)})`; c.lineWidth = (locked ? 5 : 3.5) * lw;
+  for (let i = 0; i < 4; i++) { c.rotate(Math.PI / 2); c.beginPath(); c.arc(0, 0, r, -0.35, 0.35); c.stroke(); c.beginPath(); c.moveTo(r - 14 * lw * 2, 0); c.lineTo(r + 12 * lw * 2, 0); c.stroke(); }
+  c.rotate(-rot); c.lineWidth = 1.5 * lw; c.beginPath(); c.arc(0, 0, 10 * lw * 2, 0, TAU); c.stroke();
+  c.font = `900 ${Math.max(14, 13 / z)}px system-ui,sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.lineWidth = 4 * lw; c.strokeStyle = "rgba(0,0,0,.8)";
+  const lab = locked ? "TARGET LOCKED" : "ACQUIRING TARGET"; c.strokeText(lab, 0, -r - 18 / z); c.fillStyle = `rgb(${col})`; c.fillText(lab, 0, -r - 18 / z);
+  c.restore();
+}
 // world space, above the fog: everyone can see a charging general
 function drawDoomMarks(c, z, now) {
   for (const p of G.players) {
@@ -4091,10 +4116,11 @@ function drawDoomMarks(c, z, now) {
     const g = G.gens[p.id];
     if (d.on && g && g.alive) {
       const f = d.t / DOOM.charge, pu = 0.5 + 0.5 * Math.sin(now * (6 + (1 - f) * 14));
+      drawDoomLock(c, z, now, p, g, f);
       c.strokeStyle = `rgba(255,59,48,${0.35 + 0.5 * pu})`; c.lineWidth = 3 / Math.max(z, 0.6);
       c.beginPath(); c.arc(g.x, g.y, 30 + pu * 6, 0, TAU); c.stroke();
       c.strokeStyle = "#ffd24a"; c.lineWidth = 4 / Math.max(z, 0.6); c.beginPath(); c.arc(g.x, g.y, 40, -Math.PI / 2, -Math.PI / 2 + TAU * f); c.stroke();
-      c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.25 + 0.25 * pu; c.strokeStyle = "rgba(255,80,60,1)"; c.lineWidth = 6 / Math.max(z, 0.6);
+      c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.25 + 0.25 * pu; c.strokeStyle = "rgba(255,80,60,1)"; c.lineWidth = (4 + 14 * (1 - f)) / Math.max(z, 0.6);
       if (TILT.on) { const gx = g.x, gy = g.y, al = 0.25 + 0.25 * pu; STAND.push({ x: gx, y: gy + 1, al: 1, draw: (gg, P, k) => { const [x0, y0] = P(gx, gy, 30), [x1, y1] = P(gx, gy, 520); gg.globalCompositeOperation = "lighter"; gg.globalAlpha = al; gg.strokeStyle = "rgba(255,80,60,1)"; gg.lineWidth = 6 * k; gg.beginPath(); gg.moveTo(x0, y0); gg.lineTo(x1, y1); gg.stroke(); } }); }
       else { c.beginPath(); c.moveTo(g.x, g.y - 40); c.lineTo(g.x, g.y - 700); c.stroke(); }
       c.globalAlpha = 1; c.globalCompositeOperation = "source-over";
@@ -4139,13 +4165,18 @@ function drawDoom() {
     let txt = null, mine = false, urgent = 0;
     for (const p of G.players) { const d = p.doom; if (!d || p.out) continue;
       const nm = p.id === G.human ? "Your" : p.team.name + "'s"; mine = p.id === G.human;
-      txt = d.on ? `${nm} Endgame fires in ${Math.ceil(d.t)}s · ${mine ? "keep your general alive!" : "kill their general!"}` : `${nm} Endgame arms when ${mine ? "your" : "their"} general returns`;
+      const T = doomTarget(p), tn = T ? (T.id === G.human ? "YOUR base" : T.team.name + " base") : "";
+      txt = d.on ? `${nm} super weapon is charging · target: ${tn} · fires in ${Math.ceil(d.t)}s · ${mine ? "keep your general alive!" : "kill their general!"}` : `${nm} Endgame arms when ${mine ? "your" : "their"} general returns`;
       urgent = d.on ? 1 - d.t / DOOM.charge : 0; if (d.on) break; }
     if (!txt) return;
     c.font = "800 13px system-ui,sans-serif"; const w = Math.min(SW - 24, c.measureText(txt).width + 34), x = SW / 2, y = 78, pu = 0.5 + 0.5 * Math.sin(now * (4 + urgent * 10));
     c.fillStyle = mine ? `rgba(120,90,10,${0.8 + 0.15 * pu})` : `rgba(150,20,14,${0.78 + 0.18 * pu})`; c.beginPath(); c.roundRect(x - w / 2, y - 14, w, 28, 14); c.fill();
     c.strokeStyle = mine ? "#ffd24a" : "#ff6b5e"; c.lineWidth = 1.5; c.stroke();
     c.fillStyle = "#fff6e0"; c.fillText(txt, x, y + 0.5, w - 20);
+    if (urgent > 0) { // charge bar under the banner
+      const bw = Math.min(320, SW - 60), bx = x - bw / 2, by = y + 20; c.fillStyle = "rgba(0,0,0,.6)"; c.beginPath(); c.roundRect(bx - 2, by - 2, bw + 4, 12, 6); c.fill();
+      const gr = c.createLinearGradient(bx, 0, bx + bw, 0); gr.addColorStop(0, mine ? "#a07a10" : "#8a1a12"); gr.addColorStop(1, mine ? "#ffe27a" : "#ff6b5e"); c.fillStyle = gr; c.beginPath(); c.roundRect(bx, by, Math.max(8, bw * urgent), 8, 4); c.fill();
+      c.font = "800 10px system-ui,sans-serif"; c.fillStyle = "#fff6e0"; c.fillText("SUPER WEAPON " + Math.round(urgent * 100) + "%", x, by + 22); }
     if (!drawDoom.last || drawDoom.last !== Math.ceil(urgent ? (1 - urgent) * DOOM.charge : 99)) { drawDoom.last = Math.ceil(urgent ? (1 - urgent) * DOOM.charge : 99); if (urgent && drawDoom.last <= 10 && !UI.paused) SND.doom("tick", drawDoom.last); }
     return;
   }
@@ -4296,8 +4327,9 @@ function trackQuality(dtReal) {
   if (document.hidden || dtReal <= 0 || dtReal > 0.25) return;
   Q.ema = Q.ema * 0.95 + dtReal * 1000 * 0.05;
   if (Q.ema > 24) { Q.slowT += dtReal; Q.fastT = 0; } else if (Q.ema < 14) { Q.fastT += dtReal; Q.slowT = 0; } else { Q.slowT = 0; Q.fastT = 0; }
-  if (Q.slowT > 2.5 && Q.level > 0) { Q.level--; Q.slowT = 0; Q.ema = 16; resize(); }
-  else if (Q.fastT > 12 && Q.level < 2) { Q.level++; Q.fastT = 0; resize(); }
+  if (Q.fixed != null) { if (Q.level !== Q.fixed) { Q.level = Q.fixed; resize(); } }
+  else if (Q.slowT > 2.5 && Q.level > 0) { Q.level--; Q.dropped = true; Q.slowT = 0; Q.ema = 16; resize(); }
+  else if (Q.fastT > 12 && Q.level < 2 && !Q.dropped) { Q.level++; Q.fastT = 0; resize(); }
 }
 
 // ======================================================================
@@ -4790,6 +4822,8 @@ UI.opts.split = 3; UI.opts.layout = 1; UI.opts.expert = 0; UI.opts.tel = 0; UI.o
 try { const v = localStorage.getItem("hr-advice"); if (v !== null) UI.opts.advice = +v ? 1 : 0; } catch (e) {}
 seg("optAdvice", "advice");
 UI.opts.tilt = TILT.on ? 1 : 0; seg("opt3d", "tilt");
+try { const v = localStorage.getItem("hr-gfx"); UI.opts.gfx = v == null ? 9 : +v; } catch (e) { UI.opts.gfx = 9; } Q.fixed = UI.opts.gfx === 9 ? null : UI.opts.gfx; seg("optGfx", "gfx");
+$("optGfx").addEventListener("click", () => { Q.fixed = UI.opts.gfx === 9 ? null : UI.opts.gfx; if (Q.fixed != null) { Q.level = Q.fixed; resize(); } try { localStorage.setItem("hr-gfx", String(UI.opts.gfx)); } catch (e) {} });
 $("opt3d").addEventListener("click", () => { TILT.on = !!UI.opts.tilt; try { localStorage.setItem("hr-3d", TILT.on ? "1" : "0"); } catch (e) {} resize(); if (typeof clampCam === "function" && G) clampCam(); });
 $("optAdvice").addEventListener("click", () => { try { localStorage.setItem("hr-advice", String(UI.opts.advice)); } catch (e) {} });
 try { UI.opts.tel = localStorage.getItem("hr-tel") === "1" ? 1 : 0; } catch (e) {}
