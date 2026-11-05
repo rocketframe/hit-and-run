@@ -6261,7 +6261,7 @@ function setSpeed(v) {
   b.classList.toggle("fast", v > 1); b.classList.toggle("slow", v < 1);
   $("spdPop").querySelectorAll("button").forEach(x => x.classList.toggle("on", +x.dataset.s === v));
 }
-$("spdBtn").addEventListener("click", () => { $("spdPop").hidden = !$("spdPop").hidden; setSpeed(UI.speed); });
+$("spdBtn").addEventListener("click", () => { const C = [1, 2, 4, 8, 0.25, 0.5], i = C.indexOf(UI.speed); $("spdPop").hidden = true; setSpeed(C[(i + 1) % C.length]); SND.ui && SND.ui(); }); // one tap = next speed (T)
 $("spdPop").querySelectorAll("button").forEach(x => x.addEventListener("click", () => {
   const v = +x.dataset.s; setSpeed(v); $("spdPop").hidden = true;
   if (v < 1 && G && !G.tutorial && !G.slowmo) toast("Slow motion: this game's score stays on your device, not the public board");
