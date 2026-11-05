@@ -174,6 +174,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
 .seg button:last-child{border-right:0}
 .seg button.on{background:var(--khaki);color:#1a1a12}
 .go{height:56px;border:0;border-radius:4px;background:var(--khaki);color:#17170f;font-size:22px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+#endBan{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;pointer-events:none;font:900 clamp(64px,18vw,180px)/1 "Big Shoulders Display","Saira Condensed",system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#ffe27a;text-shadow:0 0 30px rgba(255,200,60,.55),0 6px 0 #3a2600;background:linear-gradient(transparent 32%,rgba(0,0,0,.55) 40% 60%,transparent 68%);opacity:0}#endBan[hidden]{display:none}#endBan.lost{color:#ff4a3a;text-shadow:0 0 30px rgba(255,40,30,.55),0 6px 0 #3a0806}#endBan.on{animation:endBan 1.6s ease-out forwards}@keyframes endBan{0%{opacity:0;transform:scale(1.5)}12%{opacity:1;transform:scale(1)}75%{opacity:1;transform:scale(1.03)}100%{opacity:0;transform:scale(1.05)}}
 #loadScr{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(circle at 50% 45%,#1b2318,#07090a 70%);color:var(--ink,#efe9d8);transition:opacity .35s}#loadScr[hidden]{display:none}#loadScr.ld-out{opacity:0}
 .ld-x{position:relative;width:86px;height:86px}.ld-x i{position:absolute;inset:0;border:3px solid rgba(205,180,106,.8);border-radius:50%;border-top-color:transparent;border-bottom-color:transparent;animation:ldspin 1.4s linear infinite}.ld-x i+i{inset:16px;border-color:rgba(184,50,42,.9);border-left-color:transparent;border-right-color:transparent;animation-duration:.9s;animation-direction:reverse}.ld-x b{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;background:#b8322a;border-radius:50%;animation:ldpulse 1s ease-in-out infinite}
 @keyframes ldspin{to{transform:rotate(360deg)}}@keyframes ldpulse{50%{transform:scale(1.8);opacity:.5}}
@@ -490,6 +491,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
   </div>
 </div>
 
+<div id="endBan" hidden></div>
 <div id="loadScr" hidden aria-live="polite"><div class="ld-x"><i></i><i></i><b></b></div><div class="ld-t">Preparing the battlefield</div><div class="ld-bar"><i></i></div><div class="ld-s" id="ldTip"></div></div>
 <div id="endPanel" hidden role="region" aria-label="Battle over">
   <div class="ep-t" id="epTitle">Defeated<small id="epSub"></small></div>
@@ -1005,8 +1007,12 @@ function eliminate(owner, by) {
 }
 
 // knocked out with two or more armies still fighting: watch the rest unfold, whole map, with an Exit
+function endBanner(win) {
+  const b = $("endBan"); b.textContent = win ? "VICTORY" : "ELIMINATED"; b.className = win ? "" : "lost"; b.hidden = false;
+  void b.offsetWidth; b.classList.add("on"); clearTimeout(endBanner.t); endBanner.t = setTimeout(() => { b.hidden = true; }, 1700);
+}
 function startSpectate() {
-  if (G.spect) return; G.spect = true; G.spectAt = G.time; document.body.classList.add("replay");
+  if (G.spect) return; endBanner(false); G.spect = true; G.spectAt = G.time; document.body.classList.add("replay");
   $("replayBar").hidden = false; $("replayBar").querySelector("b").textContent = "👁 WATCHING"; $("rpPause").hidden = true;
   toast("You're out. Watch who wins, or tap Exit", "bad");
 }
@@ -6338,7 +6344,7 @@ function frame(now) {
     updateFog();
     hudT -= dtReal; if (hudT <= 0) { hudT = 0.2; renderScore(); refreshBar(); }
     if (G.over && !G.review && G.replay) { G.review = true; $("replayBar").querySelector("b").textContent = "REPLAY OVER"; $("rpPause").hidden = true; }
-    else if (G.over && !G.review) { if (G.spect) { $("replayBar").hidden = true; document.body.classList.remove("replay"); } SND.sting(G.over.win); updateFog(); renderScore(); if (!G.tutorial && G.rec) lastRec = G.rec;
+    else if (G.over && !G.review) { if (!G.spect && !G.attract) endBanner(G.over.win); if (G.spect) { $("replayBar").hidden = true; document.body.classList.remove("replay"); } SND.sting(G.over.win); updateFog(); renderScore(); if (!G.tutorial && G.rec) lastRec = G.rec;
       if (G.tutorial) { setTimeout(showOver, 1400); UI.paused = true; } else enterReview(); }
   }
   // the menu backdrop draws at a steady ~30fps so the menu itself stays smooth
