@@ -465,7 +465,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b>, then pick who goes: the selected soldiers, the ones on screen, all but the general, the general on his own, or everyone. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
-    <section><h3>Level 9: the Endgame</h3><ul><li>The first army to reach <b>L9</b> gets the Endgame, a black hole. It charges for 20 seconds while that army's general is alive, and then that army wins.</li><li>Everyone sees the countdown and where the general is. Kill him and the charge resets, and you get mercenaries and healers. It starts again when he is back from base. If he is already down when L9 is reached, it waits for him.</li><li>What the weapon is stays a surprise until it fires.</li></ul></section><section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> and moves up one age with each level: L1 <b>Stone Age</b> (slings), L2 <b>Bronze Age</b> (javelins, a chariot), L3 <b>Middle Ages</b> (bows, a castle, a horseman), L4 <b>Musket Age</b> (muskets, a star fort), L5 <b>World Wars</b> (rifles, a jeep, trenches), L6 <b>Modern Age</b> (assault rifles, a tank), L7 <b>Future</b> (lasers, a hover bike) and L8 <b>Space Age</b> (plasma, a mech walker).</li><li>The era is the look of each army's upgrades: stones, javelins, arrows and plasma fly for a moment before they land, bullets and lasers hit at once. So an enemy in a later age is an army several upgrades ahead of you.</li></ul></section>
+    <section><h3>Level 9: the Endgame</h3><ul><li>Every army that reaches <b>L9</b> gets the Endgame, a black hole. It charges for 20 seconds while that army's general is alive, then swallows the base of the most advanced army left (computer armies leave you for last). Then it charges again, until one base is left.</li><li>If your base falls while two or more armies are still fighting, you watch the rest of the battle, or tap Exit.</li><li>Everyone sees the countdown and where the general is. Kill him and the charge resets, and you get mercenaries and healers. It starts again when he is back from base. If he is already down when L9 is reached, it waits for him.</li><li>What the weapon is stays a surprise until it fires.</li></ul></section><section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> and moves up one age with each level: L1 <b>Stone Age</b> (slings), L2 <b>Bronze Age</b> (javelins, a chariot), L3 <b>Middle Ages</b> (bows, a castle, a horseman), L4 <b>Musket Age</b> (muskets, a star fort), L5 <b>World Wars</b> (rifles, a jeep, trenches), L6 <b>Modern Age</b> (assault rifles, a tank), L7 <b>Future</b> (lasers, a hover bike) and L8 <b>Space Age</b> (plasma, a mech walker).</li><li>The era is the look of each army's upgrades: stones, javelins, arrows and plasma fly for a moment before they land, bullets and lasers hit at once. So an enemy in a later age is an army several upgrades ahead of you.</li></ul></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
     <section><h3>Marks on your soldiers</h3><ul><li><b>Pale ring</b>: selected.</li><li><b>Bar underneath</b>: health, shown once a soldier is hurt.</li><li><b>Gold ring and arc</b>: mercenary. The arc shows how long they stay.</li><li><b>Green bubbles and dashed ring</b>: plague. It jumps to soldiers close by, so SPREAD out.</li><li><b>Dot above the head</b>: a crate effect. <b style="color:#ff9a3c">Orange</b> rapid fire, <b style="color:#6fd3ff">blue</b> sharpshooters, <b style="color:#9a9a9a">grey</b> orders lost, blinking <b style="color:#ff3b30">red</b> signal fire (the enemy can see you).</li><li>Your army level is the <b>L</b> number at the top left.</li></ul></section>
     <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: [ and ] to slow down or speed up time, \ for normal speed, shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, Z army (all but the general), I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
@@ -986,11 +986,17 @@ function eliminate(owner, by) {
   if (by === G.human && owner !== G.human && !G.attract) gStats().bases++;
   if (owner === G.human) toast("Your base has fallen", "bad");
   else toast(p.team.name + " base destroyed" + (by === G.human ? " by you" : ""), by === G.human ? "gold" : "");
-  const alive = G.players.filter(q => !q.out);
-  if (G.players[G.human].out) G.over = { win: false };
-  else if (alive.length === 1) G.over = { win: true };
+  const alive = G.players.filter(q => !q.out), over = alive.length <= 1 ? { win: !G.players[G.human].out } : null;
+  if (over) { if (G.doomFire) G.pendOver = over; else G.over = over; } // during the finale, wait for it to finish
+  else if (owner === G.human && !G.attract && !G.replay && !G.tutorial) startSpectate();
 }
 
+// knocked out with two or more armies still fighting: watch the rest unfold, whole map, with an Exit
+function startSpectate() {
+  if (G.spect) return; G.spect = true; G.spectAt = G.time; document.body.classList.add("replay");
+  $("replayBar").hidden = false; $("replayBar").querySelector("b").textContent = "👁 WATCHING"; $("rpPause").hidden = true;
+  toast("You're out. Watch who wins, or tap Exit", "bad");
+}
 function genAura(owner) {
   const gnl = G.gens[owner];
   return gnl && gnl.alive ? gnl : null;
@@ -1064,7 +1070,7 @@ function levelUp(p) {
 // ---- level 9: the mystery weapon ("carry the bomb") ----
 // Reaching L9 arms it. It charges for DOOM.charge seconds while that army's general is alive; everyone sees it.
 // Kill the general and it resets (the killer gets mercenaries and a heal); it starts again when he respawns.
-// If it fires, every other army is wiped out and its owner wins.
+// If it fires, the target army (the strongest rival; AIs go for each other before the human) is wiped out. It recharges, and the game goes on until one base is left.
 const DOOM = { lvl: 8, charge: 20, show: 10, baseAt: 3, // the finale runs 10s; the target base falls 3s before the end
   names: ["Giant rubber duck", "Endgame", "Alien mothership", "Chicken rain"], pick: [1] }; // T cut the duck, the chickens and the mothership: the black hole ("Endgame") always fires
 function doomArm(p) {
@@ -1085,28 +1091,33 @@ function stepDoom(dt) {
   if (F) {
     F.t -= dt;
     const end = F.t <= DOOM.baseAt;
-    for (const u of G.units) if (u.alive && u.owner !== F.owner && F.t < DOOM.show - 1.5 && (end || G.rng() < dt * 0.3)) { u.alive = false; u.respawn = Infinity; u.seen = u.tgt = null; pushFx({ k: "death", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" }); }
+    for (const u of G.units) if (u.alive && u.owner === F.tgt && !u.free && F.t < DOOM.show - 1.5 && (end || G.rng() < dt * 0.3)) { u.alive = false; u.respawn = Infinity; u.seen = u.tgt = null; pushFx({ k: "death", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" }); }
     if (end && !F.fell) { F.fell = true;
-      for (const q of G.players) if (q.id !== F.owner && !q.out) { q.out = true; q.base.alive = false; q.base.hp = 0; q.base.diedAt = G.time; pushFx({ k: "boom", base: true, x: q.base.x, y: q.base.y, owner: q.id, c: q.team.c }); }
+      eliminate(F.tgt, F.owner);
     }
-    if (F.t <= 0 && !G.over) G.over = { win: F.owner === G.human, doom: F.w, by: F.owner };
+    if (F.t <= 0) { // the finale is over: the game goes on (or ends, if that was the last rival)
+      G.doomFire = null; const p = G.players[F.owner];
+      if (G.pendOver) { G.over = { ...G.pendOver, doom: F.w, by: F.owner }; G.pendOver = null; }
+      else if (!p.out) { p.doom = null; doomArm(p); }
+    }
     return;
   }
   for (const p of G.players) {
     const d = p.doom; if (!d) continue;
     if (p.out) { p.doom = null; continue; }
     const gen = G.gens[p.id], up = gen && gen.alive;
-    if (!d.on) { if (up) { d.on = true; d.t = DOOM.charge; pushFx({ k: "doomGo", owner: p.id, fresh: G.time - d.armT < 0.5 }); } continue; }
+    if (d.on && (d.tgt == null || G.players[d.tgt].out)) { const t = doomPick(p); d.tgt = t ? t.id : null; } // lock on to one army for the whole charge
+    if (!d.on) { if (up) { d.on = true; d.t = DOOM.charge; { const t = doomPick(p); d.tgt = t ? t.id : null; } pushFx({ k: "doomGo", owner: p.id, fresh: G.time - d.armT < 0.5 }); } continue; }
     if (!up) { // the general fell or was withdrawn: the charge fizzles
-      d.on = false; d.t = DOOM.charge;
+      d.on = false; d.t = DOOM.charge; d.tgt = null;
       pushFx({ k: "doomStop", owner: p.id, by: d.by, x: gen ? gen.x : p.base.x, y: gen ? gen.y : p.base.y });
       if (d.by != null && d.by !== p.id) doomReward(d.by, gen.x, gen.y);
       d.by = null; continue;
     }
     d.t -= dt;
     if (d.t <= 0) {
-      const tb = doomTarget(p).base;
-      G.doomFire = { owner: p.id, w: d.w, t: DOOM.show, t0: G.time, x: gen.x, y: gen.y, tx: tb.x, ty: tb.y }; pushFx({ k: "doomFire", owner: p.id, w: d.w }); return; }
+      const T = doomTarget(p), tb = T.base;
+      G.doomFire = { owner: p.id, tgt: T.id, w: d.w, t: DOOM.show, t0: G.time, x: gen.x, y: gen.y, tx: tb.x, ty: tb.y }; pushFx({ k: "doomFire", owner: p.id, w: d.w }); return; }
   }
 }
 // ---- easter egg: a message in a bottle washes up on the shore now and then; one of your soldiers can pick it up ----
@@ -1734,7 +1745,7 @@ function updateFog() {
   const me = G.players[G.human];
   if (me.base.alive) stamp(me.base.x, me.base.y, CFG.base.sight);
   for (const u of G.units) if (u.alive && u.owner === G.human && !(u.kind === "pilot" && !u.found)) stamp(u.x, u.y, CFG[u.kind].sight);
-  if (G.over || G.attract || G.replay || G.reveal > G.time) visible.fill(1), explored.fill(1), soft.fill(255);
+  if (G.over || G.attract || G.replay || G.spect || G.reveal > G.time) visible.fill(1), explored.fill(1), soft.fill(255);
 }
 const isVis = (x, y) => { const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return false; return G.visible[cy * G.gw + cx] === 1; };
 const isExp = (x, y) => { const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return false; return G.explored[cy * G.gw + cx] === 1; };
@@ -1812,7 +1823,7 @@ const MODEL3 = {
 };
 function model3(era, kind, pid) {
   const M = MODEL3[era] && MODEL3[era][kind]; if (!M) return null;
-  if (!M.st) { M.st = 1; M.t = {}; const im = new Image(), mk = M.mask ? new Image() : null; let n = mk ? 2 : 1; const done = () => { if (--n === 0) M.st = 2; };
+  if (!M.st) { M.st = 1; M.t = {}; const im = new Image(), mk = M.mask ? new Image() : null; let n = mk ? 2 : 1; const done = () => { if (--n === 0) Promise.all([im, mk].filter(Boolean).map(x => x.decode ? x.decode().catch(() => {}) : 0)).then(() => { M.st = 2; idle(() => { if (!M.mk) darkOf(im); }); }); }; // decode off the main thread, make the fog copy when idle
     im.onload = done; im.onerror = () => { M.st = 3; }; im.src = M.src; M.img = im; if (mk) { mk.onload = done; mk.onerror = () => { M.st = 3; }; mk.src = M.mask; M.mk = mk; } }
   if (M.st !== 2) return null;
   if (!M.t[pid] && !M.mk) M.t[pid] = { cv: M.img, M, c: G.players[pid].team.c };
@@ -1825,7 +1836,8 @@ function model3(era, kind, pid) {
   return M.t[pid];
 }
 // fog over standing terrain (rocks, base pieces): same strength as the flat fog layer, 0 clear .. ~0.95 unexplored
-const fogAt = (x, y) => { if (!G || G.attract || G.doomFire || !G.soft) return 0; const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return 0; const i = cy * G.gw + cx; return (G.explored[i] && !(G.seaMask && G.seaMask[i]) ? 150 : 242) / 255 * (1 - G.soft[i] / 255); };
+const fogAt = (x, y) => { if (!G || G.attract || G.doomFire || G.spect || !G.soft) return 0; const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return 0; const i = cy * G.gw + cx; return (G.explored[i] && !(G.seaMask && G.seaMask[i]) ? 150 : 242) / 255 * (1 - G.soft[i] / 255); };
+const idle = f => (window.requestIdleCallback || (g => setTimeout(g, 50)))(f, { timeout: 2000 });
 const darkOf = cv => cv.dk || (cv.dk = (() => { const d = document.createElement("canvas"); d.width = cv.width; d.height = cv.height; const g = d.getContext("2d"); g.drawImage(cv, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = "rgb(10,13,16)"; g.fillRect(0, 0, d.width, d.height); return d; })());
 const STAND = [], FALL3 = []; // FALL3: soldiers falling over in the 3D view (model sprites with a die clip)
 function drawStanding() {
@@ -3221,6 +3233,9 @@ function buildWorld() {
     g.strokeStyle = "rgba(60,140,150,.3)"; g.lineWidth = 26; poly(g, 14); g.stroke();
     paintCoast(g); // scanned rocks, wet sand and surf all round, no drawn beach
     paintReef(g);
+    // bake the sea photo once, under everything (it used to be redrawn every frame, which was slow)
+    g.globalCompositeOperation = "destination-over"; g.fillStyle = texOk("sea") ? texPat(g, "sea", 760) : SEA; g.fillRect(-20, -20, S + 40, S + 40);
+    g.globalCompositeOperation = "source-over";
     g.restore();
   }
   miniGround = document.createElement("canvas"); miniGround.width = miniGround.height = mini.width;
@@ -3577,13 +3592,11 @@ function render(dtReal) {
   c.setTransform(DPR * z, 0, 0, DPR * z, ox * DPR, oy * DPR);
   const vx0 = cam.x - W / 2 / z - 80, vx1 = cam.x + W / 2 / z + 80, vy0 = cam.y - H / 2 / z - 80, vy1 = cam.y + H / 2 / z + 80;
   const inView = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1;
-  const seeAll = !!(G.attract || G.doomFire || G.replay);
+  const seeAll = !!(G.attract || G.doomFire || G.replay || G.spect);
   const vis = (x, y) => seeAll || isVis(x, y);
 
   c.imageSmoothingEnabled = true;
-  if (G.island && texOk("sea") && PF.sea && qLevel() > 0) { // open water: the sea photo, slowly drifting (one cheap pattern fill)
-    const T = TEX.sea; if (!T.p1) T.p1 = c.createPattern(T, "repeat");
-    T.p1.setTransform(new DOMMatrix().translate(now * 7, now * 3).scale(760 / 1024)); c.fillStyle = T.p1; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }
+  if (G.island) { c.fillStyle = SEA; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); } // beyond the map edge (the sea photo is baked into the ground)
   c.drawImage(groundCvs, 0, 0, G.S, G.S);
   c.drawImage(decalCvs, 0, 0, G.S, G.S);
   if (G.island && texOk("detail") && z > 0.45 && PF.detail && qLevel() > 1) { // fine grain at full resolution, so close-ups stay sharp
@@ -4089,7 +4102,12 @@ function doomFx(e) {
   }
 }
 // the base an Endgame will hit: yours if it's an enemy's, otherwise the nearest enemy base
-function doomTarget(p) { let t = null; if (p.id !== G.human) t = G.players[G.human]; else for (const q of G.players) if (q.id !== p.id && !q.out && (!t || d2(q.base, p.base) < d2(t.base, p.base))) t = q; return t; }
+function doomTarget(p) {
+  const d = p.doom; if (d && d.tgt != null && !G.players[d.tgt].out) return G.players[d.tgt]; return doomPick(p); }
+function doomPick(p) {
+  let R = G.players.filter(q => q.id !== p.id && !q.out); if (p.id !== G.human && R.some(q => q.id !== G.human)) R = R.filter(q => q.id !== G.human);
+  const pow = q => q.level * 1000 + G.units.filter(u => u.alive && u.owner === q.id).length;
+  return R.sort((a, b) => pow(b) - pow(a) || a.id - b.id)[0] || null; }
 // lock-on: a targeting line arcs from the general over to the target base as it charges, and a reticle closes in on the base
 function drawDoomLock(c, z, now, p, g, f) {
   const T = doomTarget(p); if (!T) return; const b = T.base, k = 1 - f, lw = 1 / Math.max(z, 0.5), mine = p.id === G.human, col = mine ? "255,210,74" : "255,70,55";
@@ -4258,7 +4276,7 @@ function drawDoom() {
     c.font = `900 ${Math.max(30, M * 0.1)}px "Big Shoulders Display",system-ui,sans-serif`; c.fillStyle = "#fff6e0"; const l2 = DOOM.names[F.w].toUpperCase();
     c.strokeText(l2, SW / 2, cy + M * 0.085, SW - 30); c.fillText(l2, SW / 2, cy + M * 0.085, SW - 30); }
   const la = clamp((e - hit - 0.5) / 0.4, 0, 1);
-  if (la > 0) { c.globalAlpha = la; const lost = F.owner === G.human ? "ENEMY BASE DESTROYED" : "YOUR BASE IS GONE";
+  if (la > 0) { c.globalAlpha = la; const lost = F.tgt === G.human ? "YOUR BASE IS GONE" : F.owner === G.human ? "ENEMY BASE DESTROYED" : G.players[F.tgt].team.name.toUpperCase() + " BASE DESTROYED";
     c.font = `900 ${Math.max(28, M * 0.09)}px "Big Shoulders Display",system-ui,sans-serif`; c.lineWidth = 6; c.strokeStyle = "rgba(0,0,0,.85)"; c.fillStyle = F.owner === G.human ? "#ffd24a" : "#ff6b5e";
     c.strokeText(lost, SW / 2, cy + M * 0.03, SW - 30); c.fillText(lost, SW / 2, cy + M * 0.03, SW - 30); }
   const fl = clamp(1 - Math.abs(e - hit) / 0.3, 0, 1); if (fl > 0) { c.globalAlpha = fl * 0.85; c.fillStyle = "#fff"; c.fillRect(0, 0, SW, SH); }
@@ -6146,7 +6164,7 @@ function exitReplay() { document.body.classList.remove("replay"); $("replayBar")
 $("replayBtn").addEventListener("click", () => { SND.ui(); startReplay(); });
 $("boardReplay").addEventListener("click", () => { SND.ui(); boardHome(); startReplay(); });
 $("rpPause").addEventListener("click", () => { UI.paused = !UI.paused; $("rpPause").textContent = UI.paused ? "▶" : "II"; });
-$("rpExit").addEventListener("click", () => { SND.ui(); exitReplay(); });
+$("rpExit").addEventListener("click", () => { SND.ui(); if (G && G.spect && !G.over && !G.replay) { G.over = { win: false }; $("replayBar").hidden = true; document.body.classList.remove("replay"); return; } exitReplay(); });
 $("pauseBtn").addEventListener("click", togglePause);
 // ---- time lapse: ¼× to 8× ----
 UI.speed = 1;
@@ -6202,7 +6220,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden && G &
 let last = performance.now(), acc = 0, miniT = 0, hudT = 0, lastAttractDraw = 0;
 function frame(now) {
   const dtReal = Math.min(0.1, (now - last) / 1000); last = now;
-  if (!(G && G.attract)) trackQuality(dtReal);
+  if (!(G && G.attract) && G && G.time > 4) trackQuality(dtReal); // ignore the first seconds, while textures warm up
   if (G && G.attract) {
     acc += dtReal; let steps = 0;
     while (acc >= CFG.dt && steps < 2) { step(); acc -= CFG.dt; steps++; }
@@ -6226,7 +6244,7 @@ function frame(now) {
     updateFog();
     hudT -= dtReal; if (hudT <= 0) { hudT = 0.2; renderScore(); refreshBar(); }
     if (G.over && !G.review && G.replay) { G.review = true; $("replayBar").querySelector("b").textContent = "REPLAY OVER"; $("rpPause").hidden = true; }
-    else if (G.over && !G.review) { SND.sting(G.over.win); updateFog(); renderScore(); if (!G.tutorial && G.rec) lastRec = G.rec;
+    else if (G.over && !G.review) { if (G.spect) { $("replayBar").hidden = true; document.body.classList.remove("replay"); } SND.sting(G.over.win); updateFog(); renderScore(); if (!G.tutorial && G.rec) lastRec = G.rec;
       if (G.tutorial) { setTimeout(showOver, 1400); UI.paused = true; } else enterReview(); }
   }
   // the menu backdrop draws at a steady ~30fps so the menu itself stays smooth
