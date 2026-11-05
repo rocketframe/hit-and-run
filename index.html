@@ -138,6 +138,7 @@ body.splash #menuInfo{opacity:0;pointer-events:none}
 @keyframes infoPulse{0%,100%{box-shadow:0 0 0 0 rgba(231,199,106,.55)}60%{box-shadow:0 0 0 12px rgba(231,199,106,0)}}
 #about .card{text-align:center}
 #bottleMsg{position:fixed;left:50%;top:38%;z-index:30;width:min(320px,86vw);transform:translate(-50%,-50%) rotate(-2deg);padding:18px 20px 12px;background:linear-gradient(160deg,#f3e6c4,#dcc796);color:#3a2a14;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,.55),inset 0 0 30px rgba(120,80,30,.25);font:italic 600 19px/1.4 Georgia,"Times New Roman",serif;text-align:center;cursor:pointer}
+#bottleChip{position:fixed;left:50%;top:112px;z-index:25;transform:translateX(-50%);padding:9px 16px;border-radius:18px;border:1.5px solid #e8d49a;background:rgba(30,26,14,.88);color:#f3e6c4;font:700 13px system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.4);cursor:pointer}#bottleChip.in{animation:btIn .5s cubic-bezier(.2,1.4,.4,1)}
 #bottleMsg.in{animation:btIn .5s cubic-bezier(.2,1.4,.4,1)}
 #bottleMsg .bt-h{font:800 10px system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;opacity:.6;margin-bottom:8px;font-style:normal}
 #bottleMsg .bt-f{font:600 10px system-ui,sans-serif;opacity:.45;margin-top:10px;font-style:normal}
@@ -441,6 +442,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
   </div>
 </div>
 
+<button id="bottleChip" hidden>📜 Read the message in the bottle</button>
 <div id="bottleMsg" hidden><div class="bt-h">Message in a bottle</div><div id="bottleTxt"></div><div class="bt-f">tap to close</div></div>
 <div class="screen" id="about" hidden>
   <div class="card">
@@ -1153,17 +1155,20 @@ function stepBottle(dt) {
     if (G.time < G.bottleT) return;
     const a = G.rng() * TAU2, I = G.island, px = I.c + Math.cos(a) * 10, py = I.c + Math.sin(a) * 10, r = landR(px, py) - 16;
     G.bottle = { x: I.c + Math.cos(a) * r, y: I.c + Math.sin(a) * r, until: G.time + BOTTLE.life, a };
+    pushFx({ k: "bottleUp", x: G.bottle.x, y: G.bottle.y });
     return;
   }
   if (G.time > B.until) { G.bottle = null; G.bottleT = G.time + BOTTLE.gap[0] + G.rng() * (BOTTLE.gap[1] - BOTTLE.gap[0]); return; }
   for (const u of G.units) if (u.alive && !u.mis && d2(u, B) < 22 * 22) {
-    if (u.owner === G.human) { G.bottleN = (G.bottleN || 0); pushFx({ k: "bottle", i: G.bottleN++ % BOTTLE.msgs.length, x: B.x, y: B.y, owner: u.owner }); }
+    if (u.owner === G.human) { G.bottleN = (G.bottleN || 0); pushFx({ k: "bottle", i: G.bottleN++ % BOTTLE.msgs.length, x: B.x, y: B.y, owner: u.owner, sq: u.squad, kind: u.kind }); }
+    else pushFx({ k: "bottleLost", x: B.x, y: B.y, owner: u.owner });
     G.bottle = null; G.bottleT = G.time + BOTTLE.gap[0] + G.rng() * (BOTTLE.gap[1] - BOTTLE.gap[0]); return;
   }
 }
 function drawBottle(c, now) {
   const B = G.bottle; if (!B) return;
-  c.save(); c.translate(B.x, B.y + Math.sin(now * 2.4) * 1.2); c.rotate(B.a + Math.PI / 2 + Math.sin(now * 1.7) * 0.15);
+  const pr = (now * 0.8) % 1; c.strokeStyle = `rgba(200,255,215,${0.7 * (1 - pr)})`; c.lineWidth = 2; c.beginPath(); c.arc(B.x, B.y, 10 + pr * 26, 0, TAU); c.stroke();
+  c.save(); c.translate(B.x, B.y + Math.sin(now * 2.4) * 1.2); c.scale(1.6, 1.6); c.rotate(B.a + Math.PI / 2 + Math.sin(now * 1.7) * 0.15);
   c.fillStyle = "rgba(0,0,0,.28)"; c.beginPath(); c.ellipse(2, 3, 9, 4, 0, 0, TAU); c.fill();
   const gb = c.createLinearGradient(-4, -9, 4, 9); gb.addColorStop(0, "rgba(150,220,170,.95)"); gb.addColorStop(1, "rgba(40,110,70,.95)");
   c.fillStyle = gb; c.strokeStyle = "rgba(10,40,20,.8)"; c.lineWidth = 0.8; c.beginPath(); c.roundRect(-4, -4, 8, 13, 3); c.fill(); c.stroke();
@@ -1172,10 +1177,12 @@ function drawBottle(c, now) {
   c.fillStyle = "#efe3c0"; c.fillRect(-2.2, -1, 4.4, 7);
   const tw = 0.5 + 0.5 * Math.sin(now * 5); c.globalCompositeOperation = "lighter"; c.globalAlpha = 0.5 * tw; c.drawImage(SPR.glow, -10, -14, 20, 20); c.restore();
 }
-function showBottle(i) {
+function showBottle(i, keep) {
   const el = $("bottleMsg"); $("bottleTxt").textContent = BOTTLE.msgs[i]; el.hidden = false; el.classList.remove("in"); void el.offsetWidth; el.classList.add("in");
-  clearTimeout(showBottle.t); showBottle.t = setTimeout(() => { el.hidden = true; }, 8000);
+  clearTimeout(showBottle.t); if (!keep) showBottle.t = setTimeout(() => { el.hidden = true; }, 8000);
 }
+// a found bottle waits on a chip until you choose to read it, so the note never just pops up out of nowhere
+function bottleChip(i) { const b = $("bottleChip"); b.dataset.i = i; b.hidden = false; b.classList.remove("in"); void b.offsetWidth; b.classList.add("in"); }
 function strikeAt(owner, x, y) {
   G.strikes.push({ owner, x: clamp(x, 0, G.S), y: clamp(y, 0, G.S), t: 1.8 });
   pushFx({ k: "strikeIn", x, y, owner });
@@ -1887,7 +1894,7 @@ function drawStanding() {
   c.globalAlpha = 1; STAND.length = 0;
 }
 function warpFlat() {
-  const c = ctx, s = Math.sin(TILT.th), p = TILT.p, B = 3, oy = SH * TILT.oy;
+  const c = ctx, s = Math.sin(TILT.th), p = TILT.p, B = [6, 4, 3][qLevel()], oy = SH * TILT.oy; // fewer, taller strips on lower settings
   c.setTransform(DPR, 0, 0, DPR, 0, 0); c.fillStyle = SEA; c.fillRect(0, 0, SW, SH);
   for (let y = 0; y < SH; y += B) {
     const v0 = tvOf(y - oy), v1 = tvOf(y + B - oy), f = (p - (v0 + v1) / 2 * s) / p, sw = SW * f;
@@ -3254,6 +3261,12 @@ function buildWorld() {
     // bake the sea photo once, under everything (it used to be redrawn every frame, which was slow)
     g.globalCompositeOperation = "destination-over"; g.fillStyle = texOk("sea") ? texPat(g, "sea", 760) : SEA; g.fillRect(-20, -20, S + 40, S + 40);
     g.globalCompositeOperation = "source-over";
+    // where the coast's scanned water runs into the map edge, fade it back to the plain sea photo, so it meets the open sea beyond with no seam
+    { const F = 70, P = texOk("sea") ? texPat(g, "sea", 760) : SEA; g.save(); g.beginPath(); g.rect(-20, -20, S + 40, S + 40); poly(g, 30, true); g.clip("evenodd");
+      for (let k = 0; k < 7; k++) { const a = k * F / 7, b = a + F / 7; g.globalAlpha = 1 - k / 7; g.fillStyle = P;
+        g.fillRect(-20, a - (k ? 0 : 20), S + 40, b - a + (k ? 0 : 20)); g.fillRect(-20, S - b, S + 40, b - a + (k ? 0 : 20));
+        g.fillRect(a - (k ? 0 : 20), -20, b - a + (k ? 0 : 20), S + 40); g.fillRect(S - b, -20, b - a + (k ? 0 : 20), S + 40); }
+      g.restore(); }
     g.restore();
   }
   miniGround = document.createElement("canvas"); miniGround.width = miniGround.height = mini.width;
@@ -3365,7 +3378,9 @@ function consumeFx() {
       continue;
     }
     if (e.k.startsWith("doom")) { if (!G.attract) doomFx(e); continue; }
-    if (e.k === "bottle") { if (!G.attract) { showBottle(e.i); SND.ui(); burst(e.x, e.y, "level"); } continue; }
+    if (e.k === "bottle") { if (!G.attract) { SND.ui(); burst(e.x, e.y, "level"); const who = e.kind === "gen" ? "Your general" : "Squad " + "ABCD"[e.sq || 0]; toast(who + " found a message in a bottle!", "gold"); bottleChip(e.i); } continue; }
+    if (e.k === "bottleUp") { if (!G.attract) toast("A message in a bottle washed up on the shore. Send a soldier to pick it up", "gold"); continue; }
+    if (e.k === "bottleLost") { if (!G.attract && isVis(e.x, e.y)) toast(G.players[e.owner].team.name + " grabbed the bottle first"); continue; }
     const pub = e.k === "crate" || e.k === "strike" || e.k === "strikeIn" || e.k === "open" || e.k === "trap" || e.k === "lost";
     if (!seen && !pub) continue;
     if (e.k === "strikeIn" && e.owner !== me && !G.attract) toast("Incoming strike!", "bad");
@@ -3614,11 +3629,12 @@ function render(dtReal) {
   const vis = (x, y) => seeAll || isVis(x, y);
 
   c.imageSmoothingEnabled = true;
-  if (G.island && (vx0 < 0 || vy0 < 0 || vx1 > G.S || vy1 > G.S)) { // beyond the map edge: the same sea photo, lined up with the one baked into the ground
+  if (G.island && (vx0 < 6 || vy0 < 6 || vx1 > G.S - 6 || vy1 > G.S - 6)) { // beyond the map edge: the same sea photo, lined up with the one baked into the ground
     const T = TEX.sea; if (texOk("sea")) { if (!T.p1) { T.p1 = c.createPattern(T, "repeat"); T.p1.setTransform(new DOMMatrix().scale(760 / T.width)); } c.fillStyle = T.p1; } else c.fillStyle = SEA; // the same photo as the baked sea, so there's no seam
     const S = G.S; // only the strips outside the map, never the whole view
-    if (vy0 < 0) c.fillRect(vx0, vy0, vx1 - vx0, -vy0); if (vy1 > S) c.fillRect(vx0, S, vx1 - vx0, vy1 - S);
-    const y0 = Math.max(0, vy0), y1 = Math.min(S, vy1); if (vx0 < 0) c.fillRect(vx0, y0, -vx0, y1 - y0); if (vx1 > S) c.fillRect(S, y0, vx1 - S, y1 - y0); }
+    const o = 6; // reach a little under the ground's edge so its soft last pixels don't show a dark seam
+    if (vy0 < o) c.fillRect(vx0, vy0, vx1 - vx0, o - vy0); if (vy1 > S - o) c.fillRect(vx0, S - o, vx1 - vx0, vy1 - S + o);
+    const y0 = Math.max(0, vy0), y1 = Math.min(S, vy1); if (vx0 < o) c.fillRect(vx0, y0, o - vx0, y1 - y0); if (vx1 > S - o) c.fillRect(S - o, y0, vx1 - S + o, y1 - y0); }
   c.drawImage(groundCvs, 0, 0, G.S, G.S);
   c.drawImage(decalCvs, 0, 0, G.S, G.S);
   if (G.island && texOk("detail") && z > 0.45 && PF.detail && qLevel() > 1) { // fine grain at full resolution, so close-ups stay sharp
@@ -4338,6 +4354,7 @@ function drawEdgeMarks() {
   for (const cr of G.crates || []) if (cr.land <= G.time) marks.push({ x: cr.x, y: cr.y, col: cr.mission ? "#f3c85a" : "#e9dfc0", kind: "crate" });
   if (G.mis && G.mis.x !== undefined) { const u = G.mis.unit, q = u && u.alive ? u : G.mis; marks.push({ x: q.x, y: q.y, col: "#f3c85a", kind: "star" }); }
   for (const p of G.players) if (p.id !== G.human && p.doom && p.doom.on && !p.out && G.gens[p.id].alive) marks.push({ x: G.gens[p.id].x, y: G.gens[p.id].y, col: "#ff3b30", kind: "gen" });
+  if (G.bottle) marks.push({ x: G.bottle.x, y: G.bottle.y, col: "#9fe0b0", kind: "bottle" });
   const g = G.gens[G.human]; if (g && g.alive && G.time - (g.hitAt || -99) < 3) marks.push({ x: g.x, y: g.y, col: "#ff6b5e", kind: "gen" });
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
   for (const q of marks) {
@@ -4352,6 +4369,7 @@ function drawEdgeMarks() {
     c.save(); c.rotate(a); c.fillStyle = q.col; c.beginPath(); c.moveTo(19, 0); c.lineTo(13, -5); c.lineTo(13, 5); c.fill(); c.restore();
     c.fillStyle = q.col;
     if (q.kind === "crate") { c.fillRect(-5, -5, 10, 10); c.strokeStyle = "rgba(10,12,8,.9)"; c.lineWidth = 1.2; c.beginPath(); c.moveTo(-5, -5); c.lineTo(5, 5); c.stroke(); }
+    else if (q.kind === "bottle") { c.beginPath(); c.roundRect(-3.5, -2, 7, 8, 2); c.fill(); c.fillRect(-1.5, -6, 3, 4); }
     else if (q.kind === "star") { c.beginPath(); for (let i = 0; i < 10; i++) { const rr = i % 2 ? 2.6 : 6.4, aa = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(Math.cos(aa) * rr, Math.sin(aa) * rr); } c.fill(); }
     else { c.font = "900 11px system-ui,sans-serif"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("G", 0, 0.5); }
     c.restore();
@@ -4380,6 +4398,7 @@ function renderMini() {
     const s = u.kind === "gen" ? 7 : 3.5; c.fillRect(u.x * k - s / 2, u.y * k - s / 2, s, s);
   }
   for (const cr of G.crates || []) { const s = cr.mission ? 9 : 6; c.fillStyle = cr.mission ? "#f3c85a" : "#f1ead2"; c.fillRect(cr.x * k - s / 2, cr.y * k - s / 2, s, s); c.strokeStyle = "#000"; c.lineWidth = 1.5; c.strokeRect(cr.x * k - s / 2, cr.y * k - s / 2, s, s); }
+  if (G.bottle && !G.attract) { const pr = (performance.now() / 700) % 1; c.strokeStyle = `rgba(159,224,176,${1 - pr})`; c.lineWidth = 2; c.beginPath(); c.arc(G.bottle.x * k, G.bottle.y * k, 3 + pr * 10, 0, 7); c.stroke(); c.fillStyle = "#9fe0b0"; c.beginPath(); c.arc(G.bottle.x * k, G.bottle.y * k, 3, 0, 7); c.fill(); }
   if (G.mis && !G.attract) { const m = G.mis, q = m.type === "rescue" && !m.unit.found ? { x: m.ax, y: m.ay } : m.type === "kill" && !(m.seen && isVis(m.unit.x, m.unit.y)) ? { x: m.ax, y: m.ay } : m.unit && m.unit.alive ? m.unit : m;
     const pr = (performance.now() / 900) % 1; c.strokeStyle = `rgba(243,200,90,${1 - pr})`; c.lineWidth = 2.5; c.beginPath(); c.arc(q.x * k, q.y * k, 5 + pr * 14, 0, 7); c.stroke();
     c.fillStyle = "#f3c85a"; c.beginPath(); c.arc(q.x * k, q.y * k, 4, 0, 7); c.fill(); }
@@ -4983,6 +5002,7 @@ addEventListener("popstate", () => {
   if (G && !G.attract && !G.over && $("menu").hidden) { if (!UI.paused) togglePause(); guardBack(); }
 });
 function start() {
+  $("bottleChip").hidden = true; $("bottleMsg").hidden = true;
   TUT.stop(); setTimeout(resize, 0); guardBack(); leaveReview();
   document.body.classList.remove("attract");
   const seed = (Date.now() & 0xffffffff) >>> 0, O = UI.opts;
@@ -6265,6 +6285,7 @@ $("resumeBtn").addEventListener("click", togglePause);
 $("howBtn").addEventListener("click", () => { $("menu").hidden = true; $("howto").hidden = false; $("howto").scrollTop = 0; });
 $("howBack").addEventListener("click", () => { $("howto").hidden = true; $("menu").hidden = false; });
 $("bottleMsg").addEventListener("click", () => { $("bottleMsg").hidden = true; });
+$("bottleChip").addEventListener("click", e => { e.stopPropagation(); const b = $("bottleChip"); b.hidden = true; SND.ui(); showBottle(+b.dataset.i, true); });
 // easter egg: the Konami code turns the battlefield 8-bit
 { const K = ["arrowup", "arrowup", "arrowdown", "arrowdown", "arrowleft", "arrowright", "arrowleft", "arrowright", "b", "a"]; let ki = 0;
   window.addEventListener("keydown", e => { const k = e.key.toLowerCase(); ki = k === K[ki] ? ki + 1 : (k === K[0] ? 1 : 0);
