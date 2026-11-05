@@ -465,7 +465,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
     <section><h3>Kill selected</h3><p>Trapped and outnumbered? Tap <b>KILL</b>, then pick who goes: the selected soldiers, the ones on screen, all but the general, the general on his own, or everyone. Nobody gets points, and they respawn at base. Better than handing the enemy free kills. The AI does it too.</p></section>
     <section><h3>Points and upgrades</h3><p>Every kill is a point. Each upgrade adds 15% health and firepower to your whole army. <b>Game pace</b> sets how often upgrades come: every 25 (Quick), 50 (Medium) or 100 (Slow) points.</p></section>
-    <section><h3>Level 9: the Endgame</h3><ul><li>Every army that reaches <b>L9</b> gets the Endgame, a black hole. It charges for 20 seconds while that army's general is alive, then swallows the base of the most advanced army left (computer armies leave you for last). Then it charges again, until one base is left.</li><li>If your base falls while two or more armies are still fighting, you watch the rest of the battle, or tap Exit.</li><li>Everyone sees the countdown and where the general is. Kill him and the charge resets, and you get mercenaries and healers. It starts again when he is back from base. If he is already down when L9 is reached, it waits for him.</li><li>What the weapon is stays a surprise until it fires.</li></ul></section><section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> and moves up one age with each level: L1 <b>Stone Age</b> (slings), L2 <b>Bronze Age</b> (javelins, a chariot), L3 <b>Middle Ages</b> (bows, a castle, a horseman), L4 <b>Musket Age</b> (muskets, a star fort), L5 <b>World Wars</b> (rifles, a jeep, trenches), L6 <b>Modern Age</b> (assault rifles, a tank), L7 <b>Future</b> (lasers, a hover bike) and L8 <b>Space Age</b> (plasma, a mech walker).</li><li>The era is the look of each army's upgrades: stones, javelins, arrows and plasma fly for a moment before they land, bullets and lasers hit at once. So an enemy in a later age is an army several upgrades ahead of you.</li></ul></section>
+    <section><h3>Level 9: the Endgame</h3><ul><li>Every army that reaches <b>L9</b> gets the Endgame, a black hole. It charges for 35 seconds while that army's general is alive, then swallows the base of the most advanced army left (computer armies leave you for last). Then it charges again, until one base is left.</li><li>If your base falls while two or more armies are still fighting, you watch the rest of the battle, or tap Exit.</li><li>Everyone sees the countdown and where the general is. Kill him and the charge is lost, that army drops back to level 8 and has to earn level 9 again, and you get mercenaries and healers. It starts again when he is back from base. If he is already down when L9 is reached, it waits for him.</li><li>What the weapon is stays a surprise until it fires.</li></ul></section><section><h3>Eras</h3><ul><li>Every army starts in the <b>Stone Age</b> and moves up one age with each level: L1 <b>Stone Age</b> (slings), L2 <b>Bronze Age</b> (javelins, a chariot), L3 <b>Middle Ages</b> (bows, a castle, a horseman), L4 <b>Musket Age</b> (muskets, a star fort), L5 <b>World Wars</b> (rifles, a jeep, trenches), L6 <b>Modern Age</b> (assault rifles, a tank), L7 <b>Future</b> (lasers, a hover bike) and L8 <b>Space Age</b> (plasma, a mech walker).</li><li>The era is the look of each army's upgrades: stones, javelins, arrows and plasma fly for a moment before they land, bullets and lasers hit at once. So an enemy in a later age is an army several upgrades ahead of you.</li></ul></section>
     <section><h3>Score and leaderboard</h3><p>Score = (kills × 5, plus 1,000 for a win and up to 900 for speed, and a loss keeps only a quarter) × skill (Recruit 1, Veteran 2, Elite 3, Invincible 5) × odds (enemy soldiers ÷ yours). Beat bigger, tougher armies with fewer soldiers to climb the board. Invincible can't be beaten at even odds, so shrink their armies and work your way up.</p></section>
     <section><h3>Marks on your soldiers</h3><ul><li><b>Pale ring</b>: selected.</li><li><b>Bar underneath</b>: health, shown once a soldier is hurt.</li><li><b>Gold ring and arc</b>: mercenary. The arc shows how long they stay.</li><li><b>Green bubbles and dashed ring</b>: plague. It jumps to soldiers close by, so SPREAD out.</li><li><b>Dot above the head</b>: a crate effect. <b style="color:#ff9a3c">Orange</b> rapid fire, <b style="color:#6fd3ff">blue</b> sharpshooters, <b style="color:#9a9a9a">grey</b> orders lost, blinking <b style="color:#ff3b30">red</b> signal fire (the enemy can see you).</li><li>Your army level is the <b>L</b> number at the top left.</li></ul></section>
     <section><h3>Keyboard and mouse</h3><p class="fine">Mouse works like touch. Optional shortcuts: [ and ] to slow down or speed up time, \ for normal speed, shift-drag to box-select, right-click to order, 1 to 4 for squads, G general, Q all, Z army (all but the general), I idle, Ctrl+number to save a group, E to switch mode, X twice to kill selected, H for base, P or Esc to pause.</p></section>
@@ -977,12 +977,18 @@ function addPoints(p, n) {
 function eliminate(owner, by) {
   const p = G.players[owner]; if (p.out) return;
   p.out = true; p.base.alive = false; p.base.hp = 0; p.base.diedAt = G.time;
+  // the winner of the base takes over its surviving soldiers as mercenaries (they stay until killed, no respawn)
+  const take = by != null && by !== owner && G.players[by] && !G.players[by].out && !G.doomFire && !G.attract ? G.units.filter(u => u.alive && u.owner === owner && u.kind !== "gen" && !u.free && !u.mis && CFG[u.kind] && CFG[u.kind].sight && u.kind !== "depot").map(u => ({ x: u.x, y: u.y })) : [];
   for (const u of G.units) if (u.owner === owner) {
     if (u.free && u.alive) { u.owner = G.human; continue; } // the cart and the scout belong to nobody: they stay
     if (u.alive) pushFx({ k: "death", x: u.x, y: u.y, a: u.face, owner, c: p.team.c, big: u.kind === "gen" });
     u.alive = false; u.respawn = Infinity;
   }
   pushFx({ k: "boom", base: true, x: p.base.x, y: p.base.y, owner, c: p.team.c });
+  if (take.length) { let near = null; for (const v of G.units) if (v.alive && v.owner === by && v.kind === "inf" && !v.temp && (!near || d2(v, p.base) < d2(near, p.base))) near = v;
+    for (const t of take) tempUnit(by, t.x, t.y, near ? near.squad : 0, Infinity).merc = true;
+    if (by === G.human) toast(take.length + " of their soldiers join you as mercenaries", "gold"); else if (owner === G.human) toast("Your surviving soldiers went over to " + G.players[by].team.name);
+    else toast(G.players[by].team.name + " took over " + take.length + " soldiers"); }
   if (by === G.human && owner !== G.human && !G.attract) gStats().bases++;
   if (owner === G.human) toast("Your base has fallen", "bad");
   else toast(p.team.name + " base destroyed" + (by === G.human ? " by you" : ""), by === G.human ? "gold" : "");
@@ -1071,7 +1077,7 @@ function levelUp(p) {
 // Reaching L9 arms it. It charges for DOOM.charge seconds while that army's general is alive; everyone sees it.
 // Kill the general and it resets (the killer gets mercenaries and a heal); it starts again when he respawns.
 // If it fires, the target army (the strongest rival; AIs go for each other before the human) is wiped out. It recharges, and the game goes on until one base is left.
-const DOOM = { lvl: 8, charge: 20, show: 10, baseAt: 3, // the finale runs 10s; the target base falls 3s before the end
+const DOOM = { lvl: 8, charge: 35, back: 0.5, show: 10, baseAt: 3, // the finale runs 10s; the target base falls 3s before the end
   names: ["Giant rubber duck", "Endgame", "Alien mothership", "Chicken rain"], pick: [1] }; // T cut the duck, the chickens and the mothership: the black hole ("Endgame") always fires
 function doomArm(p) {
   if (p.doom || G.attract || G.tutorial || p.out || G.doomFire) return;
@@ -1111,7 +1117,10 @@ function stepDoom(dt) {
     if (!up) { // the general fell or was withdrawn: the charge fizzles
       d.on = false; d.t = DOOM.charge; d.tgt = null;
       pushFx({ k: "doomStop", owner: p.id, by: d.by, x: gen ? gen.x : p.base.x, y: gen ? gen.y : p.base.y });
-      if (d.by != null && d.by !== p.id) doomReward(d.by, gen.x, gen.y);
+      if (d.by != null && d.by !== p.id) { doomReward(d.by, gen.x, gen.y); // and the charger drops back to level 8: L9 has to be earned again
+        const before = p.level; p.level = DOOM.lvl - 1; p.points = Math.floor((p.level - (p.bonus || 0) + DOOM.back) * G.upEvery);
+        for (const u of G.units) if (u.owner === p.id && u.alive) u.hp = Math.min(u.hp * (1 + CFG.upStep * p.level) / (1 + CFG.upStep * before), maxHp(u));
+        p.doom = null; continue; }
       d.by = null; continue;
     }
     d.t -= dt;
@@ -1761,7 +1770,7 @@ const mini = document.getElementById("mini"), mctx = mini.getContext("2d");
 let W = 0, H = 0, DPR = 1;
 const cam = { x: 0, y: 0, z: 1 };
 // quality: 2 = full, 1 = reduced, 0 = minimal. Drops automatically if frames get slow.
-const Q = { level: 2, ema: 16, slowT: 0, fastT: 0 };
+const Q = { level: 1, ema: 16, slowT: 0, fastT: 0 }; // Auto starts at Medium and steps up to High only when frames are fast
 const qLevel = () => (G && G.attract) ? Math.min(Q.level, 1) : Q.level;
 const QP = [
   { dpr: 1, parts: 140, clouds: false, shadows: false, decals: true },
@@ -2507,7 +2516,7 @@ const BB3 = {};
 // baked rock model (Rock Medium by Quaternius) in 6 variants: cells S x H, ground centre at (gx, gy), wpp world units (footprint radius 1) per px
 const ROCK3 = { src: "sprites/rocks.png", S: 128, H: 133, N: 6, gx: 64, gy: 86.2, wpp: 0.0203125 };
 const ROCK3B = { src: "sprites/rocks2.png", S: 128, H: 133, N: 8, gx: 64, gy: 86.2, wpp: 0.0203125 }; // Rocks by AspectStudios (CC-BY)
-function rock3(o) { const h = Math.floor(Math.abs(o.x * 7 + o.y * 3)), R = h % 7 < 3 ? ROCK3 : ROCK3B; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
+function rock3(o) { const h = Math.floor(Math.abs(o.x * 7 + o.y * 3)), R = (G.rockSet != null ? G.rockSet : (G.rockSet = G.rec ? (G.rec.seed >>> 3) % 2 : 0)) ? ROCK3B : ROCK3; /* one kind of stone per map (T) */ if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
   const i = Math.floor(h / 7) % R.N, cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, i * R.S, 0, R.S, R.H, 0, 0, R.S, R.H);
   const f = R.wpp * o.r * 1.12; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; return cv; }
 // island plants: date palm, curly palm, coconut palm (evolveduk), fern grass (Digital screen official), green shrub (Somersby, CC-BY-NC), shrub (Ryan Chaney); two turns each
@@ -3596,7 +3605,9 @@ function render(dtReal) {
   const vis = (x, y) => seeAll || isVis(x, y);
 
   c.imageSmoothingEnabled = true;
-  if (G.island) { c.fillStyle = SEA; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); } // beyond the map edge (the sea photo is baked into the ground)
+  if (G.island && (vx0 < 0 || vy0 < 0 || vx1 > G.S || vy1 > G.S)) { // beyond the map edge: the same sea photo, lined up with the one baked into the ground
+    const T = TEX.sea; if (texOk("sea")) { if (!T.p1) { T.p1 = c.createPattern(T, "repeat"); T.p1.setTransform(new DOMMatrix().scale(760 / T.width)); } c.fillStyle = T.p1; } else c.fillStyle = SEA;
+    c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }
   c.drawImage(groundCvs, 0, 0, G.S, G.S);
   c.drawImage(decalCvs, 0, 0, G.S, G.S);
   if (G.island && texOk("detail") && z > 0.45 && PF.detail && qLevel() > 1) { // fine grain at full resolution, so close-ups stay sharp
@@ -4092,9 +4103,9 @@ function doomFx(e) {
     toast(mine ? "Your general is back: the Endgame is charging" : nm + "'s Endgame is charging again!", mine ? "gold" : "bad");
   } else if (e.k === "doomStop") {
     SND.doom("stop");
-    if (mine) toast("Your general fell and the Endgame fizzled. It recharges when he's back", "bad");
+    if (mine) toast(e.by != null ? "Your general fell! Back to level 8: earn level 9 again" : "Your general left and the Endgame fizzled. It recharges when he's back", "bad");
     else if (e.by === me) { toast("Endgame stopped! Mercenaries and healers join you", "gold"); burst(e.x, e.y, "open"); }
-    else toast(nm + "'s Endgame was stopped");
+    else toast(nm + "'s Endgame was stopped" + (e.by != null ? ", back to level 8" : ""));
   } else if (e.k === "doomFire") {
     if (G.doomFire) G.doomFire.r0 = performance.now();
     $("toast").innerHTML = "";
@@ -4347,7 +4358,7 @@ function trackQuality(dtReal) {
   if (Q.ema > 24) { Q.slowT += dtReal; Q.fastT = 0; } else if (Q.ema < 14) { Q.fastT += dtReal; Q.slowT = 0; } else { Q.slowT = 0; Q.fastT = 0; }
   if (Q.fixed != null) { if (Q.level !== Q.fixed) { Q.level = Q.fixed; resize(); } }
   else if (Q.slowT > 2.5 && Q.level > 0) { Q.level--; Q.dropped = true; Q.slowT = 0; Q.ema = 16; resize(); }
-  else if (Q.fastT > 12 && Q.level < 2 && !Q.dropped) { Q.level++; Q.fastT = 0; resize(); }
+  else if (Q.fastT > 6 && Q.level < 2 && !Q.dropped) { Q.level++; Q.fastT = 0; resize(); }
 }
 
 // ======================================================================
@@ -4817,7 +4828,9 @@ seg("optMap", "map");
 function mapLine() { $("mapLine").textContent = MAPS[UI.opts.map].line; customSummary(); }
 $("optMap").addEventListener("click", () => { try { localStorage.setItem("hr-map", UI.opts.map); } catch (e) {} mapLine(); });
 mapLine();
+for (const [k, lo, hi] of [["players", 2, 4], ["up", 1, 1000], ["diff", 0, 9]]) { try { const v = localStorage.getItem("hr-" + k); if (v !== null && isFinite(+v)) UI.opts[k] = clamp(+v, lo, hi); } catch (e) {} } // remember the last pick (T)
 seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optCrates", "crates"); seg("optMissions", "missions");
+for (const [id, k] of [["optPlayers", "players"], ["optUp", "up"], ["optDiff", "diff"]]) $(id).addEventListener("click", () => { try { localStorage.setItem("hr-" + k, String(UI.opts[k])); } catch (e) {} });
 $("optMissions").addEventListener("click", () => { try { localStorage.setItem("hr-missions", String(UI.opts.missions)); } catch (e) {} renderMisTypes(); });
 function renderMisTypes() {
   const box = $("misTypes");
