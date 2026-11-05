@@ -3001,6 +3001,26 @@ function paintReef(g) {
     g.drawImage(REEF.img, 0, sp.p * REEF.H, w, REEF.H, -w / 2 * k, -(REEF.top + 4) * k, w * k, REEF.H * k); g.restore(); }
   g.restore();
 }
+// the whole coast: one strip cut along the shore of the same reef scan (rocks, wet sand, surf), bent around the island.
+// Each eighth of the coast gets the strip once, mirrored in every other eighth, so it is seamless and as symmetric as the island
+const COAST = { src: "sprites/coast2.png", img: null, flip: null, ok: false, H: 150, top: 45, k: 0.62 };
+function paintCoast(g) {
+  const I = G.island; if (!I) return;
+  if (!COAST.img) { COAST.img = new Image(); COAST.img.onload = () => { const f = document.createElement("canvas"); f.width = COAST.img.width; f.height = COAST.img.height; const fg = f.getContext("2d"); fg.translate(f.width, 0); fg.scale(-1, 1); fg.drawImage(COAST.img, 0, 0); COAST.flip = f; COAST.ok = true;
+      if (groundCvs && G && G.island) { const g2 = groundCvs.getContext("2d"); g2.save(); g2.setTransform(GK, 0, 0, GK, 0, 0); paintCoast(g2); paintReef(g2); g2.restore(); if (miniGround) miniGround.getContext("2d").drawImage(groundCvs, 0, 0, miniGround.width, miniGround.width); } }; COAST.img.src = COAST.src; }
+  if (!COAST.ok) return;
+  const n = I.R.length, Ws = COAST.img.width, k = COAST.k, oct = Math.PI / 4, pt = i => { const t = i / n * TAU, r = I.R[i % n]; return [I.c + Math.cos(t) * r, I.c + Math.sin(t) * r, t]; };
+  g.save(); g.filter = "contrast(1.15) brightness(0.84) saturate(0.85)";
+  for (let i = 0; i < n; i++) {
+    const [x0, y0, t0] = pt(i), [x1, y1] = pt(i + 1), q = Math.floor(t0 / oct + 1e-9), mir = q % 2 === 1;
+    let u0 = (t0 - q * oct) / oct, u1 = u0 + 1 / n * TAU / oct; const src = mir ? COAST.flip : COAST.img;
+    // (in odd eighths the flipped copy, read the same way round, is the mirror image)
+    const sx = Math.max(0, Math.min(Ws - 1, u0 * Ws)), sw = Math.max(1, Math.min(Ws - sx, (u1 - u0) * Ws)), dw = Math.hypot(x1 - x0, y1 - y0) + 0.9;
+    g.save(); g.translate(x0, y0); g.rotate(Math.atan2(y1 - y0, x1 - x0));
+    g.drawImage(src, sx, 0, sw, COAST.H, -0.45, -COAST.top * k, dw, COAST.H * k); g.restore();
+  }
+  g.restore();
+}
 // ---------- world (terrain, rocks) ----------
 function buildWorld() {
   buildSprites();
@@ -3172,13 +3192,11 @@ function buildWorld() {
   if (G.island) { // ocean around the island: deep water, shallows, foam and a sandy beach
     const I = G.island, n = I.R.length, poly = (c, off, keep) => { if (!keep) c.beginPath(); for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, rr = I.R[i] + off, x = I.c + Math.cos(t) * rr, y = I.c + Math.sin(t) * rr; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); };
     g.save(); g.setTransform(GK, 0, 0, GK, 0, 0);
-    g.save(); poly(g, 0); g.clip(); // beach on the land side
-    for (const [lw, col] of [[70, "rgba(168,150,104,.35)"], [40, "rgba(190,170,120,.55)"], [20, "rgba(206,188,138,.8)"]]) { g.strokeStyle = col; g.lineWidth = lw; poly(g, 0); g.stroke(); }
-    g.restore();
     g.beginPath(); g.rect(-20, -20, S + 40, S + 40); poly(g, 0, true); // the sea outside
     g.fillStyle = SEA; g.fill("evenodd");
+    for (const [off, lw, col] of [[14, 26, "rgba(60,140,150,.3)"], [34, 1.4, "rgba(200,230,230,.14)"], [48, 1.2, "rgba(200,230,230,.08)"]]) { g.strokeStyle = col; g.lineWidth = lw; poly(g, off); g.stroke(); }
+    paintCoast(g); // scanned rocks, wet sand and surf all round, no drawn beach
     paintReef(g);
-    for (const [off, lw, col] of [[10, 22, "rgba(60,140,150,.35)"], [4, 8, "rgba(110,190,190,.35)"], [1, 2.2, "rgba(230,240,230,.55)"], [16, 1.4, "rgba(200,230,230,.18)"], [30, 1.2, "rgba(200,230,230,.1)"]]) { g.strokeStyle = col; g.lineWidth = lw; poly(g, off); g.stroke(); }
     g.restore();
   }
   miniGround = document.createElement("canvas"); miniGround.width = miniGround.height = mini.width;
@@ -3475,14 +3493,14 @@ function drawWaves(c, now, z) {
   const ring = (off, amp, ph) => { c.beginPath(); for (let i = 0; i <= n; i += step) { const k = i % n, t = k / n * TAU, rr = I.R[k] + off + Math.sin(t * 40 + now * 1.3 + ph) * amp; const x = I.c + Math.cos(t) * rr, y = I.c + Math.sin(t) * rr; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); };
   // three swells moving toward the shore and fading as they arrive
   for (let k = 0; k < 3; k++) {
-    const f = ((now * 0.22 + k / 3) % 1), off = 6 + (1 - f) * 46;
+    const f = ((now * 0.22 + k / 3) % 1), off = 26 + (1 - f) * 40; // rolling in to the rocks
     c.strokeStyle = `rgba(215,238,236,${(0.05 + 0.22 * f * f).toFixed(3)})`; c.lineWidth = (1.2 + f * 1.6) / Math.max(z, 0.5) * 0.9;
     ring(off, 2.5, k * 2); c.stroke();
   }
   // foam line breathing on the sand
   const br = 0.5 + 0.5 * Math.sin(now * 1.1);
   c.strokeStyle = `rgba(240,246,240,${(0.35 + 0.25 * br).toFixed(3)})`; c.lineWidth = 2.2 / Math.max(z, 0.5);
-  ring(1.5 + br * 3, 1.2, 0); c.stroke();
+  ring(25 + br * 3, 1.6, 0); c.stroke();
 }
 function render(dtReal) {
   let c = renderCtx = TILT.on && flatCtx ? flatCtx : ctx;
