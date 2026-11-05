@@ -437,7 +437,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Star Equestrian horse by Otherspectre (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Date Palm, Curly Palm and Coconut Palm by evolveduk (CC-BY), Fern Grass 02 by Digital screen official (CC-BY), Green Shrub by Somersby (CC-BY-NC), Shrub by Ryan Chaney (CC-BY), Rocks by AspectStudios (CC-BY), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Military base by JuliaIce (CC-BY), Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Star Equestrian horse by Otherspectre (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Date Palm, Curly Palm and Coconut Palm by evolveduk (CC-BY), Fern Grass 02 by Digital screen official (CC-BY), Green Shrub by Somersby (CC-BY-NC), Shrub by Ryan Chaney (CC-BY), Rocks by AspectStudios (CC-BY), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -1803,7 +1803,8 @@ const MODEL3 = {
        gen: { src: "sprites/mu-gen.png", S: 160, fx: 80, fy: 127.67, wpp: 0.02375, k: 19, dirs: 8, clips: { walk: [0, 8] }, ring: true, ringR: 20 } }, // Redcoat by avishka1shinwa (Sketchfab), Mixamo-rigged, with a musket
   5: { inf: { src: "sprites/md-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/md-gen.png", S: 160, fx: 80, fy: 142.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 24 } }, // Tank by Quaternius
-  6: { gen: { src: "sprites/fu-gen.png", S: 160, fx: 80, fy: 114, wpp: 0.0325, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // HoverBikeTVS by Vijaysarathi, CC-BY, ridden by Cyborg Grid by CAPTAAINR, CC-BY
+  6: { inf: { src: "sprites/fu-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } }, // Cyborg Grid by CAPTAAINR (CC-BY), Mixamo-rigged
+       gen: { src: "sprites/fu-gen.png", S: 160, fx: 80, fy: 114, wpp: 0.0325, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // HoverBikeTVS by Vijaysarathi, CC-BY, ridden by Cyborg Grid by CAPTAAINR, CC-BY
   7: { gen: { src: "sprites/sp-gen.png", S: 160, fx: 80, fy: 127.8, wpp: 0.0375, k: 12.5, dirs: 8, clips: { walk: [0, 4] }, ring: true, ringR: 20 } }, // Mech Assault Walker by Alimayo Arango
 };
 function model3(era, kind, pid) {
@@ -2527,6 +2528,7 @@ const BASE3 = { 0: { src: "sprites/st-base.png", S: 256, H: 251, gx: 128, gy: 13
   3: { src: "sprites/mu-base2.png", S: 320, H: 331, gx: 160, gy: 171.2, wpp: 0.004375, r: 145 }, // Santa Luzia Fort by GSXNet (CC-BY-NC)
   4: { src: "sprites/ww-base.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 54 }, // Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY)
   2: { src: "sprites/castle.png", S: 256, H: 317, gx: 128, gy: 214.7, wpp: 0.009765625, r: 64 }, // Castle by hamidkhan224, CC-BY
+  5: { src: "sprites/md-base.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 66 }, // Military base by JuliaIce (CC-BY)
   6: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 }, // Dome Structure by trashbinkr
   7: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 } };
 function base3(era) { const R = BASE3[era]; if (!R) return null; if (!R.img) { R.img = new Image(); R.img.onload = () => { const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, 0, 0); const f = R.wpp * R.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; R.cv = cv; }; R.img.src = R.src; }
