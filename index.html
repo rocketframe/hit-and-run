@@ -432,7 +432,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Star Equestrian horse by Otherspectre (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Star Equestrian horse by Otherspectre (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Date Palm, Curly Palm and Coconut Palm by evolveduk (CC-BY), Fern Grass 02 by Digital screen official (CC-BY), Green Shrub by Somersby (CC-BY-NC), Shrub by Ryan Chaney (CC-BY), Rocks by AspectStudios (CC-BY), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -2479,9 +2479,16 @@ function eraBB(T, era) {
 const BB3 = {};
 // baked rock model (Rock Medium by Quaternius) in 6 variants: cells S x H, ground centre at (gx, gy), wpp world units (footprint radius 1) per px
 const ROCK3 = { src: "sprites/rocks.png", S: 128, H: 133, N: 6, gx: 64, gy: 86.2, wpp: 0.0203125 };
-function rock3(o) { const R = ROCK3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
-  const i = Math.floor(Math.abs(o.x * 7 + o.y * 3)) % R.N, cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, i * R.S, 0, R.S, R.H, 0, 0, R.S, R.H);
+const ROCK3B = { src: "sprites/rocks2.png", S: 128, H: 133, N: 8, gx: 64, gy: 86.2, wpp: 0.0203125 }; // Rocks by AspectStudios (CC-BY)
+function rock3(o) { const h = Math.floor(Math.abs(o.x * 7 + o.y * 3)), R = h % 7 < 3 ? ROCK3 : ROCK3B; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
+  const i = Math.floor(h / 7) % R.N, cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, i * R.S, 0, R.S, R.H, 0, 0, R.S, R.H);
   const f = R.wpp * o.r * 1.12; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; return cv; }
+// island plants: date palm, curly palm, coconut palm (evolveduk), fern grass (Digital screen official), green shrub (Somersby, CC-BY-NC), shrub (Ryan Chaney); two turns each
+const PLANT3 = { src: "sprites/plants.png", S: 128, H: 219, N: 12, gx: 64, gy: 172.2, wpp: 0.0203125, cv: {} };
+function plant3(d) { const R = PLANT3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
+  const i = d.k * 2 + d.t, key = i + ":" + d.r.toFixed(1); if (R.cv[key]) return R.cv[key];
+  const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, i * R.S, 0, R.S, R.H, 0, 0, R.S, R.H);
+  const f = R.wpp * d.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; return (R.cv[key] = cv); }
 // baked Stone Age hut (Basic Stone Age House by CristianPiotto, CC-BY) in 3 turns; footprint radius 1 = the model's 10 x 10 plot
 const HUT3 = { src: "sprites/huts.png", S: 160, H: 183, N: 3, gx: 80, gy: 125.8, wpp: 0.0175, r: 27, cv: [] };
 function hut3(i) { const R = HUT3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
@@ -3042,11 +3049,13 @@ function buildWorld() {
     g.fillStyle = "rgba(0,0,0,.25)"; g.beginPath(); g.ellipse(x + 0.8, y + 1, s, s * 0.7, 0, 0, 7); g.fill();
     g.fillStyle = `rgba(${150 + tr() * 40 | 0},${140 + tr() * 30 | 0},${110 + tr() * 30 | 0},.55)`; g.beginPath(); g.ellipse(x, y, s, s * 0.7, 0, 0, 7); g.fill();
   }
-  // shrubs (decoration only)
+  // shrubs (decoration only); in 3D they're plant models standing up instead
+  G.deco = [];
   for (let i = 0; i < S * S / 26000; i++) {
     const x = tr() * S, y = tr() * S;
     if (G.rocks.some(o => Math.hypot(o.x - x, o.y - y) < o.r + 30)) continue;
     if (G.players.some(p => Math.hypot(p.base.x - x, p.base.y - y) < 190)) continue;
+    if (TILT.on) { if (!onLand(x, y, 20)) continue; const q = tr(), k = q < 0.4 ? 3 : q < 0.7 ? 5 : q < 0.9 ? 4 : (tr() * 3 | 0); G.deco.push({ x, y, k, t: tr() < 0.5 ? 0 : 1, r: k < 3 ? 26 + tr() * 10 : k === 4 ? 13 + tr() * 5 : 10 + tr() * 5 }); if (tr() < 0.5) { const a = tr() * 7; G.deco.push({ x: x + Math.cos(a) * 16, y: y + Math.sin(a) * 16, k: 3 + (tr() * 3 | 0), t: tr() < 0.5 ? 0 : 1, r: 8 + tr() * 4 }); } continue; }
     const n = 3 + (tr() * 4 | 0), base = 5 + tr() * 6;
     const blobs = []; for (let k = 0; k < n; k++) blobs.push([x + (tr() - 0.5) * base * 2.2, y + (tr() - 0.5) * base * 2.2, base * (0.6 + tr() * 0.6)]);
     g.fillStyle = "rgba(0,0,0,.35)"; for (const [bx, by, br] of blobs) { g.beginPath(); g.arc(bx + br * 0.5, by + br * 0.6, br, 0, 7); g.fill(); }
@@ -3056,6 +3065,15 @@ function buildWorld() {
       g.fillStyle = gr; g.beginPath(); g.arc(bx, by, br, 0, 7); g.fill();
     }
   }
+  if (TILT.on && G.island) { // palms along the top of the beach, in loose clumps
+    for (let i = 0; i < S * S / 60000; i++) {
+      const x = tr() * S, y = tr() * S;
+      if (!onLand(x, y, 30) || onLand(x, y, 130)) continue;
+      if (G.rocks.some(o => Math.hypot(o.x - x, o.y - y) < o.r + 26) || G.players.some(p => Math.hypot(p.base.x - x, p.base.y - y) < 200)) continue;
+      const n = 1 + (tr() * 3 | 0); for (let k = 0; k < n; k++) G.deco.push({ x: x + (tr() - 0.5) * 50, y: y + (tr() - 0.5) * 50, k: tr() * 3 | 0, t: tr() < 0.5 ? 0 : 1, r: 26 + tr() * 12 });
+    }
+  }
+  G.deco.sort((a, b) => a.y - b.y);
   // rock contact shadows (light from top-left)
   for (const o of G.rocks) {
     const gr = g.createRadialGradient(o.x + o.r * 0.25, o.y + o.r * 0.3, o.r * 0.6, o.x + o.r * 0.25, o.y + o.r * 0.3, o.r * 1.6);
@@ -3539,6 +3557,7 @@ function render(dtReal) {
     const s = o.spr.size; if (!(c !== ctx && o.bb3m)) c.drawImage(o.spr, o.x - s / 2, o.y - s / 2, s, s); // the 3D model brings its own shadow
     if (c !== ctx) { STAND.push(o.bb3m ? { bb: o.bb3m, x: o.x, y: o.y, al: 1, fog: true } : { bb: o.bb3 || (o.bb3 = boulder3(o)), x: o.x, y: o.y + o.r * 0.35, al: 1, fog: true }); }
   }
+  if (c !== ctx && G.deco) for (const d of G.deco) { if (!inView(d.x, d.y)) continue; const bb = plant3(d); if (bb) STAND.push({ bb, x: d.x, y: d.y, al: 1, fog: true }); }
 
   // selection rings + shadows
   const showU = [];
