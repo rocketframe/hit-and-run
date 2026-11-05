@@ -437,7 +437,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">3D models: Military base by JuliaIce (CC-BY), Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Star Equestrian horse by Otherspectre (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Date Palm, Curly Palm and Coconut Palm by evolveduk (CC-BY), Fern Grass 02 by Digital screen official (CC-BY), Green Shrub by Somersby (CC-BY-NC), Shrub by Ryan Chaney (CC-BY), Rocks by AspectStudios (CC-BY), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">Ground textures from Poly Haven (CC0). 3D models: Military base by JuliaIce (CC-BY), Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Star Equestrian horse by Otherspectre (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Date Palm, Curly Palm and Coconut Palm by evolveduk (CC-BY), Fern Grass 02 by Digital screen official (CC-BY), Green Shrub by Somersby (CC-BY-NC), Shrub by Ryan Chaney (CC-BY), Rocks by AspectStudios (CC-BY), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -3035,7 +3035,7 @@ function buildWorld() {
   const hs = 5, hw = Math.ceil(S / hs), n1 = makeNoise(G.S * 7 + 3), n2 = makeNoise(G.S + 99), n3 = makeNoise(555);
   const hgt = new Float32Array(hw * hw);
   for (let y = 0; y < hw; y++) for (let x = 0; x < hw; x++) hgt[y * hw + x] = fbm(n1, x * hs / 380, y * hs / 380, 5);
-  const img = new ImageData(hw, hw), d = img.data, r = mulberry32(42);
+  const img = new ImageData(hw, hw), d = img.data, r = mulberry32(42), dryA = new Float32Array(hw * hw);
   const L = [-0.6, -0.7, 0.55];
   for (let y = 0; y < hw; y++) for (let x = 0; x < hw; x++) {
     const i = y * hw + x, h = hgt[i];
@@ -3043,7 +3043,7 @@ function buildWorld() {
     const hy = (hgt[Math.min(hw - 1, y + 1) * hw + x] - hgt[Math.max(0, y - 1) * hw + x]) * 9;
     const nl = Math.hypot(hx, hy, 1);
     const lam = Math.max(0, (-hx * L[0] - hy * L[1] + L[2]) / nl);
-    const m = fbm(n2, x * hs / 520, y * hs / 520, 3), dry = clamp((h - 0.45) * 2.4 + (0.5 - m) * 1.2, 0, 1);
+    const m = fbm(n2, x * hs / 520, y * hs / 520, 3), dry = clamp((h - 0.45) * 2.4 + (0.5 - m) * 1.2, 0, 1); dryA[i] = dry;
     const det = fbm(n3, x * hs / 40, y * hs / 40, 2);
     // lush moss -> olive -> dry straw
     let R = 34 + dry * 62 + det * 14, Gc = 50 + dry * 44 + det * 16, B = 30 + dry * 22 + det * 8;
@@ -3052,6 +3052,18 @@ function buildWorld() {
   }
   const tmp = document.createElement("canvas"); tmp.width = tmp.height = hw; tmp.getContext("2d").putImageData(img, 0, 0);
   g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high"; g.drawImage(tmp, 0, 0, w, w);
+  if (texOk("grass", "leaves")) { // the photo lawn on top, keeping the hills' light and shade from the heightmap
+    g.save(); g.scale(GK, GK);
+    g.fillStyle = texPat(g, "grass", 560); g.globalAlpha = 0.9; g.fillRect(0, 0, S, S);
+    g.fillStyle = texPat(g, "grass", 430, 37); g.globalAlpha = 0.35; g.fillRect(0, 0, S, S); // a second, turned layer hides the tiling
+    // leaf litter where the ground is dry
+    const lm = document.createElement("canvas"); lm.width = lm.height = hw; const lg = lm.getContext("2d"), li = lg.createImageData(hw, hw);
+    for (let i = 0; i < hw * hw; i++) li.data[i * 4 + 3] = 255 * clamp((dryA[i] - 0.5) / 0.3, 0, 1); lg.putImageData(li, 0, 0);
+    const lv = document.createElement("canvas"); lv.width = lv.height = w; const vg = lv.getContext("2d"); vg.scale(GK, GK); vg.fillStyle = texPat(vg, "leaves", 600, 20); vg.fillRect(0, 0, S, S);
+    vg.setTransform(1, 0, 0, 1, 0, 0); vg.globalCompositeOperation = "destination-in"; vg.imageSmoothingEnabled = true; vg.drawImage(lm, 0, 0, w, w);
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 0.55; g.drawImage(lv, 0, 0);
+    g.globalAlpha = 0.75; g.globalCompositeOperation = "soft-light"; g.drawImage(tmp, 0, 0, w, w); // hills
+    g.restore(); }
   g.save(); g.scale(GK, GK);
   // dirt tracks from every base towards the middle
   for (const p of G.players) {
@@ -3199,6 +3211,7 @@ function buildWorld() {
     // golden beach under the rocks: dry sand inland, darker wet sand at the water, a soft edge into the grass
     const sandIn = (c, off, keep) => { if (!keep) c.beginPath(); for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, rr = I.R[i] - off - 5 * Math.sin(t * 23) - 3 * Math.sin(t * 61 + 1); const x = I.c + Math.cos(t) * rr, y = I.c + Math.sin(t) * rr; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); };
     for (const [off, col] of [[40, "rgba(178,150,98,.35)"], [37, "rgba(182,154,100,.6)"], [34, "#bb9d66"]]) { g.beginPath(); poly(g, 2, true); sandIn(g, off, true); g.fillStyle = col; g.fill("evenodd"); }
+    if (texOk("sand")) { g.save(); g.beginPath(); poly(g, 2, true); sandIn(g, 40, true); g.clip("evenodd"); g.globalAlpha = 0.85; g.fillStyle = texPat(g, "sand", 220); g.fillRect(0, 0, S, S); g.restore(); }
     g.beginPath(); poly(g, 2, true); poly(g, -9, true); g.fillStyle = "rgba(120,92,52,.45)"; g.fill("evenodd");
     { const sr = mulberry32(G.S + 5); for (let j = 0; j < n * 6; j++) { const i = (sr() * n) | 0, t = i / n * Math.PI * 2, rr = I.R[i] - sr() * 44; g.fillStyle = sr() < 0.5 ? "rgba(120,96,56,.25)" : "rgba(236,214,160,.3)"; g.fillRect(I.c + Math.cos(t) * rr, I.c + Math.sin(t) * rr, 1.5, 1.5); } }
     g.strokeStyle = "rgba(60,140,150,.3)"; g.lineWidth = 26; poly(g, 14); g.stroke();
@@ -3495,6 +3508,10 @@ function drawSpr(img, x, y, a, size) {
 
 // open sea all round; gentle swell rolling in to the beach
 const SEA = "#123a4b";
+// photo textures (Poly Haven, CC0): rocky grass, forest leaves, dense sand, and high-pass detail maps for crisp close-ups
+const TEX = {}; for (const k of ["grass", "leaves", "sand", "detail", "rockd"]) { const im = new Image(); im.onload = () => { im.ok = true; }; im.src = "sprites/t-" + k + ".jpg"; TEX[k] = im; }
+const texOk = (...k) => k.every(n => TEX[n] && TEX[n].ok);
+function texPat(g, k, size, rot = 0) { const p = g.createPattern(TEX[k], "repeat"), s = size / TEX[k].width; p.setTransform(new DOMMatrix().rotate(rot).scale(s)); return p; }
 function drawWaves(c, now, z) {
   const I = G.island, n = I.R.length, step = z < 0.5 ? 4 : z > 1.4 ? 1 : 2;
   const ring = (off, amp, ph) => { c.beginPath(); for (let i = 0; i <= n; i += step) { const k = i % n, t = k / n * TAU, rr = I.R[k] + off + Math.sin(t * 40 + now * 1.3 + ph) * amp; const x = I.c + Math.cos(t) * rr, y = I.c + Math.sin(t) * rr; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); };
@@ -3561,6 +3578,10 @@ function render(dtReal) {
   c.imageSmoothingEnabled = true;
   c.drawImage(groundCvs, 0, 0, G.S, G.S);
   c.drawImage(decalCvs, 0, 0, G.S, G.S);
+  if (G.island && texOk("detail") && z > 0.45) { // fine grain at full resolution, so close-ups stay sharp
+    const I = G.island, n = I.R.length; if (!I.landP) { I.landP = new Path2D(); for (let i = 0; i < n; i++) { const t = i / n * TAU, rr = I.R[i] + 26; i ? I.landP.lineTo(I.c + Math.cos(t) * rr, I.c + Math.sin(t) * rr) : I.landP.moveTo(I.c + Math.cos(t) * rr, I.c + Math.sin(t) * rr); } I.landP.closePath(); }
+    if (!TEX.detail.pat) TEX.detail.pat = c.createPattern(TEX.detail, "repeat"); TEX.detail.pat.setTransform(new DOMMatrix().scale(150 / 512));
+    c.save(); c.clip(I.landP); c.globalCompositeOperation = "overlay"; c.globalAlpha = Math.min(0.55, (z - 0.45) * 1.2); c.fillStyle = TEX.detail.pat; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); c.restore(); }
   if (G.island) drawWaves(c, now, z);
   else { // dark beyond the map edge
     c.strokeStyle = "rgba(0,0,0,.6)"; c.lineWidth = 30; c.strokeRect(-15, -15, G.S + 30, G.S + 30);
