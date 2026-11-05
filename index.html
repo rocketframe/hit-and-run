@@ -3547,6 +3547,7 @@ function render(dtReal) {
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.fillStyle = G && G.island ? SEA : "#07090a"; c.fillRect(0, 0, c.canvas.width, c.canvas.height);
   if (!G || !groundCvs) return;
+  if (TILT.on && !G.pre3) { G.pre3 = 1; for (let e = 0; e < 8; e++) { model3(e, "inf", 0); model3(e, "gen", 0); base3(e); } } // load every era's models up front, so an upgrade never flashes the drawn versions
   const now = performance.now() / 1000, P = QP[qLevel()];
   consumeFx(); stepParts(dtReal || 0.016);
   shake.a *= 0.88; const sx = (rnd() - 0.5) * shake.a, sy = (rnd() - 0.5) * shake.a;
