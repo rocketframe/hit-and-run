@@ -3594,7 +3594,14 @@ function render(dtReal) {
     if (r) { c.strokeStyle = "rgba(243,215,124,.28)"; c.lineWidth = 1.5 / z; c.setLineDash([3 / z, 6 / z]); c.beginPath(); c.arc(myGen.x, myGen.y, r + 12, now * 0.3, now * 0.3 + TAU); c.stroke(); c.setLineDash([]); } }
   // fallen soldiers (3D model view): play the death clip, lie still, then fade
   if (c !== ctx) { const tn = performance.now(); for (let i = FALL3.length - 1; i >= 0; i--) { const d = FALL3[i], age = (tn - d.t0) / 1000; if (age > 2.6 || !G.players[d.owner]) { FALL3.splice(i, 1); continue; }
-    const A = model3(eraOf(d.owner), "inf", d.owner); if (!A || !A.M.clips.die) continue; const M = A.M, [blk, nf] = M.clips.die, dir = ((Math.round(d.a / (TAU / M.dirs)) % M.dirs) + M.dirs) % M.dirs;
+    const A = model3(eraOf(d.owner), "inf", d.owner);
+    if (!A || !A.M.clips.die) { // drawn figures (Future, Space) topple over sideways, then fade
+      const T = SPR.team[d.owner] && SPR.team[d.owner].eras[eraOf(d.owner)], bb = T && T.bb && T.bb.inf && T.bb.inf[0]; if (!bb) continue;
+      const tip = Math.min(1, age / 0.5), side = Math.cos(d.a) >= 0 ? 1 : -1, al = age > 1.9 ? Math.max(0, (2.6 - age) / 0.7) : 1;
+      STAND.push({ x: d.x, y: d.y - 0.5, al, draw: (g, P, k) => { const [px, py] = P(d.x, d.y, 0), w = bb.bw * k * 1.25, h = bb.bh * k * 1.25;
+        g.translate(px, py); g.rotate(side * tip * tip * Math.PI / 2 * 0.9); if (side < 0) g.scale(-1, 1); g.drawImage(bb, -w / 2, -h * (bb.ay || 1), w, h); } });
+      continue; }
+    const M = A.M, [blk, nf] = M.clips.die, dir = ((Math.round(d.a / (TAU / M.dirs)) % M.dirs) + M.dirs) % M.dirs;
     STAND.push({ atl: A, dead: true, col: Math.min(nf - 1, Math.floor(age / 0.11)), row: blk * M.dirs + dir, x: d.x, y: d.y - 0.5, al: age > 1.9 ? Math.max(0, (2.6 - age) / 0.7) : 1, fl: false, hov: 0 }); } }
   // soldiers
   for (const u of showU) {
