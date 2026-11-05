@@ -391,9 +391,6 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="opt"><label>Anonymous game stats</label>
       <div class="seg" id="optTel"><button data-v="1">Send</button><button data-v="0" class="on">Don't send</button></div>
       <p class="fine">Sends skill level, result, time and which orders you used after each battle, to help balance the game. No names, nothing about your device.</p></div>
-    <div class="opt"><label>3D view</label>
-      <div class="seg" id="opt3d"><button data-v="0" class="on">Off</button><button data-v="1">On</button></div>
-      <p class="fine">Tilts the battlefield like a tabletop. Off is the classic top-down view.</p></div>
     <div class="opt"><label>Graphics</label>
       <div class="seg" id="optGfx"><button data-v="9" class="on">Auto</button><button data-v="2">High</button><button data-v="1">Medium</button><button data-v="0">Low</button></div>
       <p class="fine">Auto lowers the detail by itself if the game runs slowly. Low is for older phones: no photo sea, no fine ground detail, simpler waves.</p></div>
@@ -1816,8 +1813,7 @@ let PIXEL = false; // easter egg: Konami code
 // 3D view (Settings): the world renders flat into a bigger offscreen canvas, then gets drawn tilted in thin strips.
 // W/H are the size of the world view; SW/SH the screen. With 3D off they are the same and nothing else changes.
 let SW = 0, SH = 0, flatCvs = null, flatCtx = null;
-const TILT = { on: false, th: 0.82, p: 1000, oy: 0.4 };
-try { TILT.on = localStorage.getItem("hr-3d") === "1"; } catch (e) {}
+const TILT = { on: true, th: 0.82, p: 1000, oy: 0.4 };
 // test links: ?era=5 shows every army in that era (1 Stone ... 8 Space) with the 3D view on; ?3d turns the 3D view on (neither is saved)
 const URL_ERA = (n => n >= 1 && n <= 8 ? n - 1 : null)(+((location.search.match(/[?&]era=(\d)/) || [])[1]));
 if (URL_ERA != null || /[?&]3d\b/.test(location.search)) TILT.on = true;
@@ -4911,10 +4907,10 @@ renderMisTypes();
 UI.opts.split = 4; UI.opts.layout = 1; UI.opts.expert = 0; UI.opts.tel = 0; UI.opts.advice = 1;
 try { const v = localStorage.getItem("hr-advice"); if (v !== null) UI.opts.advice = +v ? 1 : 0; } catch (e) {}
 seg("optAdvice", "advice");
-UI.opts.tilt = TILT.on ? 1 : 0; seg("opt3d", "tilt");
+
 try { const v = localStorage.getItem("hr-gfx"); UI.opts.gfx = v == null ? 9 : +v; } catch (e) { UI.opts.gfx = 9; } Q.fixed = UI.opts.gfx === 9 ? null : UI.opts.gfx; seg("optGfx", "gfx");
 $("optGfx").addEventListener("click", () => { Q.fixed = UI.opts.gfx === 9 ? null : UI.opts.gfx; if (Q.fixed != null) { Q.level = Q.fixed; resize(); } try { localStorage.setItem("hr-gfx", String(UI.opts.gfx)); } catch (e) {} });
-$("opt3d").addEventListener("click", () => { TILT.on = !!UI.opts.tilt; try { localStorage.setItem("hr-3d", TILT.on ? "1" : "0"); } catch (e) {} resize(); if (typeof clampCam === "function" && G) clampCam(); });
+
 $("optAdvice").addEventListener("click", () => { try { localStorage.setItem("hr-advice", String(UI.opts.advice)); } catch (e) {} });
 try { UI.opts.tel = localStorage.getItem("hr-tel") === "1" ? 1 : 0; } catch (e) {}
 seg("optTel", "tel");
@@ -6146,7 +6142,7 @@ async function showBoard(diff, mine) {
 $("boardTabs").querySelectorAll("button").forEach(b => b.addEventListener("click", () => showBoard(+b.dataset.v)));
 $("boardBtn").addEventListener("click", () => showBoard(0));
 function boardHome() { if ($("boardShare").contains($("sharebox"))) $("againBtn").before($("sharebox")); }
-$("boardBack").addEventListener("click", () => { boardHome(); $("board").hidden = true; if (boardFrom === "over") $("over").hidden = false; else $("menu").hidden = false; });
+$("boardBack").addEventListener("click", () => { boardHome(); $("board").hidden = true; if (boardFrom === "over") { $("over").hidden = false; if (postedRow) $("nameEntry").hidden = true; } else $("menu").hidden = false; });
 $("boardAgain").addEventListener("click", () => { boardHome(); $("board").hidden = true; $("againBtn").click(); });
 $("boardMenu").addEventListener("click", () => { SND.ui(); boardHome(); $("board").hidden = true; toMenu(); });
 
