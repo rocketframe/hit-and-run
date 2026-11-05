@@ -174,7 +174,7 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
 .seg button.on{background:var(--khaki);color:#1a1a12}
 .go{height:56px;border:0;border-radius:4px;background:var(--khaki);color:#17170f;font-size:22px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 #startBtn{background:#b8322a;color:#fff6e8;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 18px rgba(184,50,42,.45)}.xp{display:inline-block;margin-left:6px;padding:1px 6px;border:1px solid var(--khaki);border-radius:3px;color:var(--khaki);font-size:10px;letter-spacing:.1em;text-transform:uppercase;vertical-align:middle}
-.custom{border:1px solid var(--line);border-radius:4px;padding:0 12px}.custom summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}.custom summary::-webkit-details-marker{display:none}.custom summary span{white-space:nowrap}.custom summary em{flex:1}.custom summary::after{content:"Change ▾";flex:none;border:1px solid var(--khaki);border-radius:3px;padding:6px 9px;color:var(--khaki);font-size:11px;letter-spacing:.12em;background:rgba(205,180,106,.08)}.custom[open] summary::after{content:"Done ▴";background:var(--khaki);color:#17170f}.custom:not([open]) summary:hover::after{background:rgba(205,180,106,.2)}.custom:not([open]):hover{border-color:rgba(205,180,106,.55)}@media (max-width:480px){.custom summary{flex-wrap:wrap;row-gap:4px}.custom summary em{order:3;flex-basis:100%;text-align:left}}.custom summary em{font-style:normal;letter-spacing:.04em;text-transform:none;color:var(--khaki);font-size:13px;text-align:right}.custom[open]{padding-bottom:10px}.custom .opt{margin-top:0}
+.custom{border:1px solid var(--line);border-radius:4px;padding:0 12px}.custom summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}.custom summary::-webkit-details-marker{display:none}.custom summary span{white-space:nowrap}.custom summary em{flex:1}.custom summary::after{content:"Change ▾";flex:none;border:1px solid var(--khaki);border-radius:3px;padding:6px 9px;color:var(--khaki);font-size:11px;letter-spacing:.12em;background:rgba(205,180,106,.08)}.custom[open] summary::after{content:"Done ▴";background:var(--khaki);color:#17170f}.custom:not([open]) summary:hover::after{background:rgba(205,180,106,.2)}.custom:not([open]):hover{border-color:rgba(205,180,106,.55)}@media (max-width:480px){.custom summary{flex-wrap:wrap;row-gap:4px}.custom summary em{order:3;flex-basis:100%;text-align:left}}.custom summary em{font-style:normal;letter-spacing:.04em;text-transform:none;color:var(--khaki);font-size:13px;text-align:right}.custom[open]{padding-bottom:10px}.custom .opt{margin-top:0}.opt~.opt{margin-top:16px}
 .expoffer{border:1px solid var(--khaki);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.35}.expoffer .go{height:42px;font-size:15px}
 body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn,body.basic [data-sel="idle"],body.basic #boxBtn,body.basic #formBtn,body.basic #spreadBtn,body.basic #regroupBtn,body.basic #guardBtn{display:none!important}
 .go.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-size:18px;height:48px}
@@ -3606,8 +3606,10 @@ function render(dtReal) {
 
   c.imageSmoothingEnabled = true;
   if (G.island && (vx0 < 0 || vy0 < 0 || vx1 > G.S || vy1 > G.S)) { // beyond the map edge: the same sea photo, lined up with the one baked into the ground
-    const T = TEX.sea; if (texOk("sea")) { if (!T.p1) { T.p1 = c.createPattern(T, "repeat"); T.p1.setTransform(new DOMMatrix().scale(760 / T.width)); } c.fillStyle = T.p1; } else c.fillStyle = SEA;
-    c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }
+    const T = TEX.sea; if (texOk("sea") && qLevel() > 1) { if (!T.p1) { T.p1 = c.createPattern(T, "repeat"); T.p1.setTransform(new DOMMatrix().scale(760 / T.width)); } c.fillStyle = T.p1; } else c.fillStyle = SEA;
+    const S = G.S; // only the strips outside the map, never the whole view
+    if (vy0 < 0) c.fillRect(vx0, vy0, vx1 - vx0, -vy0); if (vy1 > S) c.fillRect(vx0, S, vx1 - vx0, vy1 - S);
+    const y0 = Math.max(0, vy0), y1 = Math.min(S, vy1); if (vx0 < 0) c.fillRect(vx0, y0, -vx0, y1 - y0); if (vx1 > S) c.fillRect(S, y0, vx1 - S, y1 - y0); }
   c.drawImage(groundCvs, 0, 0, G.S, G.S);
   c.drawImage(decalCvs, 0, 0, G.S, G.S);
   if (G.island && texOk("detail") && z > 0.45 && PF.detail && qLevel() > 1) { // fine grain at full resolution, so close-ups stay sharp
@@ -4189,7 +4191,7 @@ function drawDoom() {
   if (!G || G.attract) return;
   const c = ctx, F = G.doomFire, now = performance.now() / 1000;
   c.setTransform(DPR, 0, 0, DPR, 0, 0); c.textAlign = "center"; c.textBaseline = "middle";
-  if (!F) {
+  if (!F) { if (cvs.style.transform) cvs.style.transform = "";
     if (G.over) return;
     let txt = null, mine = false, urgent = 0;
     for (const p of G.players) { const d = p.doom; if (!d || p.out) continue;
@@ -4242,14 +4244,40 @@ function drawDoom() {
     if (e > hit + 0.2 ? e < hit + 2.4 : Math.sin(e * 3) > 0.4) { const big = e > hit; c.font = `900 ${M * (big ? 0.13 : 0.07)}px "Big Shoulders Display",system-ui,sans-serif`; c.fillStyle = "#fff38a"; c.strokeStyle = "#3a2600"; c.lineWidth = 6; c.strokeText("QUACK!", x + s * 0.45, y - s * 0.6); c.fillText("QUACK!", x + s * 0.45, y - s * 0.6); }
   } else if (F.w === 1) { // black hole opens on the base, eats it, then collapses with a shockwave
     const grow = clamp(e / (hit - 0.5), 0, 1), shrink = clamp((e - hit - 0.2) / 0.9, 0, 1), r = M * 0.2 * (0.03 + 0.97 * grow * grow) * (1 - shrink), k = clamp(e / 1.2, 0, 1) * (1 - shrink);
-    const gd = c.createRadialGradient(bx, by, r * 0.5, bx, by, Math.max(SW, SH)); gd.addColorStop(0, `rgba(0,0,0,${0.85 * k})`); gd.addColorStop(1, `rgba(0,0,0,${(0.15 + 0.5 * grow) * k})`); c.fillStyle = gd; c.fillRect(0, 0, SW, SH);
-    c.translate(bx, by);
-    for (let i = 0; i < 60; i++) { const ph = (e * (0.35 + (i % 5) * 0.08) + R()) % 1, a = R() * TAU + ph * (4 + i % 3), d = r * (1.15 + 3.2 * (1 - ph)); if (r < 2) break;
-      c.fillStyle = i % 4 ? `rgba(255,${160 + (i % 3) * 30},90,${0.7 * k * ph})` : `rgba(140,110,80,${0.9 * k})`; c.beginPath(); c.arc(Math.cos(a) * d, Math.sin(a) * d * 0.55, (i % 4 ? 2 : 4) + (1 - ph) * 3, 0, TAU); c.fill(); }
-    for (let i = 0; i < 26; i++) { const a = i / 26 * TAU + e * (1.5 + i % 3 * 0.4), d = r * (1.3 + (i % 5) * 0.35) * (1 - ((e * 0.4 + i * 0.13) % 1) * 0.5); c.strokeStyle = `rgba(255,${150 + (i % 4) * 25},80,${0.5 * k})`; c.lineWidth = 2; c.beginPath(); c.arc(0, 0, d, a, a + 0.9); c.stroke(); }
-    c.scale(1, 0.32); const ga = c.createRadialGradient(0, 0, r * 0.9, 0, 0, r * 2.1 + 1); ga.addColorStop(0, "rgba(255,220,140,.95)"); ga.addColorStop(0.4, "rgba(255,120,40,.6)"); ga.addColorStop(1, "rgba(255,60,20,0)"); c.fillStyle = ga; c.beginPath(); c.arc(0, 0, r * 2.1 + 1, 0, TAU); c.fill();
-    c.setTransform(DPR, 0, 0, DPR, 0, 0); c.fillStyle = "#000"; c.beginPath(); c.arc(bx, by, r, 0, TAU); c.fill();
-    c.strokeStyle = "rgba(255,230,180,.8)"; c.lineWidth = 2; c.beginPath(); c.arc(bx, by, r * 1.03, 0, TAU); c.stroke();
+    if (r >= 1.5) {
+      // 1. gravity bends the real picture: the map around the hole is pulled in and swirled (drawn back in thin rings)
+      const L = Math.min(Math.max(SW, SH), r * 9), dp = DPR, lc = drawDoom.lc || (drawDoom.lc = document.createElement("canvas")), D = Math.ceil(L * 2 * dp);
+      if (lc.width !== D) { lc.width = lc.height = D; } const lg = lc.getContext("2d"); lg.setTransform(1, 0, 0, 1, 0, 0); lg.clearRect(0, 0, D, D);
+      lg.drawImage(cvs, (bx - L) * dp, (by - L) * dp, D, D, 0, 0, D, D);
+      const thE = r * 1.7, NR = 40;
+      for (let i = NR - 1; i >= 0; i--) { const a0 = r * 0.9 + (L - r * 0.9) * Math.pow(i / NR, 2), a1 = r * 0.9 + (L - r * 0.9) * Math.pow((i + 1) / NR, 2), rho = (a0 + a1) / 2;
+        const src = Math.max(rho * 0.08, rho - thE * thE / rho), sc = rho / src, tw = 2.6 * k * Math.pow(r / rho, 1.6) + e * 0.25 * Math.pow(r / rho, 2);
+        c.save(); c.beginPath(); c.arc(bx, by, a1 + 1.5, 0, TAU); c.arc(bx, by, a0, 0, TAU, true); c.clip();
+        c.translate(bx, by); c.rotate(tw); c.scale(sc, sc); c.drawImage(lc, -L, -L, L * 2, L * 2); c.restore(); }
+      // the light goes: dark sky, warm glow from the disk on the ground
+      const gd = c.createRadialGradient(bx, by, r, bx, by, Math.max(SW, SH)); gd.addColorStop(0, `rgba(0,0,0,${0.55 * k})`); gd.addColorStop(0.35, `rgba(0,0,0,${0.35 * k})`); gd.addColorStop(1, `rgba(0,0,0,${(0.2 + 0.45 * grow) * k})`); c.fillStyle = gd; c.fillRect(0, 0, SW, SH);
+      c.globalCompositeOperation = "lighter"; const gw = c.createRadialGradient(bx, by + r * 0.3, r, bx, by + r * 0.3, r * 5); gw.addColorStop(0, `rgba(255,150,60,${0.35 * k})`); gw.addColorStop(1, "rgba(255,90,30,0)"); c.fillStyle = gw; c.fillRect(bx - r * 5, by - r * 5, r * 10, r * 10); c.globalCompositeOperation = "source-over";
+      // 2. the accretion disk: thin and tilted, hot white inside, orange outside, brighter on the side coming toward us
+      const TL = 0.26, disk = (front) => { for (let j = 0; j < 30; j++) { const q = j / 29, rr = r * (1.45 + 2.1 * q), sp = e * 2.2 / Math.pow(rr / r, 1.5), al = k * (1 - q) * (0.25 + 0.75 * (1 - q));
+          const col = q < 0.2 ? [255, 246, 225] : q < 0.5 ? [255, 200, 120] : [255, 120 - q * 50, 50];
+          for (let sg = 0; sg < 24; sg++) { const t0 = sg / 24 * Math.PI * 2, t1 = t0 + Math.PI * 2 / 24 + 0.01, tm = (t0 + t1) / 2, isFront = Math.sin(tm) > 0; if (isFront !== front) continue;
+            const dop = 0.35 + 0.65 * (0.5 - 0.5 * Math.cos(tm)), streak = 0.6 + 0.4 * Math.sin(tm * 7 + sp * 3 + j * 1.7) * Math.sin(tm * 3 - sp * 2 + j);
+            c.strokeStyle = `rgba(${col[0]},${col[1] | 0},${col[2]},${Math.min(1, al * dop * streak)})`; c.lineWidth = Math.max(1, r * 0.09 * (1 - q * 0.5));
+            c.beginPath(); c.ellipse(bx, by, rr, rr * TL, 0, t0, t1); c.stroke(); } } };
+      disk(false); // far half, behind the hole
+      // the far side of the disk, bent up over the top of the hole by gravity
+      for (let j = 0; j < 10; j++) { const q = j / 9, rr = r * (1.12 + 0.55 * q); c.strokeStyle = `rgba(255,${220 - q * 80},${150 - q * 90},${k * 0.55 * (1 - q)})`; c.lineWidth = Math.max(1, r * 0.06); c.beginPath(); c.ellipse(bx, by, rr, rr * 0.92, 0, Math.PI * 1.04, Math.PI * 1.96); c.stroke(); }
+      c.fillStyle = "#000"; c.beginPath(); c.arc(bx, by, r, 0, TAU); c.fill();
+      c.strokeStyle = `rgba(255,236,200,${0.9 * k})`; c.lineWidth = Math.max(1, r * 0.035); c.beginPath(); c.arc(bx, by, r * 1.04, 0, TAU); c.stroke(); // photon ring
+      disk(true); // near half, in front of the hole
+      // the underside image of the disk, a thin bent arc below the hole
+      for (let j = 0; j < 5; j++) { const rr = r * (1.08 + 0.1 * j); c.strokeStyle = `rgba(255,200,130,${k * 0.35 * (1 - j / 5)})`; c.lineWidth = Math.max(1, r * 0.04); c.beginPath(); c.ellipse(bx, by, rr, rr * 0.85, 0, Math.PI * 0.12, Math.PI * 0.88); c.stroke(); }
+      // matter falling in, stretched along its orbit
+      c.lineCap = "round";
+      for (let i = 0; i < 40; i++) { const ph = (e * (0.18 + (i % 5) * 0.04) + R()) % 1, rr = r * (1.2 + 4.5 * (1 - ph) * (1 - ph)), a = R() * TAU + e * 2 / Math.pow(rr / r, 1.5), ln = 0.25 + 0.5 * ph;
+        c.strokeStyle = i % 3 ? `rgba(255,${170 + (i % 3) * 25},110,${0.6 * k * ph})` : `rgba(120,100,80,${0.8 * k})`; c.lineWidth = i % 3 ? 1.5 : 2.5;
+        c.beginPath(); c.ellipse(bx, by, rr, rr * TL, 0, a, a + ln); c.stroke(); }
+    }
     if (shrink > 0.95) drawShock(c, bx, by, e - hit - 1.1, M, R);
   } else if (F.w === 2) { // alien mothership: arrives, scans, one big beam on the base, then leaves
     const sw = Math.min(SW * 0.85, M * 1.3), sh = M * 0.2, hy = by - M * 0.3, x = bx;
@@ -4353,8 +4381,8 @@ function renderMini() {
 
 // adaptive quality: watch real frame times and step down (or back up) when needed
 function trackQuality(dtReal) {
-  if (document.hidden || dtReal <= 0 || dtReal > 0.25) return;
-  Q.ema = Q.ema * 0.95 + dtReal * 1000 * 0.05;
+  if (document.hidden || dtReal <= 0 || dtReal > 1.5) return; // very slow frames count too (capped), so a struggling device still steps down
+  Q.ema = Q.ema * 0.95 + Math.min(dtReal, 0.1) * 1000 * 0.05;
   if (Q.ema > 24) { Q.slowT += dtReal; Q.fastT = 0; } else if (Q.ema < 14) { Q.fastT += dtReal; Q.slowT = 0; } else { Q.slowT = 0; Q.fastT = 0; }
   if (Q.fixed != null) { if (Q.level !== Q.fixed) { Q.level = Q.fixed; resize(); } }
   else if (Q.slowT > 2.5 && Q.level > 0) { Q.level--; Q.dropped = true; Q.slowT = 0; Q.ema = 16; resize(); }
