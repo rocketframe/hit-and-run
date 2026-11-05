@@ -269,6 +269,9 @@ body.basic #moreBtn,body.basic #trayRow,body.basic #rallyBtn,body.basic #modeBtn
 .log th{color:var(--ink-dim);font-weight:500;position:sticky;top:0;background:#0b0e0b}
 .log .w{color:#9fe07a}.log .l{color:var(--danger)}
 .fine{font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--ink-dim);margin:0}
+body.replay #bar,body.replay #side,body.replay #hint,body.replay #alertArrow,body.replay #alertEdge,body.replay #killMenu,body.replay #pauseBtn{display:none!important}
+.replaybar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 14px);z-index:30;display:flex;gap:8px;align-items:center;background:rgba(14,17,14,.86);border:1px solid #c9a14a;border-radius:6px;padding:6px 8px 6px 12px;color:#f3c85a;font:800 12px/1 system-ui,sans-serif;letter-spacing:.08em}
+.replaybar button{background:#1d211b;color:#efe6c8;border:1px solid #4a4a3a;border-radius:4px;padding:7px 12px;font:800 12px/1 system-ui,sans-serif;cursor:pointer}
 body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #alertArrow,body.ended #alertEdge,body.ended #killMenu,body.ended #score,body.ended #spdBtn,body.ended #pauseBtn,body.ended #spdPop,body.ended #msgLog{display:none!important}
 #endPanel{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);z-index:30;width:min(780px,calc(100vw - 20px));background:rgba(12,16,18,.82);border:1px solid rgba(233,229,211,.18);border-radius:12px;padding:10px 12px;display:flex;gap:12px;align-items:center;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 #endPanel[hidden]{display:none}
@@ -289,6 +292,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
 <div class="hud" id="score"></div>
 <div class="hud" id="tr">
   <div class="toprow"><span id="clock">00:00</span><button class="ib spd" id="spdBtn" aria-label="Game speed">1×</button><button class="ib" id="sndBtn" aria-label="Sound">♪</button><button class="ib" id="pauseBtn" aria-label="Pause">II</button></div>
+  <div class="replaybar" id="replayBar" hidden><b>▶ REPLAY</b><button id="rpPause" aria-label="Pause replay">II</button><button id="rpExit">Exit</button></div>
   <div class="spdpop" id="spdPop" hidden><span>Speed</span><button data-s="0.25">¼×</button><button data-s="0.5">½×</button><button data-s="1">1×</button><button data-s="2">2×</button><button data-s="4">4×</button><button data-s="8">8×</button></div>
   <canvas id="mini" width="256" height="256" aria-label="Minimap"></canvas>
   <div id="msgLog" class="msglog" aria-label="Message history" role="log"></div>
@@ -421,6 +425,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div id="boardShare"></div>
     <p class="fine" id="boardNote"></p>
     <button class="go" id="boardAgain" hidden>Play again</button>
+    <button class="go ghost" id="boardReplay" hidden>Watch replay</button>
     <button class="go ghost" id="boardMenu" hidden>Main menu</button>
     <button class="go" id="boardBack">Back</button>
   </div>
@@ -517,6 +522,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
       <textarea id="shareText" readonly hidden aria-label="Score to share"></textarea>
       <div class="arcade-msg" id="shareMsg"></div>
     </div>
+    <button class="go ghost" id="replayBtn" hidden>Watch replay</button>
     <button class="go ghost" id="againBtn">Play again</button>
     <button class="go ghost" id="menuBtn">Back to menu</button>
     <button class="madeby" id="overAbout">Made for fun in just hours · About<b>i</b></button>
@@ -699,7 +705,10 @@ const maxHp = u => CFG[u.kind].hp * (1 + CFG.upStep * G.players[u.owner].level) 
 
 // ---- commands ----
 function issue(cmd) {
+  if (G.replay && cmd.p === G.human) return; // watching, not playing
   G.cmds.push(cmd);
+  if (G.rec && !G.replay && cmd.p === G.human) G.rec.cmds.push([G.tick, JSON.parse(JSON.stringify(cmd))]); // for the replay
+
   // count which orders the player uses, for the opt-in game log
   if (typeof UI !== "undefined" && UI.use && cmd.p === G.human && !G.attract) { const k = cmd.t || (cmd.mode === "attack" ? "engage" : "move"); UI.use[k] = (UI.use[k] || 0) + 1; if (cmd.form && cmd.form !== "box") UI.use.form = (UI.use.form || 0) + 1; }
 }
@@ -1374,6 +1383,7 @@ function crateRunners(p, inf) {
 
 function step() {
   const dt = CFG.dt;
+  if (G.replay) { const R = G.replay, cs = R.rec.cmds; while (R.i < cs.length && cs[R.i][0] <= G.tick) G.cmds.push(cs[R.i++][1]); }
   G.tick++; G.time += dt;
   // apply orders
   for (const c of G.cmds) applyCmd(c);
@@ -1721,7 +1731,7 @@ function updateFog() {
   const me = G.players[G.human];
   if (me.base.alive) stamp(me.base.x, me.base.y, CFG.base.sight);
   for (const u of G.units) if (u.alive && u.owner === G.human && !(u.kind === "pilot" && !u.found)) stamp(u.x, u.y, CFG[u.kind].sight);
-  if (G.over || G.attract || G.reveal > G.time) visible.fill(1), explored.fill(1), soft.fill(255);
+  if (G.over || G.attract || G.replay || G.reveal > G.time) visible.fill(1), explored.fill(1), soft.fill(255);
 }
 const isVis = (x, y) => { const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return false; return G.visible[cy * G.gw + cx] === 1; };
 const isExp = (x, y) => { const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return false; return G.explored[cy * G.gw + cx] === 1; };
@@ -3486,7 +3496,7 @@ function render(dtReal) {
   c.setTransform(DPR * z, 0, 0, DPR * z, ox * DPR, oy * DPR);
   const vx0 = cam.x - W / 2 / z - 80, vx1 = cam.x + W / 2 / z + 80, vy0 = cam.y - H / 2 / z - 80, vy1 = cam.y + H / 2 / z + 80;
   const inView = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1;
-  const seeAll = !!(G.attract || G.doomFire);
+  const seeAll = !!(G.attract || G.doomFire || G.replay);
   const vis = (x, y) => seeAll || isVis(x, y);
 
   c.imageSmoothingEnabled = true;
@@ -4409,7 +4419,7 @@ function centerOnSelection() {
 
 const s2w = (sx, sy) => { const f = scr2flat(sx, sy); return { x: (f.x - W / 2) / cam.z + cam.x, y: (f.y - H / 2) / cam.z + cam.y }; };
 function clampCam() {
-  const minZ = Math.min(W, H) / G.S * 0.9; cam.z = clamp(cam.z, Math.max(0.25, minZ), 2.2);
+  const minZ = Math.min(W, H) / G.S * 0.9; cam.z = clamp(cam.z, G.replay ? minZ : Math.max(0.25, minZ), 2.2);
   cam.x = clamp(cam.x, 0, G.S); cam.y = clamp(cam.y, 0, G.S);
 }
 
@@ -4775,10 +4785,13 @@ addEventListener("popstate", () => {
 function start() {
   TUT.stop(); setTimeout(resize, 0); guardBack(); leaveReview();
   document.body.classList.remove("attract");
-  initGame(newGame(UI.opts.players, UI.opts.up, (Date.now() & 0xffffffff) >>> 0, UI.opts.diff, UI.opts.army, UI.opts.me, UI.opts.map));
-  G.cratesOn = !!UI.opts.crates; G.missionsOn = !!UI.opts.missions && UI.opts.misTypes.length > 0 && (EXP() || loadLog().length >= 3); G.misTypes = UI.opts.misTypes.slice();
+  const seed = (Date.now() & 0xffffffff) >>> 0, O = UI.opts;
+  initGame(newGame(O.players, O.up, seed, O.diff, O.army, O.me, O.map));
+  G.cratesOn = !!O.crates; G.missionsOn = !!O.missions && O.misTypes.length > 0 && (EXP() || loadLog().length >= 3); G.misTypes = O.misTypes.slice();
   G.players[G.human].autoSpread = !EXP(); G.players[G.human].autoEngage = !EXP(); UI.use = {};
-  { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = UI.opts.split || 3; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
+  { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = O.split || 3; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
+  G.rec = { seed, players: O.players, up: O.up, diff: O.diff, army: O.army, me: O.me, map: O.map, crates: G.cratesOn, missions: G.missionsOn, misTypes: G.misTypes.slice(), spread: !EXP(), engage: !EXP(), split: O.split || 3, cmds: [] };
+  document.body.classList.remove("replay"); $("replayBar").hidden = true;
   UI.forms = {}; UI.combo = null; UI.rallyMode = false; closeTray(); disarmKill();
   const b = G.players[G.human].base, p = G.players[G.human];
   cam.z = Math.min(SW, SH) < 600 ? 0.9 : 1.05;
@@ -5688,7 +5701,7 @@ function typeChar(ch) {
   nameArr[nameCur] = ch; nameCur = Math.min(NAME_LEN - 1, nameCur + 1); renderSlots();
 }
 // until the score is posted, the only way on is to enter a name; if posting fails, the way out comes back
-const navLock = on => { $("againBtn").hidden = on; $("menuBtn").hidden = on; };
+const navLock = on => { $("againBtn").hidden = on; $("menuBtn").hidden = on; $("replayBtn").hidden = on || !lastRec; };
 function startNameEntry(entry) {
   pendingEntry = entry; postedRow = null; navLock(true);
   const saved = loadName().toUpperCase().slice(0, NAME_LEN);
@@ -5754,7 +5767,7 @@ function setTel(on) {
 $("telYes").addEventListener("click", () => { setTel(true); const l = loadLog(), g = l[+$("telAsk").dataset.n]; if (g) logGame(g); toast("Thanks! Stats from your battles help balance the game", "gold"); });
 $("telNo").addEventListener("click", () => setTel(false));
 function reportKills() {
-  if (!G || G.attract || G.tutorial || !G.players) return;
+  if (!G || G.attract || G.tutorial || G.replay || !G.players) return;
   const k = G.players[G.human].kills - killsSent; if (k > 0) { killsSent += k; lbRpc("add_kills", { n: k }); }
 }
 async function loadCounters() {
@@ -5892,7 +5905,7 @@ async function showBoard(diff, mine) {
   // straight from a battle: bring the share buttons along, and offer another round
   const fromOver = boardFrom === "over";
   if (fromOver && !$("boardShare").contains($("sharebox"))) $("boardShare").appendChild($("sharebox"));
-  $("boardAgain").hidden = !fromOver; $("boardMenu").hidden = !fromOver; $("boardBack").className = fromOver ? "go ghost" : "go"; $("boardBack").textContent = fromOver ? "Battle report" : "Back";
+  $("boardAgain").hidden = !fromOver; $("boardMenu").hidden = !fromOver; $("boardReplay").hidden = !(fromOver && lastRec); $("boardBack").className = fromOver ? "go ghost" : "go"; $("boardBack").textContent = fromOver ? "Battle report" : "Back";
   $("menu").hidden = true; $("over").hidden = true; $("board").hidden = false;
   $("boardTabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.v === boardDiff));
   $("boardSrc").textContent = LB.url ? "Public leaderboard · everyone's best" : "Leaderboard · this device";
@@ -5980,6 +5993,29 @@ function showOver() {
 }
 $("startBtn").addEventListener("click", start);
 $("againBtn").addEventListener("click", start);
+// replay: the same seed and the same orders give the same battle, watched with the whole map revealed
+var lastRec = null;
+function startReplay() {
+  const rec = lastRec; if (!rec) return;
+  TUT.stop(); leaveReview(); document.body.classList.remove("attract"); setTimeout(resize, 0);
+  initGame(newGame(rec.players, rec.up, rec.seed, rec.diff, rec.army, rec.me, rec.map));
+  G.cratesOn = rec.crates; G.missionsOn = rec.missions; G.misTypes = rec.misTypes.slice();
+  G.players[G.human].autoSpread = rec.spread; G.players[G.human].autoEngage = rec.engage; UI.use = {};
+  { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = rec.split; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
+  G.replay = { rec, i: 0 }; $("replayBar").querySelector("b").textContent = "▶ REPLAY"; $("rpPause").hidden = false;
+  UI.sel.clear(); UI.forms = {}; UI.combo = null; UI.rallyMode = UI.strikeMode = UI.boxMode = false; closeTray(); disarmKill();
+  ["menu", "over", "pause", "board"].forEach(id => $(id).hidden = true);
+  $("toast").innerHTML = ""; $("msgLog").innerHTML = "";
+  document.body.classList.add("replay"); $("replayBar").hidden = false; $("rpPause").textContent = "II";
+  cam.x = cam.y = G.S / 2; cam.z = 0.05; clampCam(); // as far out as it goes: the whole island
+  UI.paused = false; acc = 0; last = performance.now(); SND.reset(); setSpeed(8); $("spdPop").hidden = true;
+  updateFog();
+}
+function exitReplay() { document.body.classList.remove("replay"); $("replayBar").hidden = true; setSpeed(1); toMenu(); }
+$("replayBtn").addEventListener("click", () => { SND.ui(); startReplay(); });
+$("boardReplay").addEventListener("click", () => { SND.ui(); boardHome(); startReplay(); });
+$("rpPause").addEventListener("click", () => { UI.paused = !UI.paused; $("rpPause").textContent = UI.paused ? "▶" : "II"; });
+$("rpExit").addEventListener("click", () => { SND.ui(); exitReplay(); });
 $("pauseBtn").addEventListener("click", togglePause);
 // ---- time lapse: ¼× to 8× ----
 UI.speed = 1;
@@ -6058,7 +6094,8 @@ function frame(now) {
     UI.pings = UI.pings.filter(p => p.t > 0);
     updateFog();
     hudT -= dtReal; if (hudT <= 0) { hudT = 0.2; renderScore(); refreshBar(); }
-    if (G.over && !G.review) { SND.sting(G.over.win); updateFog(); renderScore();
+    if (G.over && !G.review && G.replay) { G.review = true; $("replayBar").querySelector("b").textContent = "REPLAY OVER"; $("rpPause").hidden = true; }
+    else if (G.over && !G.review) { SND.sting(G.over.win); updateFog(); renderScore(); if (!G.tutorial && G.rec) lastRec = G.rec;
       if (G.tutorial) { setTimeout(showOver, 1400); UI.paused = true; } else enterReview(); }
   }
   // the menu backdrop draws at a steady ~30fps so the menu itself stays smooth
@@ -6084,7 +6121,7 @@ if (URL_ERA != null) setTimeout(() => {
 }, 400);
 
 // test hook
-window.__hr = { get G() { return G; }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
+window.__hr = { get G() { return G; }, replay: r => { lastRec = r; startReplay(); }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
 })();
 </script>
 
