@@ -127,7 +127,7 @@ body.entering #menu .card>*:not(h1):not(.stamp){transition:opacity .5s ease .55s
 #splash .picks button{min-width:150px;padding:14px 22px;font:800 19px/1 "Saira Condensed",sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--ink,#ece6d6);background:rgba(12,14,10,.55);border:1.5px solid rgba(236,230,214,.45);border-radius:6px;cursor:pointer}
 #splash .picks button.pri{color:#fff6e8;background:#b8322a;border-color:#b8322a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 22px rgba(184,50,42,.5)}
 #splash .picks button.pri:hover{background:#c93a30}
-#splash.out .go{opacity:0}
+#splash.out .picks{animation:none;opacity:0;transition:opacity .12s}
 @media (max-width:380px){#splash .picks button{min-width:0;padding:13px 16px;font-size:17px}}
 #menuSnd{position:fixed;top:max(12px,env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:12;background:rgba(12,14,10,.6)}
 #menuSnd.off{opacity:.45;text-decoration:line-through}
@@ -173,6 +173,12 @@ h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:8
 .seg button:last-child{border-right:0}
 .seg button.on{background:var(--khaki);color:#1a1a12}
 .go{height:56px;border:0;border-radius:4px;background:var(--khaki);color:#17170f;font-size:22px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+#loadScr{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(circle at 50% 45%,#1b2318,#07090a 70%);color:var(--ink,#efe9d8);transition:opacity .35s}#loadScr[hidden]{display:none}#loadScr.ld-out{opacity:0}
+.ld-x{position:relative;width:86px;height:86px}.ld-x i{position:absolute;inset:0;border:3px solid rgba(205,180,106,.8);border-radius:50%;border-top-color:transparent;border-bottom-color:transparent;animation:ldspin 1.4s linear infinite}.ld-x i+i{inset:16px;border-color:rgba(184,50,42,.9);border-left-color:transparent;border-right-color:transparent;animation-duration:.9s;animation-direction:reverse}.ld-x b{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;background:#b8322a;border-radius:50%;animation:ldpulse 1s ease-in-out infinite}
+@keyframes ldspin{to{transform:rotate(360deg)}}@keyframes ldpulse{50%{transform:scale(1.8);opacity:.5}}
+.ld-t{font:800 22px "Big Shoulders Display",system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase}.ld-bar{width:min(320px,70vw);height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden}.ld-bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#a07a10,#ffe27a);transform-origin:left;transform:scaleX(0)}
+#loadScr.ld-go .ld-bar i{animation:ldfill 9s cubic-bezier(.2,.7,.3,1) forwards}#loadScr.ld-done .ld-bar i{animation:none;transform:scaleX(1);transition:transform .25s}@keyframes ldfill{from{transform:scaleX(.04)}to{transform:scaleX(.92)}}
+.ld-s{font:12px var(--mono,monospace);color:rgba(239,233,216,.6);max-width:80vw;text-align:center;min-height:1.2em}
 #startBtn{background:#b8322a;color:#fff6e8;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 18px rgba(184,50,42,.45)}.xp{display:inline-block;margin-left:6px;padding:1px 6px;border:1px solid var(--khaki);border-radius:3px;color:var(--khaki);font-size:10px;letter-spacing:.1em;text-transform:uppercase;vertical-align:middle}
 .custom{border:1px solid var(--line);border-radius:4px;padding:0 12px}.custom summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 0;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}.custom summary::-webkit-details-marker{display:none}.custom summary span{white-space:nowrap}.custom summary em{flex:1}.custom summary::after{content:"Change ▾";flex:none;border:1px solid var(--khaki);border-radius:3px;padding:6px 9px;color:var(--khaki);font-size:11px;letter-spacing:.12em;background:rgba(205,180,106,.08)}.custom[open] summary::after{content:"Done ▴";background:var(--khaki);color:#17170f}.custom:not([open]) summary:hover::after{background:rgba(205,180,106,.2)}.custom:not([open]):hover{border-color:rgba(205,180,106,.55)}@media (max-width:480px){.custom summary{flex-wrap:wrap;row-gap:4px}.custom summary em{order:3;flex-basis:100%;text-align:left}}.custom summary em{font-style:normal;letter-spacing:.04em;text-transform:none;color:var(--khaki);font-size:13px;text-align:right}.custom[open]{padding-bottom:10px}.custom .opt{margin-top:0}.opt~.opt{margin-top:16px}
 .expoffer{border:1px solid var(--khaki);border-radius:6px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.35}.expoffer .go{height:42px;font-size:15px}
@@ -376,7 +382,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
       <div class="seg" id="optMissions"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div>
       <div class="chips" id="misTypes"></div>
       <p class="fine" id="misNote"></p></div>
-    <div class="opt"><label>Squads at the start</label>
+    <div class="opt" hidden><label>Squads at the start</label>
       <div class="seg" id="optSplit"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3" class="on">3</button><button data-v="4">4</button></div></div>
     <div class="opt"><label>Tips and advice on screen</label>
       <div class="seg" id="optAdvice"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div>
@@ -402,6 +408,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <h2>Paused</h2>
     <button class="go" id="resumeBtn">Resume</button>
     <div class="sndrow"><button class="go ghost" data-snd="m">Music</button><button class="go ghost" data-snd="s">Effects</button><button class="go ghost" data-snd="v">Voices</button></div>
+    <button class="go ghost" id="restartBtn">Restart</button>
     <button class="go ghost" id="quitBtn">Back to menu</button>
   </div>
 </div>
@@ -484,6 +491,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
   </div>
 </div>
 
+<div id="loadScr" hidden aria-live="polite"><div class="ld-x"><i></i><i></i><b></b></div><div class="ld-t">Preparing the battlefield</div><div class="ld-bar"><i></i></div><div class="ld-s" id="ldTip"></div></div>
 <div id="endPanel" hidden role="region" aria-label="Battle over">
   <div class="ep-t" id="epTitle">Defeated<small id="epSub"></small></div>
   <div class="ep-s" id="epStats"></div>
@@ -919,7 +927,7 @@ function scan(u) {
     if (v.camo > G.time && dd > 45 * 45) continue; // camouflaged: only spotted up close
     if (dd < s2) {
       if (dd < sd) { sd = dd; seen = v; }
-      if (dd < r2) { const sc = v.hp / maxHp(v) + dd / r2 * 0.35 + (v.kind === "gen" ? 0.15 : 0) + (v.kind === "truck" ? 0.6 : 0); if (sc < td && clearShot(u.x, u.y, v.x, v.y)) { td = sc; tgt = v; } }
+      if (dd < r2) { const sc = v.hp / maxHp(v) + dd / r2 * 0.35 + (v.kind === "gen" ? -1.5 : 0) + (v.kind === "truck" ? 0.6 : 0); if (sc < td && clearShot(u.x, u.y, v.x, v.y)) { td = sc; tgt = v; } }
     }
   }
   for (const p of G.players) {
@@ -1126,7 +1134,7 @@ function stepDoom(dt) {
     d.t -= dt;
     if (d.t <= 0) {
       const T = doomTarget(p), tb = T.base;
-      G.doomFire = { owner: p.id, tgt: T.id, w: d.w, t: DOOM.show, t0: G.time, x: gen.x, y: gen.y, tx: tb.x, ty: tb.y }; pushFx({ k: "doomFire", owner: p.id, w: d.w }); return; }
+      G.doomFire = { owner: p.id, tgt: T.id, big: T.id === G.human || G.players.filter(q => !q.out).length <= 2, w: d.w, t: DOOM.show, t0: G.time, x: gen.x, y: gen.y, tx: tb.x, ty: tb.y }; pushFx({ k: "doomFire", owner: p.id, w: d.w }); return; }
   }
 }
 // ---- easter egg: a message in a bottle washes up on the shore now and then; one of your soldiers can pick it up ----
@@ -1845,7 +1853,7 @@ function model3(era, kind, pid) {
   return M.t[pid];
 }
 // fog over standing terrain (rocks, base pieces): same strength as the flat fog layer, 0 clear .. ~0.95 unexplored
-const fogAt = (x, y) => { if (!G || G.attract || G.doomFire || G.spect || !G.soft) return 0; const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return 0; const i = cy * G.gw + cx; return (G.explored[i] && !(G.seaMask && G.seaMask[i]) ? 150 : 242) / 255 * (1 - G.soft[i] / 255); };
+const fogAt = (x, y) => { if (!G || G.attract || (G.doomFire && G.doomFire.big) || G.spect || !G.soft) return 0; const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return 0; const i = cy * G.gw + cx; return (G.explored[i] && !(G.seaMask && G.seaMask[i]) ? 150 : 242) / 255 * (1 - G.soft[i] / 255); };
 const idle = f => (window.requestIdleCallback || (g => setTimeout(g, 50)))(f, { timeout: 2000 });
 const darkOf = cv => cv.dk || (cv.dk = (() => { const d = document.createElement("canvas"); d.width = cv.width; d.height = cv.height; const g = d.getContext("2d"); g.drawImage(cv, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = "rgb(10,13,16)"; g.fillRect(0, 0, d.width, d.height); return d; })());
 const STAND = [], FALL3 = []; // FALL3: soldiers falling over in the 3D view (model sprites with a die clip)
@@ -3018,14 +3026,14 @@ function spaceSprites(T) {
 const REEF = { src: "sprites/reef2.webp", img: null, ok: false, W: 510, H: 150, top: 66, w: [510, 410, 443], k: 0.62 };
 function paintReef(g) {
   const I = G.island; if (!I || !I.reef) return;
-  if (!REEF.img) { REEF.img = new Image(); REEF.img.onload = () => { REEF.ok = true; if (groundCvs && G && G.island) { const g2 = groundCvs.getContext("2d"); g2.save(); g2.setTransform(GK, 0, 0, GK, 0, 0); paintReef(g2); g2.restore(); if (miniGround) miniGround.getContext("2d").drawImage(groundCvs, 0, 0, miniGround.width, miniGround.width); } }; REEF.img.src = REEF.src; }
+  if (!REEF.img) { REEF.img = new Image(); REEF.img.onload = () => { { const fc = document.createElement("canvas"); fc.width = REEF.img.width; fc.height = REEF.img.height; const x = fc.getContext("2d"); x.filter = "contrast(1.2) brightness(0.82) saturate(0.85)"; x.drawImage(REEF.img, 0, 0); REEF.cv = fc; } REEF.ok = true; if (groundCvs && G && G.island) { const g2 = groundCvs.getContext("2d"); g2.save(); g2.setTransform(GK, 0, 0, GK, 0, 0); paintReef(g2); g2.restore(); if (miniGround) miniGround.getContext("2d").drawImage(groundCvs, 0, 0, miniGround.width, miniGround.width); } }; REEF.img.src = REEF.src; }
   if (!REEF.ok) return;
-  const n = I.R.length; g.save(); g.filter = "contrast(1.2) brightness(0.82) saturate(0.85)";
+  const n = I.R.length; g.save(); // graded once into REEF.cv
   for (const sp of I.reef) for (let q = 0; q < 8; q++) {
     const mir = q % 2 === 1, a = (mir ? Math.floor(q / 2) * Math.PI / 2 + Math.PI / 2 - sp.a : Math.floor(q / 2) * Math.PI / 2 + sp.a);
     const t = ((a % TAU) + TAU) % TAU, R = I.R[Math.round(t / TAU * n) % n], x = I.c + Math.cos(t) * R, y = I.c + Math.sin(t) * R, k = REEF.k * sp.sc, w = REEF.w[sp.p];
     g.save(); g.translate(x, y); g.rotate(t + Math.PI / 2); if (mir) g.scale(-1, 1);
-    g.drawImage(REEF.img, 0, sp.p * REEF.H, w, REEF.H, -w / 2 * k, -(REEF.top + 4) * k, w * k, REEF.H * k); g.restore(); }
+    g.drawImage(REEF.cv, 0, sp.p * REEF.H, w, REEF.H, -w / 2 * k, -(REEF.top + 4) * k, w * k, REEF.H * k); g.restore(); }
   g.restore();
 }
 // the whole coast: one strip cut along the shore of the same reef scan (rocks, wet sand, surf), bent around the island.
@@ -3033,14 +3041,15 @@ function paintReef(g) {
 const COAST = { src: "sprites/coast3.webp", img: null, flip: null, ok: false, H: 150, top: 45, k: 0.62 };
 function paintCoast(g) {
   const I = G.island; if (!I) return;
-  if (!COAST.img) { COAST.img = new Image(); COAST.img.onload = () => { const f = document.createElement("canvas"); f.width = COAST.img.width; f.height = COAST.img.height; const fg = f.getContext("2d"); fg.translate(f.width, 0); fg.scale(-1, 1); fg.drawImage(COAST.img, 0, 0); COAST.flip = f; COAST.ok = true;
+  if (!COAST.img) { COAST.img = new Image(); COAST.img.onload = () => { const f = document.createElement("canvas"); f.width = COAST.img.width; f.height = COAST.img.height; const fg = f.getContext("2d"); const fc = document.createElement("canvas"); fc.width = f.width; fc.height = f.height; const fcg = fc.getContext("2d"); fcg.filter = "contrast(1.15) brightness(0.84) saturate(0.85)"; fcg.drawImage(COAST.img, 0, 0); COAST.cv = fc;
+      fg.translate(f.width, 0); fg.scale(-1, 1); fg.drawImage(fc, 0, 0); COAST.flip = f; COAST.ok = true;
       if (groundCvs && G && G.island) { const g2 = groundCvs.getContext("2d"); g2.save(); g2.setTransform(GK, 0, 0, GK, 0, 0); paintCoast(g2); paintReef(g2); g2.restore(); if (miniGround) miniGround.getContext("2d").drawImage(groundCvs, 0, 0, miniGround.width, miniGround.width); } }; COAST.img.src = COAST.src; }
   if (!COAST.ok) return;
   const n = I.R.length, Ws = COAST.img.width, k = COAST.k, oct = Math.PI / 4, pt = i => { const t = i / n * TAU, r = I.R[i % n]; return [I.c + Math.cos(t) * r, I.c + Math.sin(t) * r, t]; };
-  g.save(); g.filter = "contrast(1.15) brightness(0.84) saturate(0.85)";
+  g.save(); // (the colour grade is baked into COAST.cv once)
   for (let i = 0; i < n; i++) {
     const [x0, y0, t0] = pt(i), [x1, y1] = pt(i + 1), q = Math.floor(t0 / oct + 1e-9), mir = q % 2 === 1;
-    let u0 = (t0 - q * oct) / oct, u1 = u0 + 1 / n * TAU / oct; const src = mir ? COAST.flip : COAST.img;
+    let u0 = (t0 - q * oct) / oct, u1 = u0 + 1 / n * TAU / oct; const src = mir ? COAST.flip : COAST.cv;
     // (in odd eighths the flipped copy, read the same way round, is the mirror image)
     const sx = Math.max(0, Math.min(Ws - 1, u0 * Ws)), sw = Math.max(1, Math.min(Ws - sx, (u1 - u0) * Ws)), dw = Math.hypot(x1 - x0, y1 - y0) + 0.9;
     g.save(); g.translate(x0, y0); g.rotate(Math.atan2(y1 - y0, x1 - x0));
@@ -3181,7 +3190,7 @@ function buildWorld() {
   decalCtx = decalCvs.getContext("2d"); decalCtx.scale(0.5, 0.5);
 
   fogCvs = document.createElement("canvas"); fogCvs.width = G.gw; fogCvs.height = G.gh;
-  fogCtx = fogCvs.getContext("2d"); fogImg = fogCtx.createImageData(G.gw, G.gh);
+  fogCtx = fogCvs.getContext("2d"); fogImg = fogCtx.createImageData(G.gw, G.gh); fogCtx.fillStyle = "rgb(10,13,16)"; fogCtx.fillRect(0, 0, G.gw, G.gh); // fully fogged until the first fog pass, so the minimap never shows the new map
 
   // tileable drifting cloud texture for the fog
   if (!cloudCvs) {
@@ -3601,12 +3610,12 @@ function render(dtReal) {
   c.setTransform(DPR * z, 0, 0, DPR * z, ox * DPR, oy * DPR);
   const vx0 = cam.x - W / 2 / z - 80, vx1 = cam.x + W / 2 / z + 80, vy0 = cam.y - H / 2 / z - 80, vy1 = cam.y + H / 2 / z + 80;
   const inView = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1;
-  const seeAll = !!(G.attract || G.doomFire || G.replay || G.spect);
+  const seeAll = !!(G.attract || (G.doomFire && G.doomFire.big) || G.replay || G.spect);
   const vis = (x, y) => seeAll || isVis(x, y);
 
   c.imageSmoothingEnabled = true;
   if (G.island && (vx0 < 0 || vy0 < 0 || vx1 > G.S || vy1 > G.S)) { // beyond the map edge: the same sea photo, lined up with the one baked into the ground
-    const T = TEX.sea; if (texOk("sea") && qLevel() > 1) { if (!T.p1) { T.p1 = c.createPattern(T, "repeat"); T.p1.setTransform(new DOMMatrix().scale(760 / T.width)); } c.fillStyle = T.p1; } else c.fillStyle = SEA;
+    const T = TEX.sea; if (texOk("sea")) { if (!T.p1) { T.p1 = c.createPattern(T, "repeat"); T.p1.setTransform(new DOMMatrix().scale(760 / T.width)); } c.fillStyle = T.p1; } else c.fillStyle = SEA; // the same photo as the baked sea, so there's no seam
     const S = G.S; // only the strips outside the map, never the whole view
     if (vy0 < 0) c.fillRect(vx0, vy0, vx1 - vx0, -vy0); if (vy1 > S) c.fillRect(vx0, S, vx1 - vx0, vy1 - S);
     const y0 = Math.max(0, vy0), y1 = Math.min(S, vy1); if (vx0 < 0) c.fillRect(vx0, y0, -vx0, y1 - y0); if (vx1 > S) c.fillRect(S, y0, vx1 - S, y1 - y0); }
@@ -4109,9 +4118,9 @@ function doomFx(e) {
     else if (e.by === me) { toast("Endgame stopped! Mercenaries and healers join you", "gold"); burst(e.x, e.y, "open"); }
     else toast(nm + "'s Endgame was stopped" + (e.by != null ? ", back to level 8" : ""));
   } else if (e.k === "doomFire") {
-    if (G.doomFire) G.doomFire.r0 = performance.now();
-    $("toast").innerHTML = "";
-    SND.doom("fire", e.w);
+    const F = G.doomFire; if (F) F.r0 = performance.now();
+    if (F && !F.big) { toast((F.owner === G.human ? "Your" : G.players[F.owner].team.name + "'s") + " Endgame is swallowing " + G.players[F.tgt].team.name + "'s base", F.owner === G.human ? "gold" : "bad"); if (F.owner === G.human) SND.doom("fire", e.w); }
+    else { $("toast").innerHTML = ""; SND.doom("fire", e.w); }
   }
 }
 // the base an Endgame will hit: yours if it's an enemy's, otherwise the nearest enemy base
@@ -4168,7 +4177,7 @@ function drawShock(c, bx, by, t, M, R) {
   const D = 1.8; if (t < 0 || t > D + 0.4) { cvs.style.transform = ""; return; }
   const sk = clamp(t / D, 0, 1), eo = 1 - Math.pow(1 - sk, 3), far = Math.hypot(Math.max(bx, SW - bx), Math.max(by, SH - by)) * 1.25, flat = Math.cos(TILT.on ? TILT.th : 0) * 0.55 + 0.25;
   // shake, strongest at the start
-  const sh = 16 * Math.pow(1 - sk, 2); cvs.style.transform = sh > 0.3 ? `translate(${(Math.random() - 0.5) * sh}px,${(Math.random() - 0.5) * sh}px)` : "";
+  const sh = (G.doomFire && G.doomFire.big === false ? 0 : 16) * Math.pow(1 - sk, 2); cvs.style.transform = sh > 0.3 ? `translate(${(Math.random() - 0.5) * sh}px,${(Math.random() - 0.5) * sh}px)` : "";
   // core flash
   const cf = Math.pow(1 - clamp(t / 0.6, 0, 1), 2); if (cf > 0) { const g = c.createRadialGradient(bx, by, 0, bx, by, M * 0.35); g.addColorStop(0, `rgba(255,255,255,${cf})`); g.addColorStop(0.3, `rgba(200,220,255,${0.7 * cf})`); g.addColorStop(1, "rgba(120,160,255,0)"); c.fillStyle = g; c.fillRect(bx - M * 0.35, by - M * 0.35, M * 0.7, M * 0.7); }
   const ring = (r, w, a, col, dark) => { if (r < 2 || a <= 0) return; c.save(); c.translate(bx, by); c.scale(1, flat);
@@ -4213,12 +4222,12 @@ function drawDoom() {
   }
   if (G.review) { cvs.style.transform = ""; return; }
   // 10 s scene on sim time: the target base falls at hit = show - baseAt (7 s)
-  const e = DOOM.show - F.t + (G.over ? 0 : Math.min(acc, CFG.dt)), M = Math.min(SW, SH), R = mulberry32(7), hit = DOOM.show - DOOM.baseAt;
+  const e = DOOM.show - F.t + (G.over ? 0 : Math.min(acc, CFG.dt)), M = Math.min(SW, SH) * (F.big === false ? Math.min(1.2, cam.z) * 0.5 : 1), R = mulberry32(7), hit = DOOM.show - DOOM.baseAt;
   if (e > DOOM.show + 3) return;
   const B = w2scr(F.tx, F.ty), bx = B.x, by = B.y, eo = (k) => 1 - (1 - k) * (1 - k);
   c.save();
   // dim the edges so the eye goes to the base
-  { const v = c.createRadialGradient(bx, by, M * 0.25, bx, by, Math.max(SW, SH) * 0.8); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, `rgba(0,0,0,${0.45 * clamp(e / 1.5, 0, 1)})`); c.fillStyle = v; c.fillRect(0, 0, SW, SH); }
+  if (F.big !== false) { const v = c.createRadialGradient(bx, by, M * 0.25, bx, by, Math.max(SW, SH) * 0.8); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, `rgba(0,0,0,${0.45 * clamp(e / 1.5, 0, 1)})`); c.fillStyle = v; c.fillRect(0, 0, SW, SH); }
   if (e > hit && F.w !== 1) { // what is left of the base: a smoking crater
     const cr = M * 0.09 * Math.min(1.6, Math.max(0.6, cam.z)); // the ruin itself is drawn on the map (drawRuin); this adds the rising smoke column
     for (let i = 0; i < 9; i++) { const ph = ((e - hit) * 0.5 + i / 9) % 1, sx = bx + Math.sin(i * 2.3) * cr * 0.6 + ph * 20, sy = by - ph * M * 0.25; c.fillStyle = `rgba(60,55,50,${0.45 * (1 - ph)})`; c.beginPath(); c.arc(sx, sy, cr * (0.25 + ph * 0.5), 0, TAU); c.fill(); }
@@ -4308,6 +4317,7 @@ function drawDoom() {
     if (bk) { const big = e > hit; c.font = `900 ${M * (big ? 0.12 : 0.07)}px "Big Shoulders Display",system-ui,sans-serif`; c.fillStyle = "#fbf7ec"; c.strokeStyle = "#3a2a1a"; c.lineWidth = 5; const tx = big ? bx + gs * 1.3 : SW * 0.3, ty = big ? by - gs * 0.8 : SH * 0.3; c.strokeText("BAWK!", tx, ty); c.fillText("BAWK!", tx, ty); }
   }
   c.restore(); c.setTransform(DPR, 0, 0, DPR, 0, 0); c.textAlign = "center"; c.textBaseline = "middle";
+  if (F.big === false) return; // someone else's base: the black hole plays where it is, no captions, no flash, the camera stays yours
   // caption, the white flash as the base goes, then who lost it
   const ca = clamp(e / 0.4, 0, 1) * clamp((hit - 0.3 - e) / 0.5, 0, 1);
   const who = F.owner === G.human ? "Your" : G.players[F.owner].team.name + "'s", cy = F.w === 2 ? Math.min(SH * 0.66, by + M * 0.12) : SH * 0.12;
@@ -4396,7 +4406,7 @@ const UI = { sel: new Set(), selKey: "all", mode: "move", box: null, pings: [], 
 const $ = id => document.getElementById(id);
 
 function toast(msg, cls) {
-  if (G && (G.attract || G.doomFire)) return; // nothing competes with the finale
+  if (G && (G.attract || (G.doomFire && G.doomFire.big))) return; // nothing competes with the finale
   const el = document.createElement("div"); el.textContent = msg; if (cls) el.className = cls;
   const box = $("toast"); box.appendChild(el);
   // keep a scrollable history under the minimap, newest on top, stamped with the battle clock
@@ -4877,7 +4887,7 @@ function renderMisTypes() {
   $("misNote").textContent = (UI.opts.missions && !EXP() && loadLog().length < 3 ? "With Basic controls, missions join after your first 3 battles. " : "") + (!UI.opts.missions ? "Missions are off." : !n ? "No mission types picked, so no missions will come." : n === 6 ? "All six mission types are in the mix." : n + " of 6 mission types are in the mix.");
 }
 renderMisTypes();
-UI.opts.split = 3; UI.opts.layout = 1; UI.opts.expert = 0; UI.opts.tel = 0; UI.opts.advice = 1;
+UI.opts.split = 4; UI.opts.layout = 1; UI.opts.expert = 0; UI.opts.tel = 0; UI.opts.advice = 1;
 try { const v = localStorage.getItem("hr-advice"); if (v !== null) UI.opts.advice = +v ? 1 : 0; } catch (e) {}
 seg("optAdvice", "advice");
 UI.opts.tilt = TILT.on ? 1 : 0; seg("opt3d", "tilt");
@@ -4891,7 +4901,7 @@ $("optTel").addEventListener("click", () => { try { localStorage.setItem("hr-tel
 try { const v = localStorage.getItem("hr-expert"); if (v !== null) UI.opts.expert = +v ? 1 : 0; } catch (e) {}
 seg("optExpert", "expert");
 $("optExpert").addEventListener("click", () => { try { localStorage.setItem("hr-expert", String(UI.opts.expert)); } catch (e) {} applyExpert(); });
-try { const v = localStorage.getItem("hr-split"); if (v) UI.opts.split = clamp(+v | 0, 1, 4); const l = localStorage.getItem("hr-layout"); if (l !== null) UI.opts.layout = +l ? 1 : 0; } catch (e) {}
+try { UI.opts.split = 4; /* always four squads (T) */ const l = localStorage.getItem("hr-layout"); if (l !== null) UI.opts.layout = +l ? 1 : 0; } catch (e) {}
 seg("optSplit", "split");
 $("optSplit").addEventListener("click", () => { try { localStorage.setItem("hr-split", String(UI.opts.split)); } catch (e) {} });
 layoutBar(!!UI.opts.layout); applyExpert();
@@ -6011,11 +6021,11 @@ window.addEventListener("pagehide", reportKills);
     card.style.transition = "none"; card.style.transform = "none";
     const cr = card.getBoundingClientRect(), a = h1.getBoundingClientRect(), b = st.hidden ? a : st.getBoundingClientRect();
     const L = Math.min(a.left, b.left), T = Math.min(a.top, b.top), R = Math.max(a.right, b.right), B = Math.max(a.bottom, b.bottom);
-    const vw = innerWidth, vh = innerHeight, w = R - L, h = B - T, sc = Math.min(1.3, (vw - 40) / w, (vh * 0.55) / h);
-    const gx = (L + R) / 2, gy = (T + B) / 2, ty = vh * 0.44;
+    const vw = innerWidth, vh = innerHeight, w = R - L, h = B - T, gx = (L + R) / 2, gy = (T + B) / 2, ty = vh * 0.44;
+    const sc = Math.max(1, Math.min(1.3, (vh * 0.55) / h, (gx - 16) * 2 / w, (vw - 16 - gx) * 2 / w)); // grows around its own centre, so it only moves up and down (T)
     card.style.transformOrigin = `${gx - cr.left}px ${gy - cr.top}px`;
-    card.style.transform = `translate(${vw / 2 - gx}px, ${ty - gy}px) scale(${sc})`;
-    go.style.top = (ty + h * sc / 2 + 34) + "px";
+    card.style.transform = `translate(0px, ${ty - gy}px) scale(${sc})`;
+    go.style.top = (ty + h * sc / 2 + 34) + "px"; go.style.left = Math.max(170, Math.min(vw - 170, gx)) + "px"; // under the title
   }
   function enter() {
     if (done) return; done = true; ov.classList.add("out"); ov.style.pointerEvents = "none";
@@ -6088,6 +6098,7 @@ async function lbTop(diff) {
   return res.json();
 }
 let boardDiff = 0, boardMine = null, boardFrom = "menu";
+const lbDate = iso => { const d = iso ? new Date(iso) : null; if (!d || isNaN(d)) return ""; try { return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: d.getFullYear() === new Date().getFullYear() ? undefined : "2-digit" }); } catch (e) { return d.toISOString().slice(0, 10); } };
 const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "TH" : ["TH", "ST", "ND", "RD"][n % 10] || "TH");
 async function showBoard(diff, mine) {
   boardDiff = diff || 0; if (mine) boardMine = mine;
@@ -6105,9 +6116,9 @@ async function showBoard(diff, mine) {
   let rows;
   try { rows = await lbTop(boardDiff); } catch (e) { t.innerHTML = `<tbody><tr><td>Couldn't load the leaderboard. Check your connection.</td></tr></tbody>`; return; }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  t.innerHTML = `<thead><tr><th>Rank</th><th>Name</th><th style="text-align:right">Score</th><th>Skill</th><th>Enemies</th><th>Time</th></tr></thead><tbody>` +
-    (rows.length ? rows.map((r, i) => `<tr class="${i < 3 ? "top" + (i + 1) : ""}${boardMine && r.id === boardMine.id ? " me" : ""}"><td class="rk">${ord(i + 1)}</td><td class="nm">${flagHTML(r.country)}${esc(r.name)}</td><td class="sc">${fmtN(r.score)}</td><td>${DIFF_NAME[r.diff] || ""}</td><td>${r.my_army || 30} v ${r.enemies > 1 ? r.enemies + "×" : ""}${r.army}${r.win ? "" : " ✕"}</td><td>${fmtT(r.secs)}</td></tr>`).join("")
-      : `<tr><td colspan="6">No scores yet. Be the first.</td></tr>`) + `</tbody>`;
+  t.innerHTML = `<thead><tr><th>Rank</th><th>Name</th><th style="text-align:right">Score</th><th>Skill</th><th>Enemies</th><th>Time</th><th>Date</th></tr></thead><tbody>` +
+    (rows.length ? rows.map((r, i) => `<tr class="${i < 3 ? "top" + (i + 1) : ""}${boardMine && r.id === boardMine.id ? " me" : ""}"><td class="rk">${ord(i + 1)}</td><td class="nm">${flagHTML(r.country)}${esc(r.name)}</td><td class="sc">${fmtN(r.score)}</td><td>${DIFF_NAME[r.diff] || ""}</td><td>${r.my_army || 30} v ${r.enemies > 1 ? r.enemies + "×" : ""}${r.army}${r.win ? "" : " ✕"}</td><td>${fmtT(r.secs)}</td><td class="dt">${lbDate(r.created_at)}</td></tr>`).join("")
+      : `<tr><td colspan="7">No scores yet. Be the first.</td></tr>`) + `</tbody>`;
   const me = t.querySelector("tr.me"); if (me) me.scrollIntoView({ block: "center" });
 }
 $("boardTabs").querySelectorAll("button").forEach(b => b.addEventListener("click", () => showBoard(+b.dataset.v)));
@@ -6181,8 +6192,22 @@ function showOver() {
   }
   $("over").hidden = false;
 }
-$("startBtn").addEventListener("click", start);
-$("againBtn").addEventListener("click", start);
+// Deploy shows a loading screen while the island is built and the first frames warm up (CSS keeps it animating while the page is busy)
+const LD_TIPS = ["Keep your general alive: his aura makes your soldiers stronger.", "Fog hides the enemy, and it hides you too.", "Destroy a base and its surviving soldiers join you.", "At level 9 your general carries the Endgame.", "Drag to look around. Pinch to zoom."];
+function deploy() {
+  const L = $("loadScr"); if (!L.hidden) return; L.className = ""; L.hidden = false; $("ldTip").textContent = LD_TIPS[(Math.random() * LD_TIPS.length) | 0];
+  void L.offsetWidth; L.classList.add("ld-go");
+  requestAnimationFrame(() => setTimeout(() => { // let the screen paint first
+    start(); UI.loading = { t0: performance.now(), ok: 0 };
+  }, 30));
+}
+function loadTick(dtReal) { // hide the loading screen once frames are smooth (or after 12 s whatever happens)
+  const D = UI.loading; if (!D) return; D.n = (D.n || 0) + 1; D.ok = dtReal < 0.09 ? D.ok + 1 : 0; // past the first hitch frames: a few in a row that are no slower than a slow phone
+  const imgs = !TILT.on || [eraOf(G.human)].every(e => ["inf", "gen"].every(k => { const M = MODEL3[e] && MODEL3[e][k]; return !M || M.st >= 2; }));
+  if ((D.ok >= 4 && D.n >= 6 && imgs) || performance.now() - D.t0 > 9000) { UI.loading = null; acc = 0; const L = $("loadScr"); L.classList.add("ld-done"); setTimeout(() => L.classList.add("ld-out"), 250); setTimeout(() => { L.hidden = true; L.className = ""; }, 650); }
+}
+$("startBtn").addEventListener("click", deploy);
+$("againBtn").addEventListener("click", deploy);
 // replay: the same seed and the same orders give the same battle, watched with the whole map revealed
 var lastRec = null;
 function startReplay() {
@@ -6254,26 +6279,35 @@ $("tutBtn").addEventListener("click", () => TUT.start());
 $("howTut").addEventListener("click", () => TUT.start());
 const toMenu = () => { document.body.classList.remove("ended"); TUT.stop(); reportKills(); loadCounters(); $("pause").hidden = true; $("over").hidden = true; $("menu").hidden = false; showBest(); startAttract(); };
 $("quitBtn").addEventListener("click", toMenu);
+$("restartBtn").addEventListener("click", () => { SND.ui(); reportKills(); $("pause").hidden = true; document.body.classList.remove("ended", "replay"); deploy(); }); // same settings, a fresh map
 $("menuBtn").addEventListener("click", toMenu);
 document.addEventListener("visibilitychange", () => { if (document.hidden && G && !UI.paused && !G.over) togglePause(); });
 
 
 let last = performance.now(), acc = 0, miniT = 0, hudT = 0, lastAttractDraw = 0;
+const WAKE = { lock: null, want: false, busy: false, t: 0 };
+function syncWake(dtReal) { // a screen wake lock while you play; let the phone sleep in pause, menus and after the game
+  WAKE.t -= dtReal; if (WAKE.t > 0) return; WAKE.t = 1;
+  const want = !!(G && !G.attract && !G.over && !UI.paused && !G.replay && !document.hidden && navigator.wakeLock);
+  if (want && !WAKE.lock && !WAKE.busy) { WAKE.busy = true; navigator.wakeLock.request("screen").then(l => { WAKE.lock = l; l.addEventListener("release", () => { WAKE.lock = null; }); }).catch(() => {}).finally(() => { WAKE.busy = false; }); }
+  else if (!want && WAKE.lock) { const l = WAKE.lock; WAKE.lock = null; l.release().catch(() => {}); }
+}
 function frame(now) {
-  const dtReal = Math.min(0.1, (now - last) / 1000); last = now;
+  const dtReal = Math.min(0.1, (now - last) / 1000); last = now; syncWake(dtReal);
   if (!(G && G.attract) && G && G.time > 4) trackQuality(dtReal); // ignore the first seconds, while textures warm up
   if (G && G.attract) {
     acc += dtReal; let steps = 0;
     while (acc >= CFG.dt && steps < 2) { step(); acc -= CFG.dt; steps++; }
     if (acc > CFG.dt * 4) acc = CFG.dt; // never pile up a backlog behind the menu
     attractCam(dtReal);
+  } else if (G && UI.loading) { loadTick(dtReal);
   } else if (G && !UI.paused) {
     const ps = 700 / cam.z * dtReal;
     if (UI.keys.has("w") || UI.keys.has("arrowup")) cam.y -= ps;
     if (UI.keys.has("s") || UI.keys.has("arrowdown")) cam.y += ps;
     if (UI.keys.has("a") || UI.keys.has("arrowleft")) cam.x -= ps;
     if (UI.keys.has("d") || UI.keys.has("arrowright")) cam.x += ps;
-    if (G.doomFire && !G.review) { const F = G.doomFire, k = Math.min(1, dtReal * 2.5), zt = Math.min(SW, SH) < 600 ? 0.75 : 0.9; cam.x += (F.tx - cam.x) * k; cam.y += (F.ty - cam.y) * k; cam.z += (zt - cam.z) * k; }
+    if (G.doomFire && G.doomFire.big && !G.review) { const F = G.doomFire, k = Math.min(1, dtReal * 2.5), zt = Math.min(SW, SH) < 600 ? 0.75 : 0.9; cam.x += (F.tx - cam.x) * k; cam.y += (F.ty - cam.y) * k; cam.z += (zt - cam.z) * k; }
     clampCam();
     acc += dtReal * UI.speed;
     let steps = 0; const maxSteps = Math.max(5, Math.ceil(UI.speed * 3));
@@ -6290,7 +6324,7 @@ function frame(now) {
   }
   // the menu backdrop draws at a steady ~30fps so the menu itself stays smooth
   if (G) {
-    render(G.attract ? dtReal : !UI.paused ? dtReal * Math.min(UI.speed, 3) : 0);
+    render(G.attract ? dtReal : !UI.paused && !UI.loading ? dtReal * Math.min(UI.speed, 3) : 0);
     miniT -= dtReal; if (miniT <= 0) { miniT = alerts.beacons.length ? 0.04 : 0.1; renderMini(); }
     drawEdgeMarks(); drawDoom(); updateAlertArrow();
   } else if (!G) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#07090a"; ctx.fillRect(0, 0, cvs.width, cvs.height); }
