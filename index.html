@@ -437,7 +437,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
-    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">Ground textures from Poly Haven (CC0). 3D models: Military base by JuliaIce (CC-BY), Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Star Equestrian horse by Otherspectre (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Date Palm, Curly Palm and Coconut Palm by evolveduk (CC-BY), Fern Grass 02 by Digital screen official (CC-BY), Green Shrub by Somersby (CC-BY-NC), Shrub by Ryan Chaney (CC-BY), Rocks by AspectStudios (CC-BY), via Sketchfab · characters and animations from Mixamo.</p>
+    <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">Ground textures from Poly Haven (CC0), sea photo from Freepik. 3D models: Military base by JuliaIce (CC-BY), Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Star Equestrian horse by Otherspectre (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Date Palm, Curly Palm and Coconut Palm by evolveduk (CC-BY), Fern Grass 02 by Digital screen official (CC-BY), Green Shrub by Somersby (CC-BY-NC), Shrub by Ryan Chaney (CC-BY), Rocks by AspectStudios (CC-BY), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
 </div>
@@ -1791,21 +1791,21 @@ const w2scr = (x, y) => flat2scr((x - cam.x) * cam.z + W / 2, (y - cam.y) * cam.
 // ---- 3D view: sprites pre-rendered from real 3D models (media/scripts/sprites3d in the repo). Until they load, the drawn art stands in.
 // clips: name -> [block, frames]; atlas row = block * dirs + direction (0 = facing screen right, then clockwise in 45° steps)
 const MODEL3 = {
-  4: { inf: { src: "sprites/ww-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
+  4: { inf: { src: "sprites/ww-inf.webp", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/ww-gen.png", S: 160, fx: 80, fy: 137.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 23 } },
-  0: { gen: { src: "sprites/st-gen.png", ring: true, ringR: 11, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 23.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } }, // Chara Design 01 by SheeroChana (CC-BY), Mixamo-rigged
-       inf: { src: "sprites/cv-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Caveman by iRahulRajput (CC-BY), Mixamo-rigged, with a spear
-  1: { gen: { src: "sprites/br-gen2.png", S: 200, fx: 100, fy: 183.5, wpp: 0.026, k: 12.5, dirs: 8, clips: { walk: [0, 6] }, ring: true, ringR: 22 }, // Ancient Horse Chariot (Mauryan era) by EqualizerX, CC-BY
-       inf: { src: "sprites/br-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } },
-  2: { gen: { src: "sprites/me-gen2.png", S: 160, fx: 80, fy: 127.67, wpp: 0.02375, k: 19, dirs: 8, clips: { walk: [0, 8] }, ring: true, ringR: 20 }, // Erika on the Star Equestrian horse (Otherspectre, CC-BY)
-       inf: { src: "sprites/me-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Mixamo Erika Archer
-  3: { inf: { src: "sprites/mu-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } ,
-       gen: { src: "sprites/mu-gen.png", S: 160, fx: 80, fy: 127.67, wpp: 0.02375, k: 19, dirs: 8, clips: { walk: [0, 8] }, ring: true, ringR: 20 } }, // Redcoat by avishka1shinwa (Sketchfab), Mixamo-rigged, with a musket
-  5: { inf: { src: "sprites/md-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
+  0: { gen: { src: "sprites/st-gen.webp", ring: true, ringR: 11, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 23.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } }, // Chara Design 01 by SheeroChana (CC-BY), Mixamo-rigged
+       inf: { src: "sprites/cv-inf.webp", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Caveman by iRahulRajput (CC-BY), Mixamo-rigged, with a spear
+  1: { gen: { src: "sprites/br-gen2.webp", S: 200, fx: 100, fy: 183.5, wpp: 0.026, k: 12.5, dirs: 8, clips: { walk: [0, 6] }, ring: true, ringR: 22 }, // Ancient Horse Chariot (Mauryan era) by EqualizerX, CC-BY
+       inf: { src: "sprites/br-inf.webp", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } },
+  2: { gen: { src: "sprites/me-gen2.webp", S: 160, fx: 80, fy: 127.67, wpp: 0.02375, k: 19, dirs: 8, clips: { walk: [0, 8] }, ring: true, ringR: 20 }, // Erika on the Star Equestrian horse (Otherspectre, CC-BY)
+       inf: { src: "sprites/me-inf.webp", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } }, // Mixamo Erika Archer
+  3: { inf: { src: "sprites/mu-inf.webp", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } } ,
+       gen: { src: "sprites/mu-gen.webp", S: 160, fx: 80, fy: 127.67, wpp: 0.02375, k: 19, dirs: 8, clips: { walk: [0, 8] }, ring: true, ringR: 20 } }, // Redcoat by avishka1shinwa (Sketchfab), Mixamo-rigged, with a musket
+  5: { inf: { src: "sprites/md-inf.webp", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } },
        gen: { src: "sprites/md-gen.png", S: 160, fx: 80, fy: 142.9, wpp: 0.0375, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 24 } }, // Tank by Quaternius
-  6: { inf: { src: "sprites/fu-inf.png", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } }, // Cyborg Grid by CAPTAAINR (CC-BY), Mixamo-rigged
+  6: { inf: { src: "sprites/fu-inf.webp", ring: true, S: 112, fx: 56, fy: 81.64, wpp: 0.017857, k: 15.5, dirs: 8, clips: { walk: [0, 8], aim: [1, 1], fire: [2, 4], die: [3, 6] } }, // Cyborg Grid by CAPTAAINR (CC-BY), Mixamo-rigged
        gen: { src: "sprites/fu-gen.png", S: 160, fx: 80, fy: 114, wpp: 0.0325, k: 12.5, dirs: 8, clips: { idle: [0, 1] }, ring: true, ringR: 20 } }, // HoverBikeTVS by Vijaysarathi, CC-BY, ridden by Cyborg Grid by CAPTAAINR, CC-BY
-  7: { gen: { src: "sprites/sp-gen.png", S: 160, fx: 80, fy: 127.8, wpp: 0.0375, k: 12.5, dirs: 8, clips: { walk: [0, 4] }, ring: true, ringR: 20 } }, // Mech Assault Walker by Alimayo Arango
+  7: { gen: { src: "sprites/sp-gen.webp", S: 160, fx: 80, fy: 127.8, wpp: 0.0375, k: 12.5, dirs: 8, clips: { walk: [0, 4] }, ring: true, ringR: 20 } }, // Mech Assault Walker by Alimayo Arango
 };
 function model3(era, kind, pid) {
   const M = MODEL3[era] && MODEL3[era][kind]; if (!M) return null;
@@ -2528,9 +2528,9 @@ const BASE3 = { 0: { src: "sprites/st-base.png", S: 256, H: 251, gx: 128, gy: 13
   3: { src: "sprites/mu-base2.png", S: 320, H: 331, gx: 160, gy: 171.2, wpp: 0.004375, r: 145 }, // Santa Luzia Fort by GSXNet (CC-BY-NC)
   4: { src: "sprites/ww-base.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 54 }, // Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY)
   2: { src: "sprites/castle.png", S: 256, H: 317, gx: 128, gy: 214.7, wpp: 0.009765625, r: 64 }, // Castle by hamidkhan224, CC-BY
-  5: { src: "sprites/md-base.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 66 }, // Military base by JuliaIce (CC-BY)
+  5: { src: "sprites/md-base2.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 66 }, // Military base by JuliaIce (CC-BY)
   6: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 }, // Dome Structure by trashbinkr
-  7: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 } };
+  7: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60, hover: 1 } };
 function base3(era) { const R = BASE3[era]; if (!R) return null; if (!R.img) { R.img = new Image(); R.img.onload = () => { const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, 0, 0); const f = R.wpp * R.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; R.cv = cv; }; R.img.src = R.src; }
   return R.cv || null; }
 function boulder3(o) { const r = o.r, rr = mulberry32(Math.floor(o.x * 7 + o.y * 3)); return bbSprite(r * 2.3, r * 1.7, g => {
@@ -2990,7 +2990,7 @@ function spaceSprites(T) {
   return { inf, gen, fort, genSz: 60, trot: true };
 }
 // rocky headlands cut from a photogrammetry reef (rock reef and beach by Metazeon), laid on the coast 8-fold symmetric
-const REEF = { src: "sprites/reef2.png", img: null, ok: false, W: 510, H: 150, top: 66, w: [510, 410, 443], k: 0.62 };
+const REEF = { src: "sprites/reef2.webp", img: null, ok: false, W: 510, H: 150, top: 66, w: [510, 410, 443], k: 0.62 };
 function paintReef(g) {
   const I = G.island; if (!I || !I.reef) return;
   if (!REEF.img) { REEF.img = new Image(); REEF.img.onload = () => { REEF.ok = true; if (groundCvs && G && G.island) { const g2 = groundCvs.getContext("2d"); g2.save(); g2.setTransform(GK, 0, 0, GK, 0, 0); paintReef(g2); g2.restore(); if (miniGround) miniGround.getContext("2d").drawImage(groundCvs, 0, 0, miniGround.width, miniGround.width); } }; REEF.img.src = REEF.src; }
@@ -3005,7 +3005,7 @@ function paintReef(g) {
 }
 // the whole coast: one strip cut along the shore of the same reef scan (rocks, wet sand, surf), bent around the island.
 // Each eighth of the coast gets the strip once, mirrored in every other eighth, so it is seamless and as symmetric as the island
-const COAST = { src: "sprites/coast3.png", img: null, flip: null, ok: false, H: 150, top: 45, k: 0.62 };
+const COAST = { src: "sprites/coast3.webp", img: null, flip: null, ok: false, H: 150, top: 45, k: 0.62 };
 function paintCoast(g) {
   const I = G.island; if (!I) return;
   if (!COAST.img) { COAST.img = new Image(); COAST.img.onload = () => { const f = document.createElement("canvas"); f.width = COAST.img.width; f.height = COAST.img.height; const fg = f.getContext("2d"); fg.translate(f.width, 0); fg.scale(-1, 1); fg.drawImage(COAST.img, 0, 0); COAST.flip = f; COAST.ok = true;
@@ -3207,7 +3207,7 @@ function buildWorld() {
     const I = G.island, n = I.R.length, poly = (c, off, keep) => { if (!keep) c.beginPath(); for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, rr = I.R[i] + off, x = I.c + Math.cos(t) * rr, y = I.c + Math.sin(t) * rr; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); };
     g.save(); g.setTransform(GK, 0, 0, GK, 0, 0);
     g.beginPath(); g.rect(-20, -20, S + 40, S + 40); poly(g, 0, true); // the sea outside
-    g.fillStyle = SEA; g.fill("evenodd");
+    g.save(); g.globalCompositeOperation = "destination-out"; g.fill("evenodd"); g.restore(); // the sea itself is drawn live under the ground (photo water, drifting)
     // golden beach under the rocks: dry sand inland, darker wet sand at the water, a soft edge into the grass
     const sandIn = (c, off, keep) => { if (!keep) c.beginPath(); for (let i = 0; i < n; i++) { const t = i / n * Math.PI * 2, rr = I.R[i] - off - 5 * Math.sin(t * 23) - 3 * Math.sin(t * 61 + 1); const x = I.c + Math.cos(t) * rr, y = I.c + Math.sin(t) * rr; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); };
     for (const [off, col] of [[40, "rgba(178,150,98,.35)"], [37, "rgba(182,154,100,.6)"], [34, "#bb9d66"]]) { g.beginPath(); poly(g, 2, true); sandIn(g, off, true); g.fillStyle = col; g.fill("evenodd"); }
@@ -3220,7 +3220,7 @@ function buildWorld() {
     g.restore();
   }
   miniGround = document.createElement("canvas"); miniGround.width = miniGround.height = mini.width;
-  const mg = miniGround.getContext("2d"); mg.drawImage(groundCvs, 0, 0, mini.width, mini.width);
+  const mg = miniGround.getContext("2d"); mg.fillStyle = SEA; mg.fillRect(0, 0, mini.width, mini.width); mg.drawImage(groundCvs, 0, 0, mini.width, mini.width);
   for (const o of G.rocks) { mg.fillStyle = "#7a7766"; mg.beginPath(); mg.arc(o.x / S * mini.width, o.y / S * mini.width, o.r / S * mini.width, 0, 7); mg.fill(); }
   parts = [];
 }
@@ -3507,9 +3507,9 @@ function drawSpr(img, x, y, a, size) {
 }
 
 // open sea all round; gentle swell rolling in to the beach
-const SEA = "#123a4b";
+const SEA = "#123a4b", PF = { sea: 1, detail: 1, waves: 1 }; window.__pf = PF;
 // photo textures (Poly Haven, CC0): rocky grass, forest leaves, dense sand, and high-pass detail maps for crisp close-ups
-const TEX = {}; for (const k of ["grass", "leaves", "sand", "detail", "rockd"]) { const im = new Image(); im.onload = () => { im.ok = true; }; im.src = "sprites/t-" + k + ".jpg"; TEX[k] = im; }
+const TEX = {}; for (const [k, f] of [["grass", "t-grass.jpg"], ["leaves", "t-leaves.jpg"], ["sand", "t-sand.jpg"], ["detail", "t-detail2.png"], ["sea", "t-sea2.jpg"]]) { const im = new Image(); im.onload = () => { im.ok = true; }; im.src = "sprites/" + f; TEX[k] = im; }
 const texOk = (...k) => k.every(n => TEX[n] && TEX[n].ok);
 function texPat(g, k, size, rot = 0) { const p = g.createPattern(TEX[k], "repeat"), s = size / TEX[k].width; p.setTransform(new DOMMatrix().rotate(rot).scale(s)); return p; }
 function drawWaves(c, now, z) {
@@ -3527,7 +3527,8 @@ function drawWaves(c, now, z) {
     for (let s = 0; s <= len; s += step) { const [x, y] = at(k0 + s, off - w0 * sh(s)); s ? c.lineTo(x, y) : c.moveTo(x, y); }
     for (let s = len; s >= 0; s -= step) { const [x, y] = at(k0 + s, off + w1 * sh(s)); c.lineTo(x, y); }
     c.closePath(); };
-  const soft = (k0, len, off, w0, w1, rgb, a) => { for (const [m, fa] of [[2.2, 0.25], [1.5, 0.35], [1, 0.55]]) { band(k0 - (m - 1) * 2, len + (m - 1) * 4, off, w0 * m + (m - 1) * 1.5, w1 * m + (m - 1) * 1.5); c.fillStyle = `rgba(${rgb},${(a * fa).toFixed(3)})`; c.fill(); } };
+  const LAY = qLevel() > 1 ? [[1.8, 0.35], [1, 0.6]] : [[1.3, 0.8]];
+  const soft = (k0, len, off, w0, w1, rgb, a) => { for (const [m, fa] of LAY) { band(k0 - (m - 1) * 2, len + (m - 1) * 4, off, w0 * m + (m - 1) * 1.5, w1 * m + (m - 1) * 1.5); c.fillStyle = `rgba(${rgb},${(a * fa).toFixed(3)})`; c.fill(); } };
   const vx0 = cam.x - W / 2 / z - 150, vx1 = cam.x + W / 2 / z + 150, vy0 = cam.y - H / 2 / z - 250, vy1 = cam.y + H / 2 / z + 150;
   const seen = (k, off) => { const [x, y] = at(k, off); return x > vx0 && x < vx1 && y > vy0 && y < vy1; };
   const hsh = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
@@ -3576,13 +3577,16 @@ function render(dtReal) {
   const vis = (x, y) => seeAll || isVis(x, y);
 
   c.imageSmoothingEnabled = true;
+  if (G.island && texOk("sea") && PF.sea && qLevel() > 0) { // open water: the sea photo, slowly drifting (one cheap pattern fill)
+    const T = TEX.sea; if (!T.p1) T.p1 = c.createPattern(T, "repeat");
+    T.p1.setTransform(new DOMMatrix().translate(now * 7, now * 3).scale(760 / 1024)); c.fillStyle = T.p1; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); }
   c.drawImage(groundCvs, 0, 0, G.S, G.S);
   c.drawImage(decalCvs, 0, 0, G.S, G.S);
-  if (G.island && texOk("detail") && z > 0.45) { // fine grain at full resolution, so close-ups stay sharp
+  if (G.island && texOk("detail") && z > 0.45 && PF.detail && qLevel() > 1) { // fine grain at full resolution, so close-ups stay sharp
     const I = G.island, n = I.R.length; if (!I.landP) { I.landP = new Path2D(); for (let i = 0; i < n; i++) { const t = i / n * TAU, rr = I.R[i] + 26; i ? I.landP.lineTo(I.c + Math.cos(t) * rr, I.c + Math.sin(t) * rr) : I.landP.moveTo(I.c + Math.cos(t) * rr, I.c + Math.sin(t) * rr); } I.landP.closePath(); }
-    if (!TEX.detail.pat) TEX.detail.pat = c.createPattern(TEX.detail, "repeat"); TEX.detail.pat.setTransform(new DOMMatrix().scale(150 / 512));
-    c.save(); c.clip(I.landP); c.globalCompositeOperation = "overlay"; c.globalAlpha = Math.min(0.55, (z - 0.45) * 1.2); c.fillStyle = TEX.detail.pat; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); c.restore(); }
-  if (G.island) drawWaves(c, now, z);
+    if (!TEX.detail.pat) TEX.detail.pat = c.createPattern(TEX.detail, "repeat"); TEX.detail.pat.setTransform(new DOMMatrix().scale(150 / 384));
+    c.save(); c.clip(I.landP); c.globalAlpha = Math.min(0.4, (z - 0.45) * 0.9); c.fillStyle = TEX.detail.pat; c.fillRect(vx0, vy0, vx1 - vx0, vy1 - vy0); c.restore(); }
+  if (G.island && PF.waves) drawWaves(c, now, z);
   else { // dark beyond the map edge
     c.strokeStyle = "rgba(0,0,0,.6)"; c.lineWidth = 30; c.strokeRect(-15, -15, G.S + 30, G.S + 30);
     c.strokeStyle = "rgba(205,180,106,.35)"; c.lineWidth = 2; c.strokeRect(0, 0, G.S, G.S);
@@ -3608,7 +3612,13 @@ function render(dtReal) {
     const E = SPR.team[p.id].eras[eraOf(p.id)], BB = c !== ctx && E.bb, S = BB ? BB.ground : E.fort;
     c.globalAlpha = ghost ? 0.5 : 1;
     const B3 = BB && base3(eraOf(p.id)); if (!B3) c.drawImage(S, b.x - 75, b.y - 75, 150, 150);
-    if (B3) STAND.push({ bb: B3, x: b.x, y: b.y, al: c.globalAlpha, fog: true });
+    if (B3 && BASE3[eraOf(p.id)].hover) { // the final era's base floats: shadow and thruster glow on the ground, the station bobbing above
+      const hv = 34 + Math.sin(now * 1.3 + p.id) * 5, al = c.globalAlpha;
+      c.fillStyle = "rgba(0,0,0,.35)"; c.beginPath(); c.ellipse(b.x + 6, b.y + 4, 62 - (hv - 34), 34, 0, 0, TAU); c.fill();
+      c.globalCompositeOperation = "lighter"; for (const [dx, dy] of [[-30, -8], [30, -8], [0, 18]]) { const gr = c.createRadialGradient(b.x + dx, b.y + dy, 0, b.x + dx, b.y + dy, 26); gr.addColorStop(0, `rgba(140,220,255,${(0.5 + 0.2 * Math.sin(now * 7 + dx)).toFixed(2)})`); gr.addColorStop(1, "rgba(60,120,255,0)"); c.fillStyle = gr; c.fillRect(b.x + dx - 26, b.y + dy - 26, 52, 52); } c.globalCompositeOperation = "source-over";
+      STAND.push({ bb: B3, x: b.x, y: b.y, al, fog: true, hov: hv });
+      STAND.push({ draw: (g, P, k) => { g.globalCompositeOperation = "lighter"; for (const [dx, dy] of [[-30, -8], [30, -8], [0, 18]]) { const [x0, y0] = P(b.x + dx, b.y + dy, hv - 4), [x1, y1] = P(b.x + dx, b.y + dy, 0), gr = g.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, "rgba(150,225,255,.55)"); gr.addColorStop(1, "rgba(80,150,255,0)"); g.fillStyle = gr; g.beginPath(); g.moveTo(x0 - 5 * k, y0); g.lineTo(x0 + 5 * k, y0); g.lineTo(x1 + 9 * k, y1); g.lineTo(x1 - 9 * k, y1); g.fill(); } }, x: b.x, y: b.y + 0.5, al, a: 0 });
+    } else if (B3) STAND.push({ bb: B3, x: b.x, y: b.y, al: c.globalAlpha, fog: true });
     if (BB) { const F3 = rally3(TEAM.indexOf(p.team), p.id * 3); if (F3) STAND.push({ bb: F3, sc: 1.7, x: b.x - 72, y: b.y + 8, al: c.globalAlpha }); } // the team colour flies on a flag
     if (!ghost && b.hp < (b.max || CFG.base.hp) * 0.6) { if (BB) STAND.push({ draw: (g, P, k) => baseBurn(g, b, now, P, k), x: b.x, y: b.y + 40, al: 1 }); else baseBurn(c, b, now, (x, y, h) => [x, y - h], 1); }
     if (BB && !B3) for (const v of BB.pieces) STAND.push({ bb: (v.hut != null && hut3(v.hut)) || v.img, x: b.x + v.x, y: b.y + v.y, al: c.globalAlpha, fog: true });
