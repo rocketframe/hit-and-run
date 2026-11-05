@@ -465,7 +465,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <section><h3>Press and hold</h3><ul><li><b>Hold, then let go</b> on open ground: the selected soldiers sprint there and ignore enemies on the way. Running uses the yellow stamina bar; when it runs out they walk until it refills.</li><li><b>Hold, then drag</b>: draw a box to select everyone inside it.</li><li><b>Hold on an enemy</b>: focus fire, so every selected soldier shoots that one target.</li><li><b>Tap the same spot twice</b>, quickly: break off a fight and go straight there, only shooting on the way.</li></ul></section>
     <section><h3>Basic and Expert controls</h3><p>The game starts with <b>Basic</b> controls: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. That is all you need to win. Soldiers fight any enemy they spot and spread out on their own when plague hits, and missions join after your first 3 battles.</p><p>Turn on <b>Expert</b> in Settings for formations, drawn routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. Sections marked <span class="xp">Expert</span> below need it.</p></section>
     <section><h3>Picking exactly who you want <span class="xp">Expert</span></h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
-    <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, healing, rapid fire, sharpshooters with longer range, scouts that lift the fog, camouflage, or a strike you aim with <b>STRIKE</b>: a boulder, a cannonball or an airstrike, depending on your era). Some are bad (plague that spreads between soldiers standing close, a trap, lost orders, a signal fire that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
+    <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, healing, rapid fire, sharpshooters with longer range, scouts that lift the fog, spies that show every army and base through the fog for 20 seconds, camouflage, or a strike you aim with <b>STRIKE</b>: a boulder, a cannonball or an airstrike, depending on your era). Some are bad (plague that spreads between soldiers standing close, a trap, lost orders, a signal fire that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
     <section><h3>Missions</h3><p>Every couple of minutes new orders bring a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Supplies:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply cart (a sled, wagon, truck or drone, by era) cannot be destroyed. It rolls toward the base of whoever has the most soldiers around it, so fight for it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it. The first army to hold it for 30 seconds in total wins.</li><li><b>Rescue:</b> find the missing scout in the marked area, then walk him home. Like the cart, he follows whoever controls the area around him.</li><li><b>Assassinate:</b> an enemy captain with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> destroy the supply camp near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
     <section><h3>Squads <span class="xp">Expert</span></h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation. <b>Box</b> is plain. <b>Line</b> holds the line: 15% better aim while standing still. <b>Wedge</b> is the charge: 10% faster, and 25% harder hits for the first 3 seconds of a fight. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> puts the selected soldiers in a ring round the general. They follow him and take 15% less damage while they stay close.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
     <section><h3>Spread out <span class="xp">Expert</span></h3><p>With Basic controls this happens on its own when plague hits. In Expert, tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, strikes and traps. The general always gets right of way through his own soldiers.</p></section>
@@ -1026,12 +1026,12 @@ function genAura(owner) {
 // ======================================================================
 const CRATE = {
   every: [45, 60], missionEvery: [150, 210], missionFirst: [110, 150], missionLife: 60, max: 3, land: 3, pick: 20,
-  good: ["upgrade", "mercs", "medkit", "rapid", "snipe", "recon", "camo", "strike"],
+  good: ["upgrade", "mercs", "medkit", "rapid", "snipe", "recon", "intel", "camo", "strike"],
   bad: ["plague", "trap", "jam", "flare", "desert"]
 };
 const CRATE_TXT = {
   upgrade: ["Battle standard! Army upgraded", "good"], mercs: ["Mercenaries join you for 60 seconds", "good"], medkit: ["Healing: squad fully healed", "good"],
-  rapid: ["Rapid fire for 20 seconds", "good"], snipe: ["Sharpshooters: longer range for 20 seconds", "good"], recon: ["Scouts report: whole map revealed for 10 seconds", "good"],
+  rapid: ["Rapid fire for 20 seconds", "good"], snipe: ["Sharpshooters: longer range for 20 seconds", "good"], recon: ["Scouts report: whole map revealed for 10 seconds", "good"], intel: ["Spies report: every army and base shown for 20 seconds", "good"],
   camo: ["Camouflage: squad hidden from the enemy for 20 seconds", "good"], strike: ["Strike ready! Tap STRIKE, then a target", "good"],
   plague: ["Plague! Spread your soldiers out before it spreads", "bad"], trap: ["Trap!", "bad"], jam: ["Orders lost: squad ignores orders for 10 seconds", "bad"],
   flare: ["Signal fire! The enemy can see your squad", "bad"], desert: ["Deserters! Soldiers ran off to the enemy", "bad"]
@@ -1040,7 +1040,7 @@ const rr = (a, b) => a + G.rng() * (b - a);
 const boosted = (u, k) => u[k] > G.time;
 const rangeOf = u => CFG[u.kind].range * (u.snipe > G.time ? 1.4 : 1);
 function cratesInit() {
-  G.crates = []; G.strikes = []; G.crateId = 1; G.reveal = 0;
+  G.crates = []; G.strikes = []; G.crateId = 1; G.reveal = 0; G.intel = 0;
   G.crateT = rr(25, 40); G.missionT = rr(CRATE.missionFirst[0], CRATE.missionFirst[1]);
   for (const p of G.players) { p.bonus = 0; p.strikes = 0; p.recon = 0; }
 }
@@ -1222,6 +1222,7 @@ function openCrate(c, u) {
     else if (k === "rapid") for (const v of group) v.rapid = T + 20;
     else if (k === "snipe") for (const v of group) v.snipe = T + 20;
     else if (k === "recon") { if (me) G.reveal = T + 10; p.recon = T + 10; }
+    else if (k === "intel") { if (me) G.intel = T + 20; p.recon = Math.max(p.recon || 0, T + 20); } // like scouts, minus the landscape
     else if (k === "camo") for (const v of group) v.camo = T + 20;
     else if (k === "strike") { if (p.ai) { const t = aiStrikeTarget(p); if (t) strikeAt(p.id, t.x, t.y); } else p.strikes++; }
     else if (k === "plague") { const sick = []; for (const v of group) if (d2(v, u) < 60 * 60) { v.plague = T + 25; sick.push(v); }
@@ -3664,9 +3665,9 @@ function render(dtReal) {
 
   // bases
   for (const p of G.players) {
-    const b = p.base; if (!b.alive) { if ((seeAll || isExp(b.x, b.y)) && inView(b.x, b.y)) drawRuin(c, p, now); continue; }
-    const ghost = !(p.id === G.human || vis(b.x, b.y));
-    if (ghost && !(seeAll || isExp(b.x, b.y))) continue;
+    const b = p.base; if (!b.alive) { if ((seeAll || isExp(b.x, b.y) || G.intel > G.time) && inView(b.x, b.y)) drawRuin(c, p, now); continue; }
+    const ghost = !(p.id === G.human || vis(b.x, b.y) || G.intel > G.time);
+    if (ghost && !(seeAll || isExp(b.x, b.y) || G.intel > G.time)) continue;
     if (!inView(b.x, b.y)) continue;
     const E = SPR.team[p.id].eras[eraOf(p.id)], BB = c !== ctx && E.bb, S = BB ? BB.ground : E.fort;
     c.globalAlpha = ghost ? 0.5 : 1;
@@ -3724,7 +3725,7 @@ function render(dtReal) {
     if (!u.alive || !inView(u.x, u.y)) continue;
     if (u.kind === "pilot" && !u.found && !seeAll) continue;
     if (u.owner !== G.human && !seeAll && !(u.free && u.found !== false && isVis(u.x, u.y))) {
-      if (!(vis(u.x, u.y) || u.flare > G.time)) continue;
+      if (!(vis(u.x, u.y) || u.flare > G.time || G.intel > G.time)) continue;
       if (u.camo > G.time && !G.units.some(v => v.alive && v.owner === G.human && d2(u, v) < 45 * 45)) continue;
     }
     showU.push(u);
@@ -4389,14 +4390,15 @@ function renderMini() {
   const M = mini.width, k = M / G.S, c = mctx;
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.drawImage(miniGround, 0, 0);
-  if (!G.attract) { c.imageSmoothingEnabled = true; c.drawImage(fogCvs, 0, 0, G.gw * CFG.fogCell * k, G.gh * CFG.fogCell * k); }
+  const mAll = !!(G.attract || G.spect || G.replay || G.over); // watching, replays and the look-around after a battle: the whole minimap is open
+  if (!mAll) { c.imageSmoothingEnabled = true; c.drawImage(fogCvs, 0, 0, G.gw * CFG.fogCell * k, G.gh * CFG.fogCell * k); }
   for (const p of G.players) {
     const b = p.base; if (!b.alive) continue;
-    if (G.attract || p.id === G.human || isExp(b.x, b.y)) { c.fillStyle = p.team.c; c.fillRect(b.x * k - 6, b.y * k - 6, 12, 12); c.strokeStyle = "#000"; c.lineWidth = 2; c.strokeRect(b.x * k - 6, b.y * k - 6, 12, 12); }
+    if (mAll || p.id === G.human || isExp(b.x, b.y) || G.intel > G.time) { c.fillStyle = p.team.c; c.fillRect(b.x * k - 6, b.y * k - 6, 12, 12); c.strokeStyle = "#000"; c.lineWidth = 2; c.strokeRect(b.x * k - 6, b.y * k - 6, 12, 12); }
   }
   for (const u of G.units) {
     if (!u.alive) continue;
-    if (!G.attract && u.owner !== G.human && !isVis(u.x, u.y)) continue;
+    if (!mAll && u.owner !== G.human && !isVis(u.x, u.y) && !(G.intel > G.time && !(u.camo > G.time))) continue;
     if (u.kind === "pilot" && !u.found) continue;
     c.fillStyle = G.players[u.owner].team.c;
     const s = u.kind === "gen" ? 7 : 3.5; c.fillRect(u.x * k - s / 2, u.y * k - s / 2, s, s);
