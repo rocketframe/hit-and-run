@@ -451,7 +451,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <section><h3>Basic and Expert controls</h3><p>The game starts with <b>Basic</b> controls: squads, GEN, ARMY, ALL, BASE, STRIKE and KILL. That is all you need to win. Soldiers fight any enemy they spot and spread out on their own when plague hits, and missions join after your first 3 battles.</p><p>Turn on <b>Expert</b> in Settings for formations, drawn routes, rally points, guard duty, merging squads, SELECT, IDLE and the order modes. Sections marked <span class="xp">Expert</span> below need it.</p></section>
     <section><h3>Picking exactly who you want <span class="xp">Expert</span></h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, healing, rapid fire, sharpshooters with longer range, scouts that lift the fog, camouflage, or a strike you aim with <b>STRIKE</b>: a boulder, a cannonball or an airstrike, depending on your era). Some are bad (plague that spreads between soldiers standing close, a trap, lost orders, a signal fire that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
-    <section><h3>Missions</h3><p>Every couple of minutes new orders bring a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Supplies:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply cart (a sled, wagon, truck or drone, by era) moves home only while your soldiers walk next to it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it, for 30 seconds.</li><li><b>Rescue:</b> find the missing scout in the marked area, then walk him home.</li><li><b>Assassinate:</b> an enemy captain with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> destroy the supply camp near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
+    <section><h3>Missions</h3><p>Every couple of minutes new orders bring a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Supplies:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply cart (a sled, wagon, truck or drone, by era) cannot be destroyed. It rolls toward the base of whoever has the most soldiers around it, so fight for it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it. The first army to hold it for 30 seconds in total wins.</li><li><b>Rescue:</b> find the missing scout in the marked area, then walk him home. Like the cart, he follows whoever controls the area around him.</li><li><b>Assassinate:</b> an enemy captain with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> destroy the supply camp near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
     <section><h3>Squads <span class="xp">Expert</span></h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation. <b>Box</b> is plain. <b>Line</b> holds the line: 15% better aim while standing still. <b>Wedge</b> is the charge: 10% faster, and 25% harder hits for the first 3 seconds of a fight. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> puts the selected soldiers in a ring round the general. They follow him and take 15% less damage while they stay close.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
     <section><h3>Spread out <span class="xp">Expert</span></h3><p>With Basic controls this happens on its own when plague hits. In Expert, tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, strikes and traps. The general always gets right of way through his own soldiers.</p></section>
     <section><h3>Time lapse</h3><p>Tap the <b>1×</b> button by the clock to change game speed, from <b>¼×</b> slow motion up to <b>8×</b> fast forward. Fast forward is fair game. If you use slow motion, that game's score stays on your device and doesn't go on the public leaderboard.</p></section>
@@ -902,7 +902,7 @@ function scan(u) {
   const C = CFG[u.kind], R = rangeOf(u), s2 = Math.max(C.sight, R) ** 2, r2 = R * R;
   let seen = null, sd = 1e18, tgt = null, td = 1e18;
   for (const v of G.units) {
-    if (!v.alive || v.owner === u.owner) continue;
+    if (!v.alive || v.owner === u.owner || v.free) continue;
     const dx = v.x - u.x, dy = v.y - u.y, dd = dx * dx + dy * dy;
     if (v.camo > G.time && dd > 45 * 45) continue; // camouflaged: only spotted up close
     if (dd < s2) {
@@ -921,7 +921,7 @@ function scan(u) {
 }
 
 function damage(t, amount, by) {
-  if (!t.alive) return;
+  if (!t.alive || t.free) return;
   if (t.kind === "truck") amount *= 0.35; // armoured
   if (t.escort) { const g = G.gens[t.owner]; if (g && g.alive && d2(t, g) < GUARD_R * GUARD_R) amount *= 0.85; } // guards in the ring hold firm
   if (!G.attract) { const st = gStats(), a = Math.min(amount, Math.max(0, t.hp)); if (by === G.human) st.dealt += a; else if (t.owner === G.human) st.taken += a; }
@@ -949,6 +949,8 @@ function gStats() { return G.st || (G.st = { dealt: 0, taken: 0, genKills: 0, ge
 // every tap or click during a battle counts
 document.addEventListener("pointerdown", () => { if (G && !G.attract && !G.over && !G.tutorial) gStats().taps++; }, true);
 function addPoints(p, n) {
+  // opponents who fall two or more ages behind the leader learn faster, so nobody is left in the stone age
+  if (p.ai && n > 0) { let top = 0; for (const q of G.players) if (!q.out && q.level > top) top = q.level; if (top - p.level >= 2) n = Math.round(n * 1.5); }
   p.points += n;
   while (p.points >= (p.level - (p.bonus || 0) + 1) * G.upEvery) {
     const before = p.level; p.level++; pushFx({ k: "level", owner: p.id, x: p.base.x, y: p.base.y }); onLevel(p, before);
@@ -964,6 +966,7 @@ function eliminate(owner, by) {
   const p = G.players[owner]; if (p.out) return;
   p.out = true; p.base.alive = false; p.base.hp = 0; p.base.diedAt = G.time;
   for (const u of G.units) if (u.owner === owner) {
+    if (u.free && u.alive) { u.owner = G.human; continue; } // the cart and the scout belong to nobody: they stay
     if (u.alive) pushFx({ k: "death", x: u.x, y: u.y, a: u.face, owner, c: p.team.c, big: u.kind === "gen" });
     u.alive = false; u.respawn = Infinity;
   }
@@ -1232,9 +1235,9 @@ const MIS = {
   first: [100, 140], gap: [110, 170],
   types: {
     cargo:  { name: "Cargo", life: 60,  brief: "Supplies lost in the field! Recover them before the enemy does" },
-    escort: { name: "Escort", life: 150, brief: "Escort the supply cart home. It only moves with soldiers next to it" },
-    hold:   { name: "Hold the hill", life: 120, brief: "Take the hill and hold it for 30 seconds" },
-    rescue: { name: "Rescue", life: 150, brief: "A scout is missing in the marked area. Find him and bring him home" },
+    escort: { name: "Escort", life: 150, brief: "Win the supply cart! It rolls toward whoever has the most soldiers around it" },
+    hold:   { name: "Hold the hill", life: 120, brief: "Take the hill and hold it for 30 seconds. First army to do it wins" },
+    rescue: { name: "Rescue", life: 150, brief: "A scout is missing in the marked area. Find him and bring him home before anyone else does" },
     kill:   { name: "Assassinate", life: 120, brief: "An enemy captain is in the marked area. Take him out" },
     sabo:   { name: "Sabotage", life: 180, brief: "Destroy the enemy supply camp" }
   }
@@ -1253,9 +1256,9 @@ function startMission() {
   const spot = crateSpot(true) || { x: G.S / 2, y: G.S / 2 };
   const m = { type, t0: G.time, until: G.time + T.life, x: spot.x, y: spot.y, prog: 0, foe: foes[Math.floor(G.rng() * foes.length)].id, id: ++G.misN };
   if (type === "cargo") { const c = { id: G.crateId++, x: spot.x, y: spot.y, kind: "upgrade", mission: true, land: G.time + CRATE.land, until: m.until }; G.crates.push(c); m.crate = c; pushFx({ k: "crate", x: c.x, y: c.y, mission: true }); }
-  else if (type === "escort") { m.unit = misUnit(G.human, "truck", spot.x, spot.y); }
-  else if (type === "hold") { m.r = 110; }
-  else if (type === "rescue") { m.unit = misUnit(G.human, "pilot", spot.x, spot.y); const a = G.rng() * TAU2, d = G.rng() * 140; m.ax = spot.x + Math.cos(a) * d; m.ay = spot.y + Math.sin(a) * d; m.r = 220; }
+  else if (type === "escort") { m.unit = misUnit(G.human, "truck", spot.x, spot.y); m.unit.free = true; }
+  else if (type === "hold") { m.r = 110; m.progBy = {}; }
+  else if (type === "rescue") { m.unit = misUnit(G.human, "pilot", spot.x, spot.y); m.unit.free = true; const a = G.rng() * TAU2, d = G.rng() * 140; m.ax = spot.x + Math.cos(a) * d; m.ay = spot.y + Math.sin(a) * d; m.r = 220; }
   else if (type === "kill") {
     m.unit = misUnit(m.foe, "officer", spot.x, spot.y); m.guards = [];
     for (let i = 0; i < 5; i++) { const a = i / 5 * TAU2, g = tempUnit(m.foe, spot.x + Math.cos(a) * 30, spot.y + Math.sin(a) * 30, 0, T.life + 5); g.guard = true; m.guards.push(g); }
@@ -1268,17 +1271,18 @@ function startMission() {
   G.mis = m;
   pushFx({ k: "mission", x: m.x, y: m.y, owner: G.human, mt: type });
 }
-function missionReward(x, y) {
-  const p = G.players[G.human];
+function missionReward(x, y, pid = G.human) {
+  const p = G.players[pid];
   levelUp(p);
   const n = clamp(Math.round(G.myArmy * 0.25), 3, 10);
-  let near = null; for (const v of G.units) if (v.alive && v.owner === G.human && v.kind === "inf" && !v.temp && (!near || d2(v, { x, y }) < d2(near, { x, y }))) near = v;
+  let near = null; for (const v of G.units) if (v.alive && v.owner === pid && v.kind === "inf" && !v.temp && (!near || d2(v, { x, y }) < d2(near, { x, y }))) near = v;
   const sq = near ? near.squad : 0;
-  for (let i = 0; i < n; i++) { const a = i / n * TAU2; tempUnit(G.human, x + Math.cos(a) * 26, y + Math.sin(a) * 26, sq, 60).merc = true; }
-  for (const v of G.units) if (v.alive && v.owner === G.human && d2(v, { x, y }) < 260 * 260) { v.hp = maxHp(v); v.plague = 0; }
+  for (let i = 0; i < n; i++) { const a = i / n * TAU2; tempUnit(pid, x + Math.cos(a) * 26, y + Math.sin(a) * 26, sq, 60).merc = true; }
+  for (const v of G.units) if (v.alive && v.owner === pid && d2(v, { x, y }) < 260 * 260) { v.hp = maxHp(v); v.plague = 0; }
 }
-function endMission(win, why) {
+function endMission(win, why, by) {
   const m = G.mis; if (!m) return;
+  if (by != null && by !== G.human && G.players[by] && !G.players[by].out) { const pos0 = m.unit && m.unit.alive ? m.unit : m; missionReward(pos0.x, pos0.y, by); }
   if (!G.attract) gStats()[win ? "misWon" : "misLost"]++;
   G.mis = null; G.misLast = m.type; G.misT = rr(MIS.gap[0], MIS.gap[1]);
   if (m.crate) { const i = G.crates.indexOf(m.crate); if (i >= 0) G.crates.splice(i, 1); }
@@ -1302,17 +1306,27 @@ function stepMissions(dt) {
       return;
     }
   } else if (m.type === "escort" || m.type === "rescue") {
+    // nobody owns the cart (or the scout): it rolls toward whoever has the most soldiers around it, and can't be hurt
     const u = m.unit;
-    if (!u.alive) return endMission(false, m.type === "escort" ? "the supply cart was destroyed" : "the scout was killed");
-    let near = false; for (const v of G.units) if (v.alive && v.owner === me && v !== u && !v.mis && d2(v, u) < (m.type === "rescue" && !u.found ? 70 : 150) ** 2) { near = true; break; }
-    if (m.type === "rescue" && !u.found) { if (near) { u.found = true; pushFx({ k: "found", x: u.x, y: u.y, owner: me }); if (!G.attract) toast("Scout found! Bring him home", "gold"); } }
-    else if (near) { u.tx = home.x; u.ty = home.y; u.mode = "move"; } else { u.tx = u.x; u.ty = u.y; }
-    if (d2(u, home) < 170 * 170) return endMission(true);
+    if (!u.alive) return endMission(false, m.type === "escort" ? "the supply cart was lost" : "the scout was lost");
+    const by = {}; for (const v of G.units) if (v.alive && !v.mis && v.kind !== "depot" && !G.players[v.owner].out && d2(v, u) < (m.type === "rescue" && !u.found ? 70 : 150) ** 2) by[v.owner] = (by[v.owner] || 0) + 1;
+    let lead = -1, top = 0, tie = false; for (const k in by) { if (by[k] > top) { top = by[k]; lead = +k; tie = false; } else if (by[k] === top) tie = true; }
+    m.contested = tie && top > 0;
+    if (m.type === "rescue" && !u.found) { if (lead >= 0) { u.found = true; pushFx({ k: "found", x: u.x, y: u.y, owner: me }); if (!G.attract && lead === me) toast("Scout found! Bring him home", "gold"); } }
+    else if (lead >= 0 && !tie) {
+      if (u.owner !== lead && !G.attract && (u.owner === me || lead === me)) toast(lead === me ? (m.type === "escort" ? "The cart is yours, push it home" : "The scout is with you, bring him home") : G.players[lead].team.name + " took the " + (m.type === "escort" ? "cart" : "scout"), lead === me ? "gold" : "bad");
+      u.owner = lead; const b = G.players[lead].base; u.tx = b.x; u.ty = b.y; u.mode = "move";
+    } else { u.tx = u.x; u.ty = u.y; }
+    m.ctl = lead >= 0 && !tie ? lead : null;
+    for (const q of G.players) if (!q.out && u.owner === q.id && d2(u, q.base) < 170 * 170) return q.id === me ? endMission(true) : endMission(false, q.team.name + " got the " + (m.type === "escort" ? "cart" : "scout") + " home", q.id);
   } else if (m.type === "hold") {
-    const by = inZone(m.x, m.y, m.r), mine = by[me] || 0, theirs = Object.keys(by).some(k => +k !== me);
-    m.contested = mine > 0 && theirs; m.holding = mine > 0 && !theirs;
-    if (m.holding) m.prog += dt / 30;
+    // a race: whoever holds the hill alone for 30 seconds in total wins it
+    const by = inZone(m.x, m.y, m.r), own = Object.keys(by).filter(k => !G.players[k].out).map(Number), mine = by[me] || 0;
+    m.contested = own.length > 1; m.holding = mine > 0 && own.length === 1; m.taker = own.length === 1 ? own[0] : null;
+    if (m.taker != null) m.progBy[m.taker] = (m.progBy[m.taker] || 0) + dt / 30;
+    m.prog = m.progBy[me] || 0; m.foeProg = Math.max(0, ...Object.keys(m.progBy).filter(k => +k !== me).map(k => m.progBy[k]));
     if (m.prog >= 1) return endMission(true);
+    if (m.taker != null && m.progBy[m.taker] >= 1) return endMission(false, G.players[m.taker].team.name + " held the hill", m.taker);
   } else if (m.type === "kill") {
     const u = m.unit;
     if (!u.alive) return endMission(true);
@@ -1333,7 +1347,7 @@ function missionRunners(p, inf) {
   if (m.type === "hold") goal = m;
   else if (lvl >= 3) {
     // give the player a head start before the hunters come for the truck or the pilot
-    if ((m.type === "escort" || m.type === "rescue") && G.time - m.t0 > 25) goal = m.unit.found || m.type === "escort" ? m.unit : { x: m.ax, y: m.ay };
+    if ((m.type === "escort" || m.type === "rescue") && G.time - m.t0 > 15) goal = m.unit.found || m.type === "escort" ? m.unit : { x: m.ax, y: m.ay };
     else if ((m.type === "kill" || m.type === "sabo") && p.id === m.foe) goal = m.unit;
   }
   if (!goal || !goal.alive && goal.alive !== undefined) return inf;
@@ -1571,6 +1585,7 @@ function aiThink(p) {
       const sc = q.points * (p.smart ? 1 : 0) - Math.sqrt(d2(b, q.base)) / 25;
       if (sc > bs) { bs = sc; best = q.base; }
     }
+    if (!A.target || best !== A.target) A.siege = 0;
     A.target = best; A.retarget = G.time + 20;
   }
   if (!A.target) return;
@@ -1581,7 +1596,8 @@ function aiThink(p) {
   for (const v of G.units) if (v.alive && v.owner !== me && (d2(v, b) < 520 * 520 || v.flare > G.time || p.recon > G.time)) known.add(v);
   const knownArr = [...known];
   // estimated defence of an enemy base: its turret plus every unit of theirs not seen out in the field
-  const basePow = q => 8 + power(G.units.filter(v => v.alive && v.owner === q.id && !(known.has(v) && d2(v, q.base) > 700 * 700)));
+  // (scouts report roughly what is at home: units out in the field don't count)
+  const basePow = q => 8 + power(G.units.filter(v => v.alive && v.owner === q.id && d2(v, q.base) < 800 * 800));
 
   let home = inf.filter(u => d2(u, b) < 460 * 460);
   let away = inf.filter(u => d2(u, b) >= 460 * 460);
@@ -1656,7 +1672,8 @@ function aiThink(p) {
         if (p.smart && dl < 650) {
           // near the enemy base: only storm it when clearly stronger than what defends it
           const defPow = basePow(G.players[t.owner]);
-          if (myPow > defPow * 1.3) order(army, t.x, t.y, "attack");
+          A.siege = (A.siege || 0) + 1;
+          if (myPow > defPow * 1.3 || A.siege > 12) order(army, t.x, t.y, "attack"); // don't camp outside forever
           else {
             // hold just outside turret range and pick off what comes out
             const hx = t.x - dx / dl * 560, hy = t.y - dy / dl * 560;
@@ -1793,7 +1810,7 @@ function model3(era, kind, pid) {
   return M.t[pid];
 }
 // fog over standing terrain (rocks, base pieces): same strength as the flat fog layer, 0 clear .. ~0.95 unexplored
-const fogAt = (x, y) => { if (!G || G.attract || G.doomFire || !G.soft) return 0; const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return 0; const i = cy * G.gw + cx; if (G.seaMask && G.seaMask[i]) return 0; return (G.explored[i] ? 150 : 242) / 255 * (1 - G.soft[i] / 255); };
+const fogAt = (x, y) => { if (!G || G.attract || G.doomFire || !G.soft) return 0; const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return 0; const i = cy * G.gw + cx; return (G.explored[i] && !(G.seaMask && G.seaMask[i]) ? 150 : 242) / 255 * (1 - G.soft[i] / 255); };
 const darkOf = cv => cv.dk || (cv.dk = (() => { const d = document.createElement("canvas"); d.width = cv.width; d.height = cv.height; const g = d.getContext("2d"); g.drawImage(cv, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = "rgb(10,13,16)"; g.fillRect(0, 0, d.width, d.height); return d; })());
 const STAND = [], FALL3 = []; // FALL3: soldiers falling over in the 3D view (model sprites with a die clip)
 function drawStanding() {
@@ -2489,8 +2506,8 @@ function rally3(t, ph = 0) { const R = RALLY3; if (t < 0) t = 0; if (!R.img) { R
   return R.cv[key]; }
 // whole-base models for some eras (3D view): one baked view, ground centre at (gx, gy), footprint radius 1 = r world units
 const BASE3 = { 0: { src: "sprites/st-base.png", S: 256, H: 251, gx: 128, gy: 133.2, wpp: 0.009765625, r: 64 }, // log palisade with Basic Stone Age Houses (CristianPiotto, CC-BY), built in three.js
-  1: { src: "sprites/br-temple2.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 56 }, // Greek Temple by cmzw (CC-BY)
-  3: { src: "sprites/mu-base.png", S: 320, H: 331, gx: 160, gy: 171.2, wpp: 0.004375, r: 145 }, // Santa Luzia Fort by GSXNet (CC-BY-NC)
+  1: { src: "sprites/br-temple3.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 56 }, // Greek Temple by cmzw (CC-BY)
+  3: { src: "sprites/mu-base2.png", S: 320, H: 331, gx: 160, gy: 171.2, wpp: 0.004375, r: 145 }, // Santa Luzia Fort by GSXNet (CC-BY-NC)
   4: { src: "sprites/ww-base.png", S: 320, H: 332, gx: 160, gy: 215.2, wpp: 0.008125, r: 54 }, // Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY)
   2: { src: "sprites/castle.png", S: 256, H: 317, gx: 128, gy: 214.7, wpp: 0.009765625, r: 64 }, // Castle by hamidkhan224, CC-BY
   6: { src: "sprites/dome.png", S: 256, H: 266, gx: 128, gy: 163.7, wpp: 0.009765625, r: 60 }, // Dome Structure by trashbinkr
@@ -3150,7 +3167,7 @@ function drawFogTexture() {
   }
   for (let i = 0, n = soft.length; i < n; i++) {
     const o = i * 4, f = 1 - soft[i] / 255; d[o] = 10; d[o + 1] = 13; d[o + 2] = 16;
-    d[o + 3] = G.seaMask[i] ? 0 : (explored[i] ? 150 : 242) * f;
+    d[o + 3] = (explored[i] && !G.seaMask[i] ? 150 : 242) * f; // the open sea is fogged too, and never stays half-lit: only what your soldiers see right now is clear
   }
   fogCtx.putImageData(fogImg, 0, 0);
 }
@@ -3305,7 +3322,7 @@ function drawMisUnit(c, u, T, now) {
   const look = { stone: 0, bronze: 1, med: 1, musket: 1, ww: 2, modern: 2, laser: 3, space: 3 }[es];
   if (c !== ctx) { // 3D view: vehicles and people stand up; camps stay on the ground
     const fr = u.moving ? 1 + (Math.floor(now * 11 + u.id * 0.37) % FIG_N) : 0, a = u.moving && u.walk != null ? u.walk : u.face;
-    if (u.kind === "truck") { const S = truck3(G.human, look); c.restore(); STAND.push({ bb: (fl ? S.w : S.fr)[fr], sc: 1.1, x: u.x, y: u.y, a, u, al: c.globalAlpha }); return; }
+    if (u.kind === "truck") { const S = truck3(u.owner, look); c.restore(); STAND.push({ bb: (fl ? S.w : S.fr)[fr], sc: 1.1, x: u.x, y: u.y, a, u, al: c.globalAlpha }); return; }
     if ((u.kind === "pilot" && look !== 3) || u.kind === "officer") { const E = SPR.team[u.kind === "pilot" ? G.human : u.owner].eras[era].bb; c.restore(); STAND.push({ bb: (fl ? E.infW : E.inf)[fr], sc: u.kind === "officer" ? 1.4 : 1.25, x: u.x, y: u.y, a, u, al: c.globalAlpha });
       if (u.kind === "officer") STAND.push({ bb: BB3.star || (BB3.star = bbSprite(8, 8, g => { g.fillStyle = "#f3c85a"; g.beginPath(); for (let i = 0; i < 10; i++) { const a = i / 10 * TAU - Math.PI / 2, r = i % 2 ? 1.5 : 3.6; g.lineTo(Math.cos(a) * r, -4 + Math.sin(a) * r); } g.fill(); }, 4)), x: u.x, y: u.y + 0.2, hov: 40, al: 1 });
       return; }
@@ -3528,7 +3545,7 @@ function render(dtReal) {
   for (const u of G.units) {
     if (!u.alive || !inView(u.x, u.y)) continue;
     if (u.kind === "pilot" && !u.found && !seeAll) continue;
-    if (u.owner !== G.human && !seeAll) {
+    if (u.owner !== G.human && !seeAll && !(u.free && u.found !== false && isVis(u.x, u.y))) {
       if (!(vis(u.x, u.y) || u.flare > G.time)) continue;
       if (u.camo > G.time && !G.units.some(v => v.alive && v.owner === G.human && d2(u, v) < 45 * 45)) continue;
     }
@@ -3698,6 +3715,19 @@ function render(dtReal) {
     fl.setTransform(z * 0.5, 0, 0, z * 0.5, ox * 0.5, oy * 0.5);
     fl.imageSmoothingEnabled = true;
     fl.drawImage(fogCvs, 0, 0, G.gw * CFG.fogCell, G.gh * CFG.fogCell);
+    { // the open sea past the map edge is fog too, so there's no clear box around the island
+      const mw = G.gw * CFG.fogCell, mh = G.gh * CFG.fogCell, pad = 4000;
+      if (!(G.over || G.reveal > G.time)) {
+        fl.save(); fl.beginPath(); fl.rect(-pad, -pad, mw + pad * 2, mh + pad * 2); fl.rect(0, 0, mw, mh); fl.clip("evenodd");
+        fl.fillStyle = "rgba(10,13,16,0.95)"; fl.fillRect(-pad, -pad, mw + pad * 2, mh + pad * 2);
+        // what your soldiers near the edge can see stays clear out there too, with the same soft rim
+        fl.globalCompositeOperation = "destination-out";
+        const hole = (x, y, r) => { if (x > r && y > r && x < mw - r && y < mh - r) return; const g = fl.createRadialGradient(x, y, Math.max(0, r - 46), x, y, r); g.addColorStop(0, "#000"); g.addColorStop(1, "rgba(0,0,0,0)"); fl.fillStyle = g; fl.fillRect(x - r, y - r, r * 2, r * 2); };
+        const me = G.players[G.human]; if (me.base.alive) hole(me.base.x, me.base.y, CFG.base.sight);
+        for (const u of G.units) if (u.alive && u.owner === G.human && !(u.kind === "pilot" && !u.found)) hole(u.x, u.y, CFG[u.kind].sight);
+        fl.restore();
+      }
+    }
     if (P.clouds) {
       fl.globalCompositeOperation = "source-atop";
       const pat = fl.createPattern(cloudCvs, "repeat");
@@ -4560,7 +4590,7 @@ function renderScore() {
   }
   if (G.mis && !G.attract) {
     const m = G.mis, left = Math.max(0, Math.ceil(m.until - G.time)), tx = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
-    const goal = { cargo: "Grab the supplies", escort: "Walk the supply cart home", hold: m.contested ? "Contested! Clear the hill" : "Hold the hill " + Math.round(m.prog * 100) + "%", rescue: m.unit && m.unit.found ? "Bring the scout home" : "Find the scout", kill: "Kill the captain", sabo: "Destroy the supply camp" }[m.type];
+    const goal = { cargo: "Grab the supplies", escort: m.contested ? "Cart contested!" : m.ctl === G.human ? "Push the cart home" : m.ctl != null ? G.players[m.ctl].team.name + " has the cart!" : "Win the supply cart", hold: m.contested ? "Contested! Clear the hill" : "Hold the hill " + Math.round(m.prog * 100) + "%" + (m.foeProg > 0.05 ? " · rival " + Math.round(m.foeProg * 100) + "%" : ""), rescue: m.unit && m.unit.found ? "Bring the scout home" : "Find the scout", kill: "Kill the captain", sabo: "Destroy the supply camp" }[m.type];
     html += `<div class="mis"><b>★ ${MIS.types[m.type].name}</b><span>${goal}</span><em>${tx}</em></div>`;
   }
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
