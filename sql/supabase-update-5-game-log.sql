@@ -1,5 +1,5 @@
--- Hit and Run: anonymous, opt-in game log (one row per finished battle). Paste into SQL Editor > Run (once).
--- No names, no device data. Players who agreed send: difficulty, result, time, armies, kills, losses,
+-- Hit and Run: anonymous game log (on by default, players can switch it off) (one row per finished battle). Paste into SQL Editor > Run (once).
+-- No names, no device data. The game sends: difficulty, result, time, armies, kills, losses,
 -- level, Basic or Expert controls, and how many times each order was used.
 create table if not exists public.game_log (
   id bigint generated always as identity primary key,

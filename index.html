@@ -390,8 +390,8 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
       <div class="seg" id="optAdvice"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div>
       <p class="fine">Turns off the how-to hints. Battle news like crates, missions and attacks still shows.</p></div>
     <div class="opt"><label>Anonymous game stats</label>
-      <div class="seg" id="optTel"><button data-v="1">Send</button><button data-v="0" class="on">Don't send</button></div>
-      <p class="fine">Sends skill level, result, time and which orders you used after each battle, to help balance the game. No names, nothing about your device.</p></div>
+      <div class="seg" id="optTel"><button data-v="1" class="on">Send</button><button data-v="0">Don't send</button></div>
+      <p class="fine">Sends skill level, result, time and which orders you used after each battle, to help balance the game. No name, no IP address, nothing about your device.</p></div>
     <div class="opt"><label>Graphics</label>
       <div class="seg" id="optGfx"><button data-v="9" class="on">Auto</button><button data-v="2">High</button><button data-v="1">Medium</button><button data-v="0">Low</button></div>
       <p class="fine">Auto lowers the detail by itself if the game runs slowly. Low is for older phones: no photo sea, no fine ground detail, simpler waves.</p></div>
@@ -447,6 +447,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <div class="eyebrow">Field notes</div>
     <h2>About</h2>
     <p class="abt" id="aboutText">Made for fun in just hours.</p>
+    <p class="abt" style="font-size:11px;opacity:.7">After each battle the game sends anonymous stats to help balance it: skill level, result, time, kills and which orders were used. No name, no IP address, nothing about your device. Switch it off in Settings.</p>
     <p class="abt" id="aboutCredits" style="font-size:11px;opacity:.7">Ground textures from Poly Haven (CC0), sea photo from Freepik. 3D models: Military base by JuliaIce (CC-BY), Humvee by madtrollstudio (CC-BY) and Assault Rifle, Rock Medium and Tank by Quaternius, Mech Assault Walker by Alimayo Arango, via Poly Pizza · Basic Stone Age House by CristianPiotto (CC-BY), Ancient Horse Chariot by EqualizerX (CC-BY), Castle by hamidkhan224 (CC-BY), Dome Structure by trashbinkr, HoverBikeTVS by Vijaysarathi (CC-BY), Cyborg Grid by CAPTAAINR (CC-BY), Caveman by iRahulRajput (CC-BY), Redcoat by avishka1shinwa, Santa Luzia Fort by GSXNet (CC-BY-NC), Greek Temple by cmzw (CC-BY), Star Equestrian horse by Otherspectre (CC-BY), Reichsbahn Berlin Bunker by Kessler_Protus (CC-BY), Rock, Reef and Beach by Metazeon (CC-BY), Chara Design 01 by SheeroChana (CC-BY), Date Palm, Curly Palm and Coconut Palm by evolveduk (CC-BY), Fern Grass 02 by Digital screen official (CC-BY), Green Shrub by Somersby (CC-BY-NC), Shrub by Ryan Chaney (CC-BY), Rocks by AspectStudios (CC-BY), via Sketchfab · characters and animations from Mixamo.</p>
     <button class="go" id="aboutBack">Back</button>
   </div>
@@ -4912,7 +4913,7 @@ function renderMisTypes() {
   $("misNote").textContent = (UI.opts.missions && !EXP() && loadLog().length < 3 ? "With Basic controls, missions join after your first 3 battles. " : "") + (!UI.opts.missions ? "Missions are off." : !n ? "No mission types picked, so no missions will come." : n === 6 ? "All six mission types are in the mix." : n + " of 6 mission types are in the mix.");
 }
 renderMisTypes();
-UI.opts.split = 4; UI.opts.layout = 1; UI.opts.expert = 0; UI.opts.tel = 0; UI.opts.advice = 1;
+UI.opts.split = 4; UI.opts.layout = 1; UI.opts.expert = 0; UI.opts.tel = 1; UI.opts.advice = 1;
 try { const v = localStorage.getItem("hr-advice"); if (v !== null) UI.opts.advice = +v ? 1 : 0; } catch (e) {}
 seg("optAdvice", "advice");
 
@@ -4920,7 +4921,7 @@ try { const v = localStorage.getItem("hr-gfx"); UI.opts.gfx = v == null ? 9 : +v
 $("optGfx").addEventListener("click", () => { Q.fixed = UI.opts.gfx === 9 ? null : UI.opts.gfx; if (Q.fixed != null) { Q.level = Q.fixed; resize(); } try { localStorage.setItem("hr-gfx", String(UI.opts.gfx)); } catch (e) {} });
 
 $("optAdvice").addEventListener("click", () => { try { localStorage.setItem("hr-advice", String(UI.opts.advice)); } catch (e) {} });
-try { UI.opts.tel = localStorage.getItem("hr-tel") === "1" ? 1 : 0; } catch (e) {}
+try { UI.opts.tel = localStorage.getItem("hr-tel") === "0" ? 0 : 1; } catch (e) {} // on unless the player switched it off
 seg("optTel", "tel");
 $("optTel").addEventListener("click", () => { try { localStorage.setItem("hr-tel", String(UI.opts.tel)); } catch (e) {} });
 try { const v = localStorage.getItem("hr-expert"); if (v !== null) UI.opts.expert = +v ? 1 : 0; } catch (e) {}
@@ -5979,7 +5980,7 @@ function lbRpc(fn, body) {
   if (!LB.url) return Promise.resolve();
   return fetch(LB.url + "/rest/v1/rpc/" + fn, { method: "POST", keepalive: true, headers: { ...lbHead(), "Content-Type": "application/json" }, body: JSON.stringify(body || {}) }).catch(() => {});
 }
-// opt-in anonymous game log (see sql/supabase-update-5-game-log.sql)
+// anonymous game log, on by default (Settings can switch it off) (see sql/supabase-update-5-game-log.sql)
 function logGame(g) {
   if (!g || !LB.url) return;
   const use = {}; for (const [k, v] of Object.entries(g.use || {}).slice(0, 24)) if (/^[a-z]{1,12}$/.test(k)) use[k] = Math.min(9999, v | 0);
@@ -6205,8 +6206,8 @@ function showOver() {
   startNameEntry({ score, diff: G.diff, enemies, army: G.enemyArmy, my_army: G.myArmy, secs, kills: me.kills, win });
   if (G.slowmo) { $("nameEntry").hidden = true; navLock(false); }
   { const entry = log[log.length - 1]; let asked = null; try { asked = localStorage.getItem("hr-tel"); } catch (e) {}
-    if (asked === "1") logGame(entry);
-    $("telAsk").hidden = !(asked === null && LB.url && !G.slowmo); $("telAsk").dataset.n = String(log.length - 1); }
+    if (asked !== "0") logGame(entry);
+    $("telAsk").hidden = true; $("telAsk").dataset.n = String(log.length - 1); }
   { let offered = false; try { offered = localStorage.getItem("hr-expoffer") === "1"; } catch (e) {}
     const show = win && G.diff >= 2 && !EXP() && !offered; $("expOffer").hidden = !show;
     if (show) try { localStorage.setItem("hr-expoffer", "1"); } catch (e) {} }
