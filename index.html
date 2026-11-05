@@ -922,16 +922,18 @@ function clearShot(x1, y1, x2, y2) {
 
 function scan(u) {
   const C = CFG[u.kind], R = rangeOf(u), s2 = Math.max(C.sight, R) ** 2, r2 = R * R;
-  let seen = null, sd = 1e18, tgt = null, td = 1e18;
+  let seen = null, sd = 1e18, tgt = null, td = 1e18, gen = null; const g2 = Math.max(C.sight + 120, R) ** 2;
   for (const v of G.units) {
     if (!v.alive || v.owner === u.owner || v.free) continue;
     const dx = v.x - u.x, dy = v.y - u.y, dd = dx * dx + dy * dy;
     if (v.camo > G.time && dd > 45 * 45) continue; // camouflaged: only spotted up close
+    if (v.kind === "gen" && dd < g2 && (!gen || dd < d2(u, gen))) gen = v; // a general stands out further than a soldier (he shoots from 235)
     if (dd < s2) {
       if (dd < sd) { sd = dd; seen = v; }
       if (dd < r2) { const sc = v.hp / maxHp(v) + dd / r2 * 0.35 + (v.kind === "gen" ? -1.5 : 0) + (v.kind === "truck" ? 0.6 : 0); if (sc < td && clearShot(u.x, u.y, v.x, v.y)) { td = sc; tgt = v; } }
     }
   }
+  if (gen) seen = gen; // an enemy general in sight is the one to close in on (shots still go to whoever is in range meanwhile)
   for (const p of G.players) {
     const b = p.base; if (p.id === u.owner || !b.alive) continue;
     const dd = d2(u, b), rr = R + b.r, ss = C.sight + b.r;
@@ -1470,7 +1472,7 @@ function step() {
     let foe = engages ? u.seen : null;
     if (engages && !foe) { // nobody in my own sight: go help whoever in my group has found one nearby
       const a = spot.get(u.grp || (50000 + u.owner * 100 + (u.squad | 0)));
-      if (a) { let bd = 480 * 480; for (const v of a) { if (v.isBase ? !v.alive : !v.alive) continue; const dd = d2(u, v); if (dd < bd) { bd = dd; foe = v; } } }
+      if (a) { let bd = 480 * 480; for (const v of a) { if (v.isBase ? !v.alive : !v.alive) continue; const dd = d2(u, v) * (v.kind === "gen" ? 0.25 : 1); if (dd < bd) { bd = dd; foe = v; } } } // a general someone spotted pulls harder
     }
     if (foe) {
       gx = foe.x; gy = foe.y;
