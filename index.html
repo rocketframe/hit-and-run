@@ -460,7 +460,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <section><h3>Your army</h3><p>Your soldiers come in squads A, B and C, plus one general (the star). Fallen soldiers respawn at your base after a few seconds, and the general takes longer. Out of combat, everyone slowly patches up.</p></section>
     <section><h3>The general</h3><p>He sees and shoots much further than infantry, is a little faster, and has ten times the health. Soldiers near him hit 30% harder. Use him for sneaky long-range shots, and don't lose him.</p></section>
     <section><h3>Moving around</h3><ul><li><b>Drag</b> anywhere to move the map.</li><li><b>Pinch</b> (or mouse wheel) to zoom.</li><li><b>Tap the minimap</b> to jump anywhere.</li><li><b>BASE</b> jumps home.</li><li>Tap a squad button <b>twice</b> to find that squad.</li></ul></section>
-    <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick just that one. Tap twice quickly for everyone close by, three times for everyone on screen, four times for all.</li><li><b>ALL</b> picks everyone, general included. <b>ARMY</b> picks every soldier but leaves the general where he is.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li>With Basic controls, soldiers stop to fight any enemy their group spots, then carry on to where you sent them. With Expert controls you choose: <b>RUN &amp; GUN</b> keeps going and shoots whatever is in reach on the way; <b>ENGAGE</b> stops, and when anyone in the group spots an enemy the whole group closes in and fights until it's gone.</li><li>Tap the same spot <b>twice</b> to break off: they go straight there and only shoot on the way.</li><li><b>Press and hold</b> the map: let go to make your soldiers run there without stopping to fight (a few seconds, then they need to get their breath back), or drag to box-select. Hold on an enemy to make everyone you picked shoot at it, for example their general.</li></ul></section>
+    <section><h3>Giving orders</h3><ul><li>Tap a squad button (<b>A B C D</b>), <b>GEN</b> or <b>ALL</b>, or tap one of your soldiers to pick just that one. Tap twice quickly for everyone close by, three times for everyone on screen, four times for all.</li><li><b>ALL</b> picks everyone, general included. <b>ARMY</b> picks every soldier but leaves the general where he is.</li><li>Then tap where they should go. Tap an enemy to attack it.</li><li>Tap the order mode button to choose: <b>RUN &amp; GUN</b> keeps going and shoots whatever is in reach on the way; <b>ENGAGE</b> also gets there first, then when anyone in the group spots an enemy the whole group closes in and fights until it's gone.</li><li>Tap the same spot <b>twice</b> to break off: they go straight there and only shoot on the way.</li><li><b>Press and hold</b> the map: let go to make your soldiers run there without stopping to fight (a few seconds, then they need to get their breath back), or drag to box-select. Hold on an enemy to make everyone you picked shoot at it, for example their general.</li></ul></section>
     <section><h3>Press and hold</h3><ul><li><b>Hold, then let go</b> on open ground: the selected soldiers sprint there and ignore enemies on the way. Running uses the yellow stamina bar; when it runs out they walk until it refills.</li><li><b>Hold, then drag</b>: draw a box to select everyone inside it.</li><li><b>Hold on an enemy</b>: focus fire, so every selected soldier shoots that one target.</li><li><b>Tap the same spot twice</b>, quickly: break off a fight and go straight there, only shooting on the way.</li></ul></section>
     <section><h3>The ⋯ button</h3><p>The squad row has what you need most: squads, GEN, ARMY, ALL. Tap <b>⋯</b> for everything else: SELECT, IDLE, formations, SPREAD, REGROUP, GUARD, RALLY, the order modes and KILL. Tap <b>▾</b> to fold them away again.</p></section>
     <section><h3>Picking exactly who you want</h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
@@ -812,7 +812,7 @@ function applyCmd(c) {
     u.path = path ? path.slice(1).map(q => ({ x: q.x + x - c.x, y: q.y + y - c.y })) : null;
     x = clamp(x, 10, G.S - 10); y = clamp(y, 10, G.S - 10);
     const pt = pushOutOfRocks(x, y, CFG[u.kind].r + 2);
-    u.tx = pt.x; u.ty = pt.y; u.mode = c.mode; u.focus = null; u.run = !!c.run && !p.tired; u.brk = !!c.brk;
+    u.tx = pt.x; u.ty = pt.y; u.mode = c.mode; u.focus = null; u.run = !!c.run && !p.tired; u.brk = !!c.brk; u.going = c.p === G.human && !G.attract ? G.time + 3 + Math.hypot(u.x - u.tx, u.y - u.ty) / CFG[u.kind].speed * 1.5 : 0; // the player's orders: go first, fight after (gives up if they can't get there)
   });
 }
 
@@ -1466,7 +1466,9 @@ function step() {
     let gx = u.tx, gy = u.ty, stopAt = 3;
     // Basic controls: soldiers on a move order engage on their own when they spot an enemy
     // break-off orders (double tap) and sprints go straight there without stopping to fight
-    const engages = !u.brk && !u.run && (u.mode === "attack" || (u.mode === "move" && G.players[u.owner].autoEngage && !u.escort && !u.mis));
+    if (u.going && !(u.path && u.path.length) && (u.x - u.tx) ** 2 + (u.y - u.ty) ** 2 < 40 * 40) u.going = 0; // arrived: from here ENGAGE hunts what it sees
+    // a fresh order is obeyed first: soldiers shoot what's in range on the way, but only go chasing once they're there
+    const engages = !u.brk && !u.run && !(u.going > G.time) && (u.mode === "attack" || (u.mode === "move" && G.players[u.owner].autoEngage && !u.escort && !u.mis));
     let foe = engages ? u.seen : null;
     if (engages && !foe) { // nobody in my own sight: go help whoever in my group has found one nearby
       const a = spot.get(u.grp || (50000 + u.owner * 100 + (u.squad | 0)));
@@ -4650,15 +4652,15 @@ function clampCam() {
   cam.x = clamp(cam.x, 0, G.S); cam.y = clamp(cam.y, 0, G.S);
 }
 
-function orderTo(wx, wy, forceMode, run) {
+function orderTo(wx, wy, forceMode, run, tiredBrk) {
   const ids = [...UI.sel].filter(id => G.unitById.get(id).alive);
   if (!ids.length) { toast("Pick a squad first"); return; }
   const mode = forceMode || UI.mode, tnow = performance.now(), L = UI.lastOrd;
   // a second tap on the same spot straight after: break off and go there without stopping to fight
-  const brk = !run && !forceMode && L && tnow - L.t < 1000 && Math.hypot(wx - L.x, wy - L.y) < Math.max(40, 50 / cam.z) && (mode === "attack" || G.players[G.human].autoEngage);
+  const brk = tiredBrk || !run && !forceMode && L && tnow - L.t < 1000 && Math.hypot(wx - L.x, wy - L.y) < Math.max(40, 50 / cam.z) && (mode === "attack" || G.players[G.human].autoEngage);
   UI.lastOrd = brk || run ? null : { x: wx, y: wy, t: tnow }; if (UI.tut) { if (run) UI.tut.run = 1; if (brk) UI.tut.brk = 1; }
   issue({ p: G.human, ids, x: wx, y: wy, mode, form: curForm(), run: run ? 1 : 0, brk: brk ? 1 : 0 });
-  if (brk) toast("Break off! Straight there, no stopping to fight", "gold");
+  if (brk && !tiredBrk) toast("Break off! Straight there, no stopping to fight", "gold");
   if (UI.orderN === 6) tip("hold", "Try press and hold on the map: let go to make your soldiers run there, or drag to box-select. Hold on an enemy to make them all shoot at it.");
   UI.pings.push({ x: wx, y: wy, t: 0.7, mode }); SND.order(mode); UI.orderN = (UI.orderN || 0) + 1;
   SND.say(mode === "attack" ? "attack" : "move", ids.length === 1 && G.unitById.get(ids[0]).kind === "gen");
@@ -4718,7 +4720,7 @@ function holdRelease(sx, sy) {
   }
   const P = G.players[G.human];
   if (P.tired) toast("Too tired to run. They walk until they get their breath back");
-  orderTo(w.x, w.y, null, !P.tired);
+  orderTo(w.x, w.y, null, !P.tired, P.tired);
 }
 const ptrs = new Map(); let gesture = null;
 cvs.addEventListener("contextmenu", e => e.preventDefault());
