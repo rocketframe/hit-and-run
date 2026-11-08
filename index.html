@@ -5034,7 +5034,7 @@ function start() {
   selectKey("all");
   $("menu").hidden = true; $("over").hidden = true; $("pause").hidden = true;
   $("toast").innerHTML = ""; $("msgLog").innerHTML = "";
-  UI.paused = false; acc = 0; last = performance.now(); SND.reset(); setSpeed(1); $("spdPop").hidden = true;
+  UI.paused = false; acc = 0; last = performance.now(); SND.reset(); if (SND.music && SND.music.nextTune && !/[?&]tune=/.test(location.search)) SND.music.nextTune(); setSpeed(1); $("spdPop").hidden = true;
   killsSent = 0; lbRpc("game_started");
   updateFog();
   if (UI.opts.advice) toast("Drag to look around. Pick a squad, then tap where to go.");
@@ -5057,7 +5057,7 @@ const SND = (() => {
   const dbgEl = /[?&]musdebug\b/.test(location.search) ? Object.assign(document.createElement("div"), { style: "position:fixed;left:8px;bottom:8px;z-index:99;background:#000;color:#9fe07a;font:12px monospace;padding:4px 6px" }) : null;
   if (dbgEl) setTimeout(() => document.body.appendChild(dbgEl), 0);
   let tension = 0, heat = 0, lastShot = -1e9, lastSting = -1e9, lastHp = null, duck = 1, voices = 0, voiceT = 0;
-  const S = { get on() { return !!ac; }, get pref() { return pref; }, style: urlStyle || "dark", force: null };
+  const S = { get on() { return !!ac; }, get pref() { return pref; }, style: urlStyle || "epic", force: null };
 
   function init() {
     if (ac) { if (ac.state === "suspended") ac.resume(); return; }
@@ -5402,8 +5402,124 @@ const SND = (() => {
       [[0, 26, 8], [8, 24, 4], [12, 23, 4], [16, 19, 16]]                 // A
     ];
 
+    // ---- orchestra: bowed strings, short spiccato strings, horns, low strings ----
+    function strings(t, notes, dur, lv, o = {}) {
+      const att = o.att || 0.35, rel = o.rel || 0.6, g = ac.createGain(), f1 = ac.createBiquadFilter(), f2 = ac.createBiquadFilter();
+      f1.type = f2.type = "lowpass"; f1.frequency.value = f2.frequency.value = o.cut || 2400; f1.Q.value = f2.Q.value = 0.4;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(lv, t + att); g.gain.setValueAtTime(lv, t + Math.max(att, dur)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + rel);
+      f1.connect(f2); f2.connect(g); out(g, o.pan || 0, o.wet != null ? o.wet : 0.55, musBus);
+      for (const s of notes) for (const det of [-11, -3, 6, 13]) {
+        const os = ac.createOscillator(); os.type = "sawtooth"; os.frequency.value = hz(s); os.detune.value = det + (rnd() - 0.5) * 5;
+        const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = 4.8 + rnd() * 1.2; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(hz(s) * 0.0045, t + att + 0.4); l.connect(lg); lg.connect(os.frequency);
+        os.connect(f1); os.start(t); l.start(t); os.stop(t + dur + rel + 0.1); l.stop(t + dur + rel + 0.1);
+      }
+    }
+    function spic(t, s, lv, pan = 0) { // a short bowed stab, the engine of an action cue
+      const g = ac.createGain(), f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.setValueAtTime(2600, t); f.frequency.exponentialRampToValueAtTime(700, t + 0.12); f.Q.value = 0.7;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(lv, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      f.connect(g); out(g, pan, 0.3, musBus);
+      for (const det of [-9, 8]) { const os = ac.createOscillator(); os.type = "sawtooth"; os.frequency.value = hz(s); os.detune.value = det; os.connect(f); os.start(t); os.stop(t + 0.2); }
+    }
+    function horns(t, notes, dur, lv, o = {}) { // warm, swelling brass: dark at the start of the note, opening up
+      for (const s of notes) for (const det of [-7, 7]) { const os = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+        os.type = "sawtooth"; os.frequency.value = hz(s); os.detune.value = det; f.type = "lowpass"; f.Q.value = 1.2;
+        const sw = Math.min(0.25, dur * 0.4); f.frequency.setValueAtTime(o.c0 || 380, t); f.frequency.linearRampToValueAtTime(o.c1 || 1500, t + sw); f.frequency.linearRampToValueAtTime((o.c1 || 1500) * 0.7, t + dur);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(lv, t + Math.min(0.09, dur * 0.3)); g.gain.setValueAtTime(lv, t + dur * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.25);
+        os.connect(f); f.connect(g); out(g, o.pan || 0, 0.5, musBus); os.start(t); os.stop(t + dur + 0.35); }
+    }
+    function swell(t, dur, v) { // reversed cymbal into a new section
+      const s = ac.createBufferSource(); s.buffer = noise; const f = ac.createBiquadFilter(); f.type = "highpass"; f.frequency.setValueAtTime(2000, t); f.frequency.exponentialRampToValueAtTime(7000, t + dur);
+      const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12 * v, t + dur); g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.05);
+      s.connect(f); f.connect(g); out(g, 0, 0.5, musBus); s.start(t, 0, dur + 0.1);
+    }
+    const tri = (r, q) => q === "m" ? [r, r + 3, r + 7] : [r, r + 4, r + 7];
+    // the epic tunes. Chords: [root in semitones from the tonic, "m" or "M"], one per bar. Melody: per bar, [16th, note, length]
+    // with notes in semitones from the tonic (12 = an octave up). Each tune: an A theme, a B theme, its own drive and drums.
+    const EPIC = [
+      { name: "Last stand", key: 0, calm: 64, bt: [92, 14],
+        A: [[0, "m"], [-4, "M"], [3, "M"], [-2, "M"], [0, "m"], [-4, "M"], [-2, "M"], [-2, "M"]],
+        B: [[-4, "M"], [-2, "M"], [0, "m"], [0, "m"], [-4, "M"], [-2, "M"], [-5, "M"], [-5, "M"]],
+        mA: [[[0, 12, 6], [6, 14, 2], [8, 15, 4], [12, 17, 4]], [[0, 15, 6], [6, 17, 2], [8, 20, 8]], [[0, 19, 6], [6, 17, 2], [8, 15, 4], [12, 12, 4]], [[0, 14, 8], [8, 10, 4], [12, 14, 4]],
+             [[0, 12, 4], [4, 15, 4], [8, 19, 8]], [[0, 20, 6], [6, 19, 2], [8, 17, 4], [12, 15, 4]], [[0, 14, 6], [6, 15, 2], [8, 17, 8]], [[0, 22, 12], [12, 19, 4]]],
+        mB: [[[0, 20, 8], [8, 22, 4], [12, 24, 4]], [[0, 22, 12], [12, 19, 4]], [[0, 24, 6], [6, 22, 2], [8, 20, 4], [12, 19, 4]], [[0, 17, 4], [4, 19, 4], [8, 24, 8]],
+             [[0, 20, 8], [8, 22, 4], [12, 24, 4]], [[0, 26, 8], [8, 24, 4], [12, 22, 4]], [[0, 19, 8], [8, 25, 8]], [[0, 25, 16]]],
+        ost: [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1], taiko: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0] },
+      { name: "Banners in the fog", key: 2, calm: 60, bt: [88, 14],
+        A: [[0, "m"], [-2, "M"], [-4, "M"], [-2, "M"], [0, "m"], [-2, "M"], [-4, "M"], [-5, "M"]],
+        B: [[3, "M"], [-2, "M"], [0, "m"], [0, "m"], [5, "m"], [-4, "M"], [-5, "M"], [-5, "M"]],
+        mA: [[[0, 7, 4], [4, 12, 4], [8, 14, 4], [12, 15, 4]], [[0, 14, 12], [12, 10, 4]], [[0, 12, 6], [6, 10, 2], [8, 8, 4], [12, 7, 4]], [[0, 10, 16]],
+             [[0, 7, 4], [4, 12, 4], [8, 15, 4], [12, 19, 4]], [[0, 17, 8], [8, 14, 8]], [[0, 15, 6], [6, 14, 2], [8, 12, 8]], [[0, 11, 16]]],
+        mB: [[[0, 19, 8], [8, 15, 8]], [[0, 17, 8], [8, 14, 8]], [[0, 15, 6], [6, 14, 2], [8, 12, 4], [12, 15, 4]], [[0, 19, 16]],
+             [[0, 20, 8], [8, 17, 8]], [[0, 20, 6], [6, 19, 2], [8, 15, 8]], [[0, 14, 8], [8, 11, 8]], [[0, 14, 16]]],
+        ost: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1], taiko: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0] },
+      { name: "Iron crown", key: -2, calm: 62, bt: [96, 14],
+        A: [[0, "m"], [5, "m"], [-4, "M"], [-5, "M"], [0, "m"], [5, "m"], [-4, "M"], [-5, "M"]],
+        B: [[-4, "M"], [-2, "M"], [3, "M"], [0, "m"], [-4, "M"], [1, "M"], [-5, "M"], [-5, "M"]],
+        mA: [[[0, 12, 8], [8, 15, 4], [12, 14, 4]], [[0, 12, 6], [6, 10, 2], [8, 8, 8]], [[0, 15, 8], [8, 12, 4], [12, 8, 4]], [[0, 11, 8], [8, 14, 8]],
+             [[0, 12, 4], [4, 15, 4], [8, 19, 8]], [[0, 20, 8], [8, 17, 8]], [[0, 15, 6], [6, 14, 2], [8, 12, 8]], [[0, 11, 8], [8, 7, 8]]],
+        mB: [[[0, 20, 12], [12, 19, 4]], [[0, 17, 8], [8, 22, 8]], [[0, 22, 6], [6, 19, 2], [8, 15, 8]], [[0, 19, 4], [4, 17, 4], [8, 15, 4], [12, 14, 4]],
+             [[0, 20, 8], [8, 24, 8]], [[0, 25, 8], [8, 20, 8]], [[0, 23, 8], [8, 19, 8]], [[0, 23, 16]]],
+        ost: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], taiko: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1] },
+      { name: "The long night", key: 0, calm: 58, bt: [84, 16],
+        A: [[0, "m"], [-5, "m"], [-4, "M"], [3, "M"], [5, "m"], [0, "m"], [-5, "M"], [-5, "M"]],
+        B: [[3, "M"], [-2, "M"], [-4, "M"], [-2, "M"], [3, "M"], [-2, "M"], [-5, "M"], [-5, "M"]],
+        mA: [[[0, 7, 6], [6, 8, 2], [8, 7, 4], [12, 3, 4]], [[0, 10, 8], [8, 14, 8]], [[0, 12, 6], [6, 10, 2], [8, 8, 8]], [[0, 7, 8], [8, 10, 8]],
+             [[0, 12, 6], [6, 10, 2], [8, 8, 4], [12, 5, 4]], [[0, 3, 8], [8, 7, 8]], [[0, 11, 8], [8, 14, 8]], [[0, 11, 16]]],
+        mB: [[[0, 15, 8], [8, 19, 8]], [[0, 17, 6], [6, 15, 2], [8, 14, 8]], [[0, 15, 8], [8, 12, 8]], [[0, 14, 16]],
+             [[0, 22, 8], [8, 19, 8]], [[0, 17, 8], [8, 22, 8]], [[0, 23, 8], [8, 19, 8]], [[0, 23, 16]]],
+        ost: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], taiko: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0] }
+    ];
+    const EPIC_PIN = /[?&]tune=\d/.test(location.search);
+    let epI = clamp(+((location.search.match(/[?&]tune=(\d)/) || [])[1] || 1) - 1, 0, EPIC.length - 1), epBars = 0, epBattle = false, epN = 0, epCalmN = 0;
+
     // ---- the styles: each sets its chords and tempo and plays one 16th step ----
     const STY = {
+      epic: { // dark orchestral: strings, horns, choir, timpani and war drums. Calm = a slow hymn; battle = a driving anthem in four sections
+        name: "Epic orchestra", chords: [[0, 3, 7]], roots: [0], bpm: [64, 0],
+        tempo: T => { const U = EPIC[epI]; return epBattle ? U.bt[0] + U.bt[1] * clamp((T - 0.25) / 0.75, 0, 1) : U.calm; },
+        step(t, st0, bar0, T) {
+          const want = epBattle ? T > 0.15 : T >= 0.25;
+          if (want !== epBattle) { epBattle = want; epN = 0; if (epBars >= 40 && !EPIC_PIN) { epI = (epI + 1) % EPIC.length; epBars = 0; }
+            if (want) { dk(t, "boom", 1.3); cymbal(t, 1.4, 2.2); timp(t, 1, hz(EPIC[epI].key - 24)); } }
+          const U = EPIC[epI], K = U.key, st = epN % 16, bar = Math.floor(epN / 16) % 8; epN++; if (st === 0) epBars++;
+          const sec = Math.floor(epN / 128) % 4; // battle sections: 0 A, 1 A with strings singing, 2 B, 3 A at full power
+          const nb = n => n + K; // tonic-relative to D3-relative
+          if (!epBattle) { // ---- calm: a slow hymn on strings, a harp turning, a lone horn or cello carrying the tune ----
+            const ph = Math.floor((epN - 1) / 128) % 4, ch = (ph === 2 ? U.B : U.A)[bar], cn = tri(ch[0], ch[1]).map(nb);
+            if (st === 0) { strings(t, cn, beat * 3.9, 0.04, { att: 1.2, rel: 1.4, cut: 1500, wet: 0.8 }); strings(t, [nb(ch[0] - 12)], beat * 3.9, 0.045, { att: 0.9, rel: 1.2, cut: 700 }); }
+            if (st % 4 === 0 || (st % 2 === 0 && ph % 2 === 1)) { const k = (st >> 1) % 4, n = [cn[0], cn[1], cn[2], cn[1]][k] + 12; pluck(t, n, 0.07, (k - 1.5) * 0.25, "triangle", 1.2, 0.7, 2600); }
+            // the tune comes and goes: a horn, then just the harp, then the B theme, then soft strings over a choir
+            if (ph !== 1) for (const [s0, n, len] of (ph === 2 ? U.mB : U.mA)[bar]) if (st === s0) { if (ph === 3) strings(t, [nb(n)], six * len, 0.03, { att: 0.25, rel: 0.6, cut: 2600, pan: 0.2 }); else horns(t, [nb(n - 12)], six * len, 0.07, { c0: 300, c1: 1000 }); }
+            if (ph === 3 && st === 0) choir(t, cn.map(n => n + 12), beat * 3.8, 0.025);
+            if (st === 0 && bar % 4 === 0) timp(t, 0.6, hz(nb(-24)));
+            if (bar === 7 && st === 12) swell(t, beat, 0.4);
+            return;
+          }
+          // ---- battle ----
+          const hot = clamp((T - 0.25) / 0.75, 0, 1), useB = sec === 2, ch = (useB ? U.B : U.A)[bar], cn = tri(ch[0], ch[1]).map(nb), root = nb(ch[0]);
+          const mel = (useB ? U.mB : U.mA)[bar], big = sec === 3 || hot > 0.75;
+          if (st === 0 && bar === 0) { cymbal(t, 0.8 + hot * 0.6, 2); dk(t, "boom", 0.9 + hot * 0.4); }
+          if (bar === 7 && st === 8) swell(t, beat * 2, 0.6 + hot * 0.4);
+          // the drive: low strings in octaves, the tune's own rhythm
+          if (U.ost[st]) { spic(t, root - 12, st % 4 === 0 ? 0.11 : 0.07, -0.2); if (hot > 0.25 || st % 4 === 0) spic(t, root, 0.05, 0.2); }
+          if (hot > 0.45 && st % 2 === 0) spic(t, cn[(st >> 1) % 3] + 12, 0.035, (rnd() - 0.5) * 0.6); // violins churning above
+          // harmony: sustained strings, horns joining as it heats up
+          if (st === 0) { strings(t, cn, beat * 4, 0.012 + hot * 0.01, { att: 0.2, rel: 0.5, cut: 2000 }); strings(t, [root - 24, root - 12], beat * 4, 0.022, { att: 0.08, rel: 0.4, cut: 600 });
+            if (sec !== 0 || hot > 0.3) horns(t, cn.map(n => n - 12), beat * 3.6, 0.018 + hot * 0.012, { c0: 350, c1: 1200 }); }
+          if (st === 0 && (useB || big)) choir(t, cn.map(n => n + 12), beat * 3.8, 0.012 + hot * 0.01);
+          // the anthem: horns first, then strings, then everything
+          for (const [s0, n, len] of mel) if (st === s0) {
+            const d = six * len, m = nb(n);
+            if (sec === 1) strings(t, [m, m + 12], d, 0.02, { att: 0.06, rel: 0.3, cut: 3200, pan: 0.15 });
+            else horns(t, [m], d, 0.05 + hot * 0.015, { c0: 500, c1: 2000 });
+            if (big) { horns(t, [m - 12], d, 0.04, { c0: 400, c1: 1600 }); strings(t, [m + 12], d, 0.014, { att: 0.05, rel: 0.3, cut: 3600 }); }
+          }
+          // percussion: timpani on the roots, war drums, a roll into each new section
+          if (st === 0 || (st === 8 && hot > 0.2)) timp(t, 0.7 + hot * 0.3, hz(root - 24));
+          if (U.taiko[st] && (hot > 0.15 || st === 0)) taiko(t, st === 0 ? 1.1 : 0.8, st === 0 ? 70 : 95);
+          if (hot > 0.6 && (st === 4 || st === 12)) dk(t, "snare", 0.7);
+          if (bar === 7 && st >= 12) timp(t, 0.4 + (st - 12) * 0.15, hz(root - 24));
+        } },
       march: { // the original: driving bass ostinato, kit drums, string stabs, brass at the top
         name: "Battle march", chords: [[0, 3, 7], [-4, 0, 3], [-7, -4, 0], [-2, 2, 5]], roots: [0, -4, -9, -2], bpm: [100, 50],
         step(t, st, bar, T, ch, root) {
@@ -5517,41 +5633,67 @@ const SND = (() => {
           if (hot > 0.3 && (pos === 0 || pos === 16 || pos === 22)) for (const s of ch) fm(t, hz(s + 12), six * (pos === 22 ? 2 : 3), 0.05, { r: 1, i0: 0.8, i1: 3.5, id: 0.12, a: 0.03, rel: 0.1, wet: 0.35 });
         } },
       dark: { // dark and drum-driven: a low drone and heartbeat when calm; a heavy drum battery and chugging bass in battle
+        // several tunes in the same style take turns: a new one at each calm/battle switch once the last has had its time, and every new game
         name: "Dark drums", chords: [[0, 3, 7], [0, 3, 7], [1, 5, 8], [-2, 2, 5]], roots: [0, 0, 1, -2], bpm: [84, 0],
-        tempo: T => fmBattle ? 120 + 20 * clamp((T - 0.25) / 0.75, 0, 1) : 84,
+        tempo: T => { const U = DARK[darkI]; return fmBattle ? U.bt[0] + U.bt[1] * clamp((T - 0.25) / 0.75, 0, 1) : U.ct; },
         step(t, st0, bar0, T) {
           const want = fmBattle ? T > 0.15 : T >= 0.25;
-          if (want !== fmBattle) { fmBattle = want; fmI = 0; if (want) { cymbal(t, 1.4, 1.8); dk(t, "boom", 1.4); } }
-          const st = fmI % 16, bar = Math.floor(fmI / 16), pos = fmI % 32, blk = Math.floor(fmI / 32) % 4; fmI++;
-          const rt = [0, 0, 1, -2][blk];
+          if (want !== fmBattle) { fmBattle = want; fmI = 0; if (darkBars >= 48 && !TUNE_PIN) { darkI = (darkI + 1) % DARK.length; darkBars = 0; } if (want) { cymbal(t, 1.4, 1.8); dk(t, "boom", 1.4); } }
+          const U = DARK[darkI], st = fmI % 16, bar = Math.floor(fmI / 16), pos = fmI % 32, blk = Math.floor(fmI / 32) % 4; fmI++; if (st === 0) darkBars++;
+          if (!fmBattle && darkBars >= 96 && !TUNE_PIN) { darkI = (darkI + 1) % DARK.length; darkBars = 0; } // a long quiet spell moves on too
+          const rt = U.rt[blk];
           if (!fmBattle) { // ---- calm: drone, heartbeat, distant drums, a metallic tick now and then ----
             if (pos === 0) fm(t, hz(rt - 24), six * 30, 0.1, { r: 0.5, i0: 0.8, i1: 0.2, id: 2, a: 0.8, rel: 1.5, wet: 0.6 }); // sub drone
-            { const BL = [[0, -12, 10], [12, -12, 4], [16, -12, 8], [26, -11, 6]]; // long ringing bass: root, root, root, then a minor second up
-              for (const [s0, n, len] of BL) if (pos === s0) fm(t, hz(rt + n), six * len, 0.24, { r: 1, i0: 2.4, i1: 0.35, id: six * len * 0.7, a: 0.01, rel: 1.6, wet: 1.1, echo: 0.6 }); }
-            if (st === 0) dk(t, "kick", 0.55); if (st === 3) dk(t, "kick", 0.35);
+            for (const [s0, n, len] of U.bl) if (pos === s0) fm(t, hz(rt + n), six * len, 0.24, { r: 1, i0: 2.4, i1: 0.35, id: six * len * 0.7, a: 0.01, rel: 1.6, wet: 1.1, echo: 0.6 }); // long ringing bass
+            if (U.heart[st]) dk(t, "kick", U.heart[st]);
             if (pos === 24 && blk % 2 === 1) dk(t, "boom", 0.6);
             if (st % 2 === 0 && rnd() < 0.12) dk(t, "tick", 0.5);
-            if (blk === 2 && pos === 8) fm(t, hz(rt), six * 12, 0.06, { r: 1, i0: 0.7, i1: 0.3, id: 1, a: 0.3, rel: 0.6, wet: 0.6, vib: 0.006 });
+            if (U.call && blk === U.call[0]) for (const [s0, n, len] of U.call[1]) if (pos === s0) fm(t, hz(rt + n), six * len, 0.06, { r: 1, i0: 0.7, i1: 0.3, id: 1, a: 0.3, rel: 0.6, wet: 0.6, vib: 0.006 });
             return;
           }
           // ---- battle ----
           const hot = clamp((T - 0.25) / 0.75, 0, 1);
-          const chug = [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1][st], riff = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, -2, 0][st];
+          const chug = U.chug[st], riff = U.riff[st];
           if (chug) fm(t, hz(rt - 24 + (bar % 2 ? riff : 0)), six * 0.8, st % 4 === 0 ? 0.3 : 0.2, { r: 1, i0: 2.2, i1: 0.3, id: six * 0.6, rel: 0.03 });
           if (chug && hot > 0.3) fm(t, hz(rt - 12 + (bar % 2 ? riff : 0)), six * 0.7, 0.08, { r: 1, i0: 1.4, i1: 0.3, id: six * 0.5, rel: 0.03, pan: 0.2 });
-          const K = hot > 0.7 ? [1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1] : [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0];
+          const K = hot > 0.7 ? U.kHi : U.kLo;
           if (K[st]) dk(t, "kick", 1.2);
-          if (st === 4 || st === 12) dk(t, "snare", 1.1);
+          if (U.snare.includes(st)) dk(t, "snare", 1.1);
           if (hot > 0.45 && st === 15) dk(t, "snare", 0.5);
           if (st % 2 === 0 || hot > 0.55) dk(t, "hat", st % 4 === 2 ? 0.9 : 0.5);
           if (bar % 4 === 3 && st >= 8) { if (st % 2 === 0 || hot > 0.5) dk(t, "tom", 1, [150, 140, 125, 115, 100, 90, 80, 72][st - 8]); }
           if (pos === 0 && blk % 2 === 0) cymbal(t, 0.9 + hot, 1.6);
           if (st === 0) dk(t, "boom", 0.7 + hot * 0.5);
-          if (hot > 0.35 && (pos === 0 || pos === 22)) for (const s of [rt - 12, rt - 5, rt]) fm(t, hz(s), six * (pos === 22 ? 3 : 5), 0.07, { r: 1, i0: 0.6, i1: 3, id: 0.15, a: 0.02, rel: 0.12, wet: 0.35 });
-          if (hot > 0.6 && pos === 0) fm(t, hz(rt + 12), six * 28, 0.05, { r: 1, i0: 0.5, i1: 1.6, id: 1.2, a: 0.6, rel: 0.6, wet: 0.5, vib: 0.008 });
+          if (hot > 0.35) for (const [p0, len] of U.stab) if (pos === p0) for (const s of [rt - 12, rt - 5, rt]) fm(t, hz(s), six * len, 0.07, { r: 1, i0: 0.6, i1: 3, id: 0.15, a: 0.02, rel: 0.12, wet: 0.35 });
+          if (hot > 0.6) for (const [p0, n, len] of U.lead) if (pos === p0) fm(t, hz(rt + n), six * len, 0.05, { r: 1, i0: 0.5, i1: 1.6, id: 1.2, a: len > 8 ? 0.6 : 0.05, rel: 0.6, wet: 0.5, vib: 0.008 });
         } },
     };
-    const styleKey = () => (STY[S.style] ? S.style : "dark");
+    // the dark tunes: same sounds and mood, different keys, grooves and riffs. The first is the one T approved.
+    const DARK = [
+      { name: "Drums in the dark", ct: 84, bt: [120, 20], rt: [0, 0, 1, -2],
+        bl: [[0, -12, 10], [12, -12, 4], [16, -12, 8], [26, -11, 6]], heart: [0.55, 0, 0, 0.35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], call: [2, [[8, 0, 12]]],
+        chug: [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1], riff: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, -2, 0],
+        kLo: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0], kHi: [1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1], snare: [4, 12],
+        stab: [[0, 5], [22, 3]], lead: [[0, 12, 28]] },
+      { name: "Iron march", ct: 78, bt: [112, 18], rt: [0, -2, 0, 1], // three-beat bass figure, a marching gallop, a falling lead
+        bl: [[0, -12, 6], [6, -12, 6], [12, -10, 4], [16, -12, 6], [22, -12, 4], [26, -14, 6]], heart: [0.5, 0, 0.3, 0, 0, 0, 0, 0, 0.4, 0, 0, 0, 0, 0, 0, 0], call: [1, [[4, 7, 6], [10, 5, 4], [14, 3, 10]]],
+        chug: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], riff: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 1, 0],
+        kLo: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], kHi: [1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0], snare: [4, 12],
+        stab: [[0, 3], [6, 3], [12, 2]], lead: [[0, 15, 6], [6, 14, 2], [8, 12, 8], [16, 10, 6], [22, 8, 2], [24, 7, 8]] },
+      { name: "Night raid", ct: 90, bt: [128, 18], rt: [0, 3, -2, -4], // fast, restless sixteenths and a climbing riff
+        bl: [[0, -12, 4], [4, -12, 2], [6, -9, 6], [16, -12, 4], [20, -12, 2], [22, -7, 8]], heart: [0.5, 0, 0, 0.3, 0, 0, 0.3, 0, 0, 0, 0, 0, 0, 0, 0, 0], call: [3, [[0, 12, 4], [6, 13, 4], [12, 12, 12]]],
+        chug: [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1], riff: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 5, 0, 6, 7],
+        kLo: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0], kHi: [1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1], snare: [4, 12],
+        stab: [[0, 2], [3, 2], [6, 3]], lead: [[0, 12, 4], [4, 15, 4], [8, 13, 8], [16, 12, 4], [20, 10, 4], [24, 7, 8]] },
+      { name: "Siege", ct: 72, bt: [100, 16], rt: [0, 1, 0, -1], // slow and crushing: half-time snare, huge root hits
+        bl: [[0, -12, 14], [16, -11, 6], [22, -12, 10]], heart: [0.6, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0, 0, 0, 0, 0], call: [2, [[0, 3, 8], [8, 1, 8], [16, 0, 16]]],
+        chug: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0], riff: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0],
+        kLo: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0], kHi: [1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1], snare: [8],
+        stab: [[0, 8], [16, 6]], lead: [[0, 12, 16], [16, 13, 8], [24, 11, 8]] }
+    ];
+    const TUNE_PIN = /[?&]tune=\d/.test(location.search);
+    let darkI = clamp(+((location.search.match(/[?&]tune=(\d)/) || [])[1] || 1) - 1, 0, DARK.length - 1), darkBars = 0; // ?tune=2 picks a tune to listen to (and keeps it)
+    const styleKey = () => (STY[S.style] ? S.style : "epic");
 
     // ---- victory and defeat: the battle music stops and a theme takes over until you leave the screen ----
     const END = {
@@ -5653,6 +5795,30 @@ const SND = (() => {
           if (st % 4 === 0) fm(t, hz(mel[st / 4] + 12), beat * 1.05, 0.1, { r: 1, i0: 1.2, i1: 0.5, id: 0.4, vib: 0.016, a: 0.05, rel: 0.3, wet: 0.55 });
         } }
     };
+    // ---- recorded soundtrack: real orchestral tracks take turns; calm ones when quiet, battle ones in a fight ----
+    // { src, name, by, mood: "calm" | "battle" | "any" }. Empty = the synthesized score plays. Credits go in #aboutCredits.
+    const TRACKS = [];
+    const REC = { el: null, g: null, cur: -1, mood: null, fail: 0, at: 0 };
+    const recOn = () => TRACKS.length > 0 && REC.fail < 3;
+    function recStop(fade = 2) { if (!REC.el) return; const el = REC.el, g = REC.g, t = now(); g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0.0001, t + fade); setTimeout(() => { try { el.pause(); } catch (e) {} }, fade * 1000 + 100); REC.el = null; }
+    function recPlay(mood) {
+      const pool = TRACKS.map((q, i) => i).filter(i => (TRACKS[i].mood === mood || TRACKS[i].mood === "any") && (i !== REC.cur || TRACKS.length === 1));
+      const list = pool.length ? pool : TRACKS.map((q, i) => i).filter(i => i !== REC.cur);
+      const i = list[Math.floor(Math.random() * list.length)]; if (i == null) return;
+      recStop(2.5); REC.cur = i; REC.mood = mood; REC.at = performance.now();
+      const el = new Audio(); el.src = TRACKS[i].src; el.preload = "auto";
+      const g = ac.createGain(); g.gain.value = 0.0001; try { ac.createMediaElementSource(el).connect(g); } catch (e) { REC.fail = 9; return; }
+      g.connect(musBus); g.gain.setValueAtTime(0.0001, now()); g.gain.linearRampToValueAtTime(1, now() + 2.5);
+      el.onended = () => { if (REC.el === el) recPlay(REC.mood); };
+      el.onerror = () => { if (REC.el === el) { REC.fail++; REC.el = null; if (recOn()) recPlay(REC.mood); } };
+      el.play().catch(() => {}); REC.el = el; REC.g = g;
+    }
+    function recTick() {
+      if (endMode) { recStop(0.3); return; }
+      const mood = tension >= 0.3 ? "battle" : "calm";
+      if (!REC.el) recPlay(mood);
+      else if (mood !== REC.mood && performance.now() - REC.at > 10000) recPlay(mood); // don't flip-flop: a track gets at least 10 s
+    }
     function schedule() {
       if (!ac) return;
       if (endMode && S.force == null && (!G || !G.over || G.attract)) endMode = null; // left the result screen
@@ -5670,17 +5836,19 @@ const SND = (() => {
       if (G && !G.attract && !G.over) { const hp = G.players[G.human].base.hp; if (lastHp !== null && hp < lastHp - 1) heat += 6; lastHp = hp; }
       const dTarget = (UI.paused && G && !G.attract && !G.over) ? 0.35 : 1;
       duck += (dTarget - duck) * 0.2;
-      musBus.gain.setTargetAtTime(pref.m ? (endMode ? 0.9 : (0.45 + 0.6 * tension) * duck) : 0, now(), 0.15);
+      musBus.gain.setTargetAtTime(pref.m ? (endMode ? 0.9 : (recOn() ? 0.85 : 0.45 + 0.6 * tension) * duck) : 0, now(), 0.15);
+      if (recOn()) recTick();
       sfxBus.gain.setTargetAtTime(pref.s ? 0.8 - 0.25 * tension : 0, now(), 0.15);
-      if (dbgEl) dbgEl.textContent = STY[styleKey()].name + " · intensity " + tension.toFixed(2) + " · heat " + heat.toFixed(1);
+      if (dbgEl) dbgEl.textContent = STY[styleKey()].name + (styleKey() === "dark" ? " / " + DARK[darkI].name : styleKey() === "epic" ? " / " + EPIC[epI].name : "") + " · intensity " + tension.toFixed(2) + " · heat " + heat.toFixed(1);
       while (next < now() + 0.25) {
         const t = next;
         if (endMode) {
-          const E = ({ fm: END_FM, dark: END_DARK }[styleKey()] || END)[endMode], bar = Math.floor(endIdx / 16), st = endIdx % 16;
+          const E = ({ fm: END_FM, dark: END_DARK, epic: END_DARK }[styleKey()] || END)[endMode], bar = Math.floor(endIdx / 16), st = endIdx % 16;
           beat = 60 / E.bpm; six = beat / 4;
           E.step(t, st, bar, E.chords[bar % 4]);
           next += six; endIdx++; idx = 0; continue;
         }
+        if (recOn()) { next += 0.125; continue; } // recordings playing: the synthesized battle score stays quiet
         const Y = STY[styleKey()], bar = Math.floor(idx / 16), st = idx % 16, cI = Math.floor(bar / 2) % 4, T = tension;
         beat = 60 / (Y.tempo ? Y.tempo(T) : Y.bpm[0] + Y.bpm[1] * T); six = beat / 4; // tempo rises with the fight
         Y.step(t, st, bar, T, Y.chords[cI], Y.roots[cI]);
@@ -5693,6 +5861,8 @@ const SND = (() => {
       end(win) { if (!ac) return; endMode = win ? "win" : "lose"; endIdx = 0; const t = now();
         fadePads(t, 0.08); musBus.gain.cancelScheduledValues(t); musBus.gain.setValueAtTime(musBus.gain.value, t); musBus.gain.linearRampToValueAtTime(0.0001, t + 0.12);
         musBus.gain.linearRampToValueAtTime(pref.m ? 0.9 : 0, t + 0.5); next = t + 0.45; },
+      nextTune() { darkI = (darkI + 1) % DARK.length; darkBars = 0; epI = (epI + 1) % EPIC.length; epBars = 0; }, get tune() { return styleKey() === "epic" ? EPIC[epI].name : DARK[darkI].name; },
+      get track() { return REC.cur >= 0 && TRACKS[REC.cur] ? TRACKS[REC.cur].name : null; },
       styles: Object.keys(STY), get tension() { return tension; }, get dbg() { return { heat, lastShot, ac: ac && ac.state, endMode }; }
     };
   })();
