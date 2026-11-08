@@ -5436,7 +5436,7 @@ const SND = (() => {
     // the epic tunes. Chords: [root in semitones from the tonic, "m" or "M"], one per bar. Melody: per bar, [16th, note, length]
     // with notes in semitones from the tonic (12 = an octave up). Each tune: an A theme, a B theme, its own drive and drums.
     const EPIC = [
-      { name: "Last stand", key: 0, calm: 64, bt: [118, 30],
+      { name: "Last stand", key: 0, calm: 64, bt: 124,
         A: [[0, "m"], [-4, "M"], [3, "M"], [-2, "M"], [0, "m"], [-4, "M"], [-2, "M"], [-2, "M"]],
         B: [[-4, "M"], [-2, "M"], [0, "m"], [0, "m"], [-4, "M"], [-2, "M"], [-5, "M"], [-5, "M"]],
         mA: [[[0, 12, 6], [6, 14, 2], [8, 15, 4], [12, 17, 4]], [[0, 15, 6], [6, 17, 2], [8, 20, 8]], [[0, 19, 6], [6, 17, 2], [8, 15, 4], [12, 12, 4]], [[0, 14, 8], [8, 10, 4], [12, 14, 4]],
@@ -5444,7 +5444,7 @@ const SND = (() => {
         mB: [[[0, 20, 8], [8, 22, 4], [12, 24, 4]], [[0, 22, 12], [12, 19, 4]], [[0, 24, 6], [6, 22, 2], [8, 20, 4], [12, 19, 4]], [[0, 17, 4], [4, 19, 4], [8, 24, 8]],
              [[0, 20, 8], [8, 22, 4], [12, 24, 4]], [[0, 26, 8], [8, 24, 4], [12, 22, 4]], [[0, 19, 8], [8, 25, 8]], [[0, 25, 16]]],
         ost: [1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1], taiko: [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0] },
-      { name: "Banners in the fog", key: 2, calm: 60, bt: [114, 30],
+      { name: "Banners in the fog", key: 2, calm: 60, bt: 118,
         A: [[0, "m"], [-2, "M"], [-4, "M"], [-2, "M"], [0, "m"], [-2, "M"], [-4, "M"], [-5, "M"]],
         B: [[3, "M"], [-2, "M"], [0, "m"], [0, "m"], [5, "m"], [-4, "M"], [-5, "M"], [-5, "M"]],
         mA: [[[0, 7, 4], [4, 12, 4], [8, 14, 4], [12, 15, 4]], [[0, 14, 12], [12, 10, 4]], [[0, 12, 6], [6, 10, 2], [8, 8, 4], [12, 7, 4]], [[0, 10, 16]],
@@ -5452,7 +5452,7 @@ const SND = (() => {
         mB: [[[0, 19, 8], [8, 15, 8]], [[0, 17, 8], [8, 14, 8]], [[0, 15, 6], [6, 14, 2], [8, 12, 4], [12, 15, 4]], [[0, 19, 16]],
              [[0, 20, 8], [8, 17, 8]], [[0, 20, 6], [6, 19, 2], [8, 15, 8]], [[0, 14, 8], [8, 11, 8]], [[0, 14, 16]]],
         ost: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1], taiko: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0] },
-      { name: "Iron crown", key: -2, calm: 62, bt: [122, 30],
+      { name: "Iron crown", key: -2, calm: 62, bt: 128,
         A: [[0, "m"], [5, "m"], [-4, "M"], [-5, "M"], [0, "m"], [5, "m"], [-4, "M"], [-5, "M"]],
         B: [[-4, "M"], [-2, "M"], [3, "M"], [0, "m"], [-4, "M"], [1, "M"], [-5, "M"], [-5, "M"]],
         mA: [[[0, 12, 8], [8, 15, 4], [12, 14, 4]], [[0, 12, 6], [6, 10, 2], [8, 8, 8]], [[0, 15, 8], [8, 12, 4], [12, 8, 4]], [[0, 11, 8], [8, 14, 8]],
@@ -5460,182 +5460,75 @@ const SND = (() => {
         mB: [[[0, 20, 12], [12, 19, 4]], [[0, 17, 8], [8, 22, 8]], [[0, 22, 6], [6, 19, 2], [8, 15, 8]], [[0, 19, 4], [4, 17, 4], [8, 15, 4], [12, 14, 4]],
              [[0, 20, 8], [8, 24, 8]], [[0, 25, 8], [8, 20, 8]], [[0, 23, 8], [8, 19, 8]], [[0, 23, 16]]],
         ost: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], taiko: [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1] },
-      { name: "The long night", key: 0, calm: 58, bt: [110, 32],
+      { name: "The long night", key: 0, calm: 58, bt: 112,
         A: [[0, "m"], [-5, "m"], [-4, "M"], [3, "M"], [5, "m"], [0, "m"], [-5, "M"], [-5, "M"]],
         B: [[3, "M"], [-2, "M"], [-4, "M"], [-2, "M"], [3, "M"], [-2, "M"], [-5, "M"], [-5, "M"]],
         mA: [[[0, 7, 6], [6, 8, 2], [8, 7, 4], [12, 3, 4]], [[0, 10, 8], [8, 14, 8]], [[0, 12, 6], [6, 10, 2], [8, 8, 8]], [[0, 7, 8], [8, 10, 8]],
              [[0, 12, 6], [6, 10, 2], [8, 8, 4], [12, 5, 4]], [[0, 3, 8], [8, 7, 8]], [[0, 11, 8], [8, 14, 8]], [[0, 11, 16]]],
         mB: [[[0, 15, 8], [8, 19, 8]], [[0, 17, 6], [6, 15, 2], [8, 14, 8]], [[0, 15, 8], [8, 12, 8]], [[0, 14, 16]],
              [[0, 22, 8], [8, 19, 8]], [[0, 17, 8], [8, 22, 8]], [[0, 23, 8], [8, 19, 8]], [[0, 23, 16]]],
-        ost: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], taiko: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0] }
+        ost: [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0], taiko: [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0] }
     ];
     const EPIC_PIN = /[?&]tune=\d/.test(location.search);
-    let epI = clamp(+((location.search.match(/[?&]tune=(\d)/) || [])[1] || 1) - 1, 0, EPIC.length - 1), epBars = 0, epBattle = false, epN = 0, epCalmN = 0;
+    let epI = clamp(+((location.search.match(/[?&]tune=(\d)/) || [])[1] || 1) - 1, 0, EPIC.length - 1), epBars = 0, epBattle = false, epN = 0, epHot = 0;
 
     // ---- the styles: each sets its chords and tempo and plays one 16th step ----
     const STY = {
       epic: { // dark orchestral: strings, horns, choir, timpani and war drums. Calm = a slow hymn; battle = a driving anthem in four sections
+        // Everything sits on a steady grid: one tempo per tune and mood, moods change only on a beat or a bar line,
+        // and how hot the fight is gets read once per bar, so layers come and go with the music, never mid-phrase.
         name: "Epic orchestra", chords: [[0, 3, 7]], roots: [0], bpm: [64, 0],
-        tempo: T => { const U = EPIC[epI]; return epBattle ? U.bt[0] + U.bt[1] * clamp((T - 0.25) / 0.75, 0, 1) : U.calm; },
+        tempo: () => { const U = EPIC[epI]; return epBattle ? U.bt : U.calm; },
         step(t, st0, bar0, T) {
           const want = epBattle ? T > 0.15 : T >= 0.25;
-          if (want !== epBattle) { epBattle = want; epN = 0; if (epBars >= 40 && !EPIC_PIN) { epI = (epI + 1) % EPIC.length; epBars = 0; }
+          // into battle on the next beat, back to calm on the next bar line
+          if (want !== epBattle && epN % (want ? 4 : 16) === 0) { epBattle = want; epN = 0; if (epBars >= 40 && !EPIC_PIN) { epI = (epI + 1) % EPIC.length; epBars = 0; }
             if (want) { dk(t, "boom", 1.3); cymbal(t, 1.4, 2.2); timp(t, 1, hz(EPIC[epI].key - 24)); } }
-          const U = EPIC[epI], K = U.key, st = epN % 16, bar = Math.floor(epN / 16) % 8; epN++; if (st === 0) epBars++;
-          const sec = Math.floor(epN / 128) % 4; // battle sections: 0 A, 1 A with strings singing, 2 B, 3 A at full power
-          const nb = n => n + K; // tonic-relative to D3-relative
+          const U = EPIC[epI], K = U.key, st = epN % 16, bar = Math.floor(epN / 16) % 8, sec = Math.floor(epN / 128) % 4; epN++;
+          if (st === 0) { epBars++; epHot = clamp((T - 0.25) / 0.75, 0, 1); }
+          const voice = (r, q) => tri(r, q).map(n => ((n - 2) % 12 + 12) % 12 + 2 + K).sort((x, y) => x - y); // close chord between E3 and D#4: no mud
+          const low = r => ((r + 5) % 12 + 12) % 12 - 5 + K; // bass root between A2 and G#3
           if (!epBattle) { // ---- calm: a slow hymn on strings, a harp turning, a lone horn or cello carrying the tune ----
-            const ph = Math.floor((epN - 1) / 128) % 4, ch = (ph === 2 ? U.B : U.A)[bar], cn = tri(ch[0], ch[1]).map(nb);
-            if (st === 0) { strings(t, cn, beat * 3.9, 0.04, { att: 1.2, rel: 1.4, cut: 1500, wet: 0.8 }); strings(t, [nb(ch[0] - 12)], beat * 3.9, 0.045, { att: 0.9, rel: 1.2, cut: 700 }); }
+            const ph = sec, ch = (ph === 2 ? U.B : U.A)[bar], cn = voice(ch[0], ch[1]), bs = low(ch[0]);
+            if (st === 0) { strings(t, cn, beat * 3.9, 0.04, { att: 1.2, rel: 1.4, cut: 1500, wet: 0.8 }); strings(t, [bs - 12], beat * 3.9, 0.045, { att: 0.9, rel: 1.2, cut: 700 }); }
             if (st % 4 === 0 || (st % 2 === 0 && ph % 2 === 1)) { const k = (st >> 1) % 4, n = [cn[0], cn[1], cn[2], cn[1]][k] + 12; pluck(t, n, 0.07, (k - 1.5) * 0.25, "triangle", 1.2, 0.7, 2600); }
             // the tune comes and goes: a horn, then just the harp, then the B theme, then soft strings over a choir
-            if (ph !== 1) for (const [s0, n, len] of (ph === 2 ? U.mB : U.mA)[bar]) if (st === s0) { if (ph === 3) strings(t, [nb(n)], six * len, 0.03, { att: 0.25, rel: 0.6, cut: 2600, pan: 0.2 }); else horns(t, [nb(n - 12)], six * len, 0.07, { c0: 300, c1: 1000 }); }
+            if (ph !== 1) for (const [s0, n, len] of (ph === 2 ? U.mB : U.mA)[bar]) if (st === s0) { if (ph === 3) strings(t, [n + K], six * len, 0.03, { att: 0.25, rel: 0.6, cut: 2600, pan: 0.2 }); else horns(t, [n + K - 12], six * len, 0.07, { c0: 300, c1: 1000 }); }
             if (ph === 3 && st === 0) choir(t, cn.map(n => n + 12), beat * 3.8, 0.025);
-            if (st === 0 && bar % 4 === 0) timp(t, 0.6, hz(nb(-24)));
+            if (st === 0 && bar % 4 === 0) timp(t, 0.6, hz(low(0) - 12));
             if (bar === 7 && st === 12) swell(t, beat, 0.4);
             return;
           }
-          // ---- battle ----
-          const hot = clamp((T - 0.25) / 0.75, 0, 1), useB = sec === 2, ch = (useB ? U.B : U.A)[bar], cn = tri(ch[0], ch[1]).map(nb), root = nb(ch[0]);
-          const mel = (useB ? U.mB : U.mA)[bar], big = sec === 3 || hot > 0.75;
-          if (st === 0 && bar === 0) { cymbal(t, 1.2 + hot * 0.6, 2.2); dk(t, "boom", 1.1 + hot * 0.4); }
+          // ---- battle: four 8-bar sections. A: horns sing over the drive. A2: strings take the tune. B: half-time, choir, a new theme. A3: everyone. ----
+          const hot = epHot, useB = sec === 2, ch = (useB ? U.B : U.A)[bar], cn = voice(ch[0], ch[1]), bs = low(ch[0]);
+          const mel = (useB ? U.mB : U.mA)[bar], full = sec === 3, layers = hot + (full ? 0.35 : 0) + (sec === 1 ? 0.15 : 0);
+          if (st === 0 && bar === 0) { cymbal(t, 1.2 + hot * 0.6, 2.4); dk(t, "boom", 1.1 + hot * 0.4); }
           if (bar === 7 && st === 8) swell(t, beat * 2, 0.6 + hot * 0.4);
-          // the drive: low strings in octaves in the tune's own rhythm, every 16th once the fight is big
-          const drive = U.ost[st] || hot > 0.55, acc = st % 4 === 0 || U.ost[st] && !U.ost[(st + 15) % 16];
-          if (drive) { spic(t, root - 12, acc ? 0.17 : 0.11, -0.2); spic(t, root, acc ? 0.09 : 0.06, 0.2); }
-          if (st % (hot > 0.6 ? 1 : 2) === 0) spic(t, cn[(st >> (hot > 0.6 ? 0 : 1)) % 3] + 12, 0.045 + hot * 0.02, (rnd() - 0.5) * 0.7); // violins churning above
-          // harmony: sustained strings and horns, with brass hits punching the off-beats
-          if (st === 0) { strings(t, cn, beat * 4, 0.02 + hot * 0.012, { att: 0.12, rel: 0.4, cut: 2600 }); strings(t, [root - 24, root - 12], beat * 4, 0.03, { att: 0.05, rel: 0.3, cut: 700 });
-            horns(t, cn.map(n => n - 12), beat * 3.6, 0.028 + hot * 0.016, { c0: 450, c1: 1500 }); }
-          if ([0, 3, 6, 10].includes(st) && (hot > 0.3 || st === 0)) horns(t, [root - 12, cn[1] - 12, cn[2] - 12, root], six * 1.4, 0.035 + hot * 0.025, { c0: 900, c1: 2600 });
-          if (st === 0 && (useB || big || hot > 0.3)) choir(t, cn.map(n => n + 12), beat * 3.8, 0.02 + hot * 0.015);
-          // the anthem: horns first, then strings, then everything
+          // the drive: low strings in octaves, always the tune's own rhythm
+          if (U.ost[st] && !(useB && st % 8 !== 0 && layers < 0.6)) { const acc = st % 4 === 0; spic(t, bs - 12, acc ? 0.17 : 0.11, -0.2); spic(t, bs, acc ? 0.09 : 0.06, 0.2); }
+          // violins: a steady arpeggio up-down through the chord, eighths, then sixteenths when it's big
+          if (layers > 0.35 && st % (layers > 0.8 ? 1 : 2) === 0) { const k = (layers > 0.8 ? st : st >> 1) % 4; spic(t, [cn[0], cn[1], cn[2], cn[1]][k] + 12, 0.05 + hot * 0.02, k % 2 ? 0.35 : -0.35); }
+          // harmony: sustained strings and horns, one chord a bar
+          if (st === 0) { strings(t, cn, beat * 4, 0.022 + hot * 0.012, { att: 0.12, rel: 0.4, cut: 2600 }); strings(t, [bs - 24, bs - 12], beat * 4, 0.03, { att: 0.05, rel: 0.3, cut: 700 });
+            horns(t, cn, beat * 3.6, 0.024 + hot * 0.014, { c0: 450, c1: 1400 }); }
+          // brass hits lock to the drive's accents on beats 1 and 3 (and the push before 3) when the fight is on
+          if (layers > 0.5 && (st === 0 || st === 8 || (full && st === 6))) horns(t, [bs - 12, ...cn], six * 1.5, 0.035 + hot * 0.02, { c0: 900, c1: 2600 });
+          if (st === 0 && (useB || full)) choir(t, cn.map(n => n + 12), beat * 3.8, 0.022 + hot * 0.012);
+          // the anthem
           for (const [s0, n, len] of mel) if (st === s0) {
-            const d = six * len, m = nb(n);
-            if (sec === 1) strings(t, [m, m + 12], d, 0.034, { att: 0.04, rel: 0.25, cut: 3600, pan: 0.15 });
-            horns(t, [m], d, 0.07 + hot * 0.03, { c0: 700, c1: 2600 });
-            if (big || hot > 0.5) { horns(t, [m - 12], d, 0.05, { c0: 500, c1: 1900 }); strings(t, [m + 12], d, 0.024, { att: 0.04, rel: 0.25, cut: 4200 }); }
+            const d = six * len, m = n + K;
+            if (sec === 1) strings(t, [m, m + 12], d, 0.036, { att: 0.04, rel: 0.25, cut: 3600, pan: 0.15 });
+            else horns(t, [m], d, 0.075 + hot * 0.025, { c0: 700, c1: 2600 });
+            if (full) { horns(t, [m - 12], d, 0.05, { c0: 500, c1: 1900 }); strings(t, [m + 12], d, 0.026, { att: 0.04, rel: 0.25, cut: 4200 }); }
           }
-          // percussion: war drums and kick on the tune's pattern, timpani on the roots, a snare that rolls into each new section
-          if (U.taiko[st] || (hot > 0.4 && st % 4 === 2) || (hot > 0.75 && st % 2 === 1 && rnd() < 0.5)) { taiko(t, st === 0 ? 1.4 : 1, st === 0 ? 66 : 92 + (st % 3) * 8); dk(t, "kick", st % 8 === 0 ? 1.2 : 0.8); }
-          if (st === 0 || st === 8 || (hot > 0.5 && (st === 4 || st === 12))) timp(t, 0.9 + hot * 0.3, hz(root - 24));
-          if (st === 4 || st === 12) dk(t, "snare", 0.8 + hot * 0.4);
-          if (hot > 0.25 && st % 2 === 1) dk(t, "snare", 0.18 + hot * 0.2);
-          if (bar % 2 === 1 && st >= 12) dk(t, "snare", 0.4 + (st - 12) * 0.15);
-          if (st === 0 && (bar % 2 === 0 || hot > 0.6)) cymbal(t, 0.8 + hot * 0.7, 1.6);
-          if (bar === 7 && st >= 8) timp(t, 0.5 + (st - 8) * 0.1, hz(root - 24));
-        } },
-      march: { // the original: driving bass ostinato, kit drums, string stabs, brass at the top
-        name: "Battle march", chords: [[0, 3, 7], [-4, 0, 3], [-7, -4, 0], [-2, 2, 5]], roots: [0, -4, -9, -2], bpm: [100, 50],
-        step(t, st, bar, T, ch, root) {
-          if (st === 0 && bar % 2 === 0) pad(t, ch, beat * 8);
-          if (T < 0.5 && st % 2 === 0 && rnd() < 0.45 - T * 0.8) pluck(t, ch[Math.floor(rnd() * 3)] + 12 * (rnd() < 0.5 ? 1 : 2), 0.07 * (1 - T));
-          if (T > 0.06) {
-            const pat = [0, 0, 12, 0, 0, 7, 0, 12, 0, 0, 12, 0, 3, 0, 7, 12];
-            if (st % (T > 0.25 ? 1 : 2) === 0) { const n = root + pat[st], v = Math.min(1, T * 2.2);
-              tone(t, "sawtooth", hz(n - 12), hz(n - 12), six * 0.85, 0.06 * v, 0.004, 0, 0, musBus, 400 + T * 900);
-              tone(t, "sawtooth", hz(n + 12), hz(n + 12), six * 0.7, 0.32 * v, 0.003, (st % 4 - 1.5) * 0.25, 0.15, musBus, 1400 + T * 2600); }
-          }
-          if (T > 0.1 && (st % 2 === 1 || T > 0.5)) hat(t, Math.min(2.2, T * 3));
-          if (T > 0.15 && (st === 0 || st === 8 || (T > 0.45 && (st === 6 || st === 10 || st === 11)))) kick(t, Math.min(1.3, T * 1.8));
-          if (T > 0.25 && (st === 4 || st === 12 || (T > 0.8 && st === 14))) snare(t, Math.min(1.6, T * 2));
-          if (T > 0.45 && (bar % 2 === 1 || T > 0.85) && st >= 12) tom(t, T * 1.3, [300, 260, 220, 180][st - 12]);
-          if (T > 0.35 && (st === 0 || st === 3 || st === 6 || st === 10)) for (const s of ch) tone(t, "sawtooth", hz(s + 12), hz(s + 12), six * 1.6, 0.2 * T, 0.006, 0, 0.4, musBus, 3200);
-          if (T > 0.7 && st === 0 && bar % 2 === 0) brass(t, ch, beat * 4, 0.09 * T);
-        } },
-      orchestra: { // heroic film score: harp and horns when calm; strings, timpani, snare and a brass theme in battle
-        name: "Orchestral", chords: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-5, -1, 2]], roots: [0, -2, -4, -5], bpm: [92, 46],
-        step(t, st, bar, T, ch, root) {
-          if (st === 0 && bar % 2 === 0) pad(t, ch, beat * 8, { type: "triangle", cut: 900 + T * 1200, lv: 0.06 * (1 - 0.6 * T) + 0.01, det: [-4, 4], att: 1.6 });
-          if (T < 0.55 && st % 2 === 0) { const arp = [0, 1, 2, 1], s = ch[arp[(st / 2) % 4]] + 12 + (st >= 8 ? 12 : 0); if (rnd() < 0.75 - T) pluck(t, s, 0.075 * (1 - T), (st / 16 - 0.5) * 0.8, "triangle", 1.2, 0.7); }
-          if (T > 0.08) { // spiccato strings: root and fifth in 16ths
-            const pat = [0, 12, 7, 12, 0, 12, 7, 12, 0, 12, 7, 12, 0, 12, 8, 7];
-            if (st % (T > 0.3 ? 1 : 2) === 0) { const n = root + pat[st], v = Math.min(1, T * 2);
-              tone(t, "sawtooth", hz(n), hz(n), six * 0.6, 0.22 * v, 0.004, -0.3, 0.3, musBus, 1600 + T * 1600);
-              tone(t, "sawtooth", hz(n - 12), hz(n - 12), six * 0.7, 0.09 * v, 0.004, 0.3, 0.2, musBus, 700); }
-          }
-          if (T > 0.15 && (st === 0 || (T > 0.4 && st === 8))) timp(t, Math.min(1.4, T * 2), hz(root - 12));
-          if (T > 0.6 && bar % 2 === 1 && st >= 12) timp(t, T, hz(root - 12) * (st % 2 ? 1.5 : 1));
-          if (T > 0.3 && (st === 4 || st === 12)) snare(t, Math.min(1.2, T * 1.5));
-          if (T > 0.55 && (st === 13 || st === 15)) snare(t, T * 0.6);
-          if (T > 0.45) { // brass theme: one phrase per two bars
-            const mel = bar % 2 === 0 ? [[0, 7, 6], [6, 3, 2], [8, 5, 2], [10, 7, 6]] : [[0, 8, 4], [4, 7, 4], [8, 10, 4], [12, 3, 4]];
-            for (const [s0, n, len] of mel) if (st === s0) brass(t, [root + n + (n < 5 ? 12 : 0), root + n - 12 + (n < 5 ? 12 : 0)], six * len, 0.07 * T, 700, 2200 + T * 1200);
-          }
-          if (T > 0.7 && st === 0 && bar % 4 === 0) cymbal(t, T * 1.5, 2.2);
-        } },
-      synth: { // dark synth: pulsing arpeggios when calm; four-on-the-floor, pumping bass and a lead in battle
-        name: "Dark synth", chords: [[0, 3, 7], [3, 7, 10], [-2, 2, 5], [-4, 0, 3]], roots: [0, 3, -2, -4], bpm: [108, 34],
-        step(t, st, bar, T, ch, root) {
-          if (st === 0 && bar % 2 === 0) pad(t, ch, beat * 8, { type: "sawtooth", cut: 700 + T * 1500, lfo: 0.15, q: 3, lv: 0.03 * (1 - 0.5 * T) + 0.006, det: [-10, 10] });
-          if (st % 2 === 0) { const up = [0, 1, 2, 1, 0, 2, 1, 2], s = ch[up[(st / 2) % 8]] + 12 + (st % 8 === 6 ? 12 : 0);
-            const lv = T < 0.4 ? 0.06 : 0.07 + T * 0.06; tone(t, "square", hz(s), hz(s), six * 1.5, lv, 0.003, st % 4 ? 0.35 : -0.35, 0.5, musBus, 900 + T * 3000); }
-          if (T > 0.08) { // pumping bass on the offbeats, 16ths when it heats up
-            if (st % 4 !== 0 && (T > 0.35 || st % 2 === 0)) { const v = Math.min(1, T * 2); tone(t, "sawtooth", hz(root - 12), hz(root - 12), six * 0.8, (st % 4 === 2 ? 0.42 : 0.28) * v, 0.003, 0, 0, musBus, 300 + T * 1200);
-              tone(t, "square", hz(root), hz(root), six * 0.6, 0.13 * v, 0.003, 0, 0, musBus, 1400); }
-          }
-          if (T > 0.15 && (st % 4 === 0 && (T > 0.35 || st % 8 === 0))) kick(t, Math.min(1.8, T * 2.2));
-          if (T > 0.25 && (st === 4 || st === 12)) clap(t, Math.min(1.4, T * 1.8));
-          if (T > 0.12 && st % 2 === 1) hat(t, Math.min(2.4, T * 3) * (st % 4 === 2 ? 1.4 : 1));
-          if (T > 0.6) { // lead: chord tones in 8ths an octave up
-            const lead = [2, 1, 0, 1, 2, 2, 1, 0], s = ch[lead[(st >> 1) % 8]] + 24;
-            if (st % 2 === 0 && (bar % 2 === 0 || st < 8)) tone(t, "sawtooth", hz(s), hz(s), six * 1.8, 0.14 * T, 0.004, 0.15, 0.45, musBus, 2600);
-          }
-          if (T > 0.75 && st === 0 && bar % 4 === 0) nz(t, beat * 4, "bandpass", 600, 1, 0.15 * T, beat * 3.6, 0, 0.6, musBus, 6000); // riser
-        } },
-      drums: { // war drums: a low drone and distant drums when calm; taiko patterns, low strings and choir in battle
-        name: "War drums", chords: [[0, 3, 7], [1, 5, 8], [0, 3, 7], [-2, 2, 5]], roots: [0, 1, 0, -2], bpm: [88, 44],
-        step(t, st, bar, T, ch, root) {
-          if (st === 0 && bar % 2 === 0) pad(t, [root - 12, root - 5], beat * 8, { type: "sawtooth", cut: 380 + T * 600, lv: 0.05 * (1 - 0.4 * T) + 0.01, det: [-5, 5], wet: 0.8 });
-          if (T < 0.4 && (st === 0 || (st === 10 && bar % 2 === 1)) && rnd() < 0.8) taiko(t, 0.35 * (1 - T), 60);
-          if (T < 0.45 && st % 4 === 2 && rnd() < 0.25 - T * 0.4) pluck(t, [0, 3, 5, 7, 10][Math.floor(rnd() * 5)] + 12, 0.06, (rnd() - 0.5) * 0.8, "sine", 1.4, 0.8);
-          if (T > 0.1) { // taiko patterns: big drum on the pulse, mid drums fill in as it heats up
-            const big = [1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0], mid = [0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1];
-            if (big[st] && (T > 0.3 || st % 8 === 0)) taiko(t, Math.min(1.5, T * 2.2), 58);
-            if (mid[st] && T > 0.35) taiko(t, T * 0.8, 120 + (st % 3) * 18);
-            if (T > 0.75 && st >= 12) taiko(t, T, [170, 150, 130, 110][st - 12]);
-          }
-          if (T > 0.25 && (st === 4 || st === 12)) clap(t, T * 0.9);
-          if (T > 0.2 && st % 2 === 0) { const pat = [0, 0, 1, 0, 0, 0, 3, 1], n = root + pat[(st >> 1) % 8], v = Math.min(1, T * 2); // low strings
-            tone(t, "sawtooth", hz(n - 12), hz(n - 12), six * 1.5, 0.12 * v, 0.004, -0.2, 0.2, musBus, 700 + T * 700);
-            tone(t, "sawtooth", hz(n), hz(n), six * 1.3, 0.12 * v, 0.004, 0.2, 0.25, musBus, 1200 + T * 1200); }
-          if (T > 0.5 && st === 0 && bar % 2 === 0) choir(t, ch.map(s => s + 12), beat * 7.5, 0.035 * T);
-          if (T > 0.8 && st === 8 && bar % 2 === 1) brass(t, [root, root + 7], beat * 2, 0.08 * T, 400, 1800);
-        } },
-      fm: { // early-90s FM synth strategy score: a calm exploration theme, and a separate battle theme once shots fly
-        name: "FM command", chords: [[0, 3, 7], [-4, 0, 3], [-2, 2, 5], [-5, -1, 2]], roots: [0, -4, -2, -5], bpm: [96, 0],
-        tempo: T => fmBattle ? 132 + 18 * clamp((T - 0.25) / 0.75, 0, 1) : 96,
-        step(t, st0, bar0, T) {
-          const want = fmBattle ? T > 0.15 : T >= 0.25;
-          if (want !== fmBattle) { fmBattle = want; fmI = 0; if (want) { cymbal(t, 1.2, 1.4); fmDrum(t, "kick", 1.3); } }
-          const st = fmI % 16, bar = Math.floor(fmI / 16), pos = fmI % 32, blk = Math.floor(fmI / 32) % 4, cyc = Math.floor(fmI / 128); fmI++;
-          if (!fmBattle) { // ---- exploration: bell arpeggio, soft bass, a slow lead tune every other pass ----
-            const CH = [[0, 3, 7], [5, 8, 12], [-4, 0, 3], [-5, -1, 2]], RT = [0, -7, -4, -5], ch = CH[blk], rt = RT[blk];
-            if (st % 2 === 0) { const a = [0, 1, 2, 1, 2, 0, 1, 2][(st >> 1)], s = ch[a] + 24 + (st === 8 ? 12 : 0);
-              fm(t, hz(s), six * 3, 0.05, { r: 3.5, i0: 2.2, i1: 0.2, id: 0.25, pan: st % 4 ? 0.35 : -0.35, wet: 0.5 }); }
-            if (pos === 0 || pos === 16) fm(t, hz(rt - 12), six * 14, 0.16, { r: 1, i0: 1.6, i1: 0.4, id: 0.4, rel: 0.4 });
-            if (pos === 8 || pos === 24) fm(t, hz(rt - 5), six * 7, 0.08, { r: 1, i0: 1.2, i1: 0.3, id: 0.3 });
-            if (st === 4 || st === 12) fmDrum(t, "hat", 0.5);
-            if (cyc % 2 === 1 || T > 0.08) for (const [s0, n, len] of FM_CALM[blk]) if (pos === s0) fm(t, hz(n), six * len, 0.1, { r: 1, i0: 1.4, i1: 0.6, id: 0.3, vib: 0.012, a: 0.03, rel: 0.2, wet: 0.45 });
-            return;
-          }
-          // ---- battle: galloping FM bass, march snare, a lead tune you can hum, brass stabs at the peak ----
-          const ch = [[0, 3, 7], [-4, 0, 3], [-2, 2, 5], [-5, -1, 2]][blk], rt = [0, -4, -2, -5][blk], hot = clamp((T - 0.25) / 0.75, 0, 1);
-          const gal = [0, null, 0, 0, 12, null, 0, 0, 0, null, 0, 0, 12, null, 10, 7][st];
-          if (gal !== null) fm(t, hz(rt - 12 + gal), six * 0.9, 0.2, { r: 1, i0: 3.2, i1: 0.5, id: six * 0.8, rel: 0.03, ct: "sine" });
-          if (st === 0 || st === 8 || (hot > 0.4 && st === 10)) fmDrum(t, "kick", 1.2);
-          if (st === 4 || st === 12) fmDrum(t, "snare", 1);
-          if (hot > 0.55 && (st === 14 || st === 15 || (bar % 2 === 1 && st === 13))) fmDrum(t, "snare", 0.45);
-          if (st % 2 === 0 || hot > 0.5) fmDrum(t, "hat", st % 4 === 2 ? 1 : 0.6);
-          const leadOn = cyc % 2 === 0 || hot > 0.45;
-          if (leadOn) for (const [s0, n, len] of FM_LEAD[blk]) if (pos === s0) {
-            fm(t, hz(n), six * len, 0.13, { r: 1, i0: 2.6, i1: 0.9, id: 0.18, vib: 0.014, a: 0.006, rel: 0.06, wet: 0.3, pan: -0.1 });
-            fm(t, hz(n - 12), six * len, 0.05, { r: 2, i0: 1.2, i1: 0.4, id: 0.2, a: 0.006, rel: 0.06, wet: 0.2, pan: 0.1 });
-            const SC = blk === 3 ? [0, 2, 3, 5, 7, 8, 11] : [0, 2, 3, 5, 7, 8, 10], hn = [3, 4].map(d => n - d).find(x => SC.includes(((x % 12) + 12) % 12)) || n - 3;
-            if (hot > 0.75) fm(t, hz(hn), six * len, 0.05, { r: 1, i0: 1.6, i1: 0.6, id: 0.2, a: 0.006, rel: 0.06, wet: 0.3, pan: 0.4 });
-          }
-          if (!leadOn && st % 2 === 0) { const s = ch[[0, 1, 2, 1, 0, 2, 1, 2][st >> 1]] + 24; fm(t, hz(s), six * 1.6, 0.06, { r: 3, i0: 2, i1: 0.3, id: 0.15, pan: st % 4 ? 0.4 : -0.4, wet: 0.3 }); }
-          if (hot > 0.3 && (pos === 0 || pos === 16 || pos === 22)) for (const s of ch) fm(t, hz(s + 12), six * (pos === 22 ? 2 : 3), 0.05, { r: 1, i0: 0.8, i1: 3.5, id: 0.12, a: 0.03, rel: 0.1, wet: 0.35 });
+          // percussion: the same pattern every bar, with fills only at the end of a phrase
+          const half = useB && !full; // B is in half time: the backbeat moves to beat 3
+          if (U.taiko[st]) { taiko(t, st === 0 ? 1.4 : 1, st === 0 ? 66 : 90); dk(t, "kick", st === 0 ? 1.2 : 0.8); }
+          if (st === 0 || (st === 8 && !half)) timp(t, 0.9 + hot * 0.3, hz(bs - 12));
+          if (half ? st === 8 : (st === 4 || st === 12)) dk(t, "snare", 0.8 + hot * 0.4);
+          if (layers > 0.7 && !half && (st === 14 || st === 15)) dk(t, "snare", 0.35);
+          if (st === 0 && (bar % 2 === 0 || layers > 0.8)) cymbal(t, 0.7 + hot * 0.6, 1.6);
+          if (bar === 7 && st >= 12) { dk(t, "snare", 0.4 + (st - 12) * 0.18); timp(t, 0.5 + (st - 12) * 0.12, hz(bs - 12)); }
         } },
       dark: { // dark and drum-driven: a low drone and heartbeat when calm; a heavy drum battery and chugging bass in battle
         // several tunes in the same style take turns: a new one at each calm/battle switch once the last has had its time, and every new game
