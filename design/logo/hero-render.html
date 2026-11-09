@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf8">
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script></head>
+<body style="margin:0;background:#0000">
+<script type="module">
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+const load=f=>new Promise((res,rej)=>(f.endsWith(".fbx")?new FBXLoader():new GLTFLoader()).load(f,res,undefined,rej));
+window.render=async o=>{
+ const root=await load(o.model||"ch15.fbx"),scene=new THREE.Scene();scene.add(root);
+ const box=new THREE.Box3().setFromObject(root),h=box.getSize(new THREE.Vector3()).y,k=1.8/h;root.scale.multiplyScalar(k);
+ const names=[];root.traverse(x=>{if(x.isMesh){names.push(x.name+":"+(Array.isArray(x.material)?x.material.map(m=>m.name):x.material.name));x.castShadow=true;if(o.hide&&new RegExp(o.hide).test([].concat(x.material).map(m=>m.name).join()))x.visible=false}});console.log("meshes",names.join(" | "));
+ const anim=await load(o.clip),mixer=new THREE.AnimationMixer(root);const act=mixer.clipAction(anim.animations[0]);act.play();mixer.setTime((o.t||0)*anim.animations[0].duration);
+ root.traverse(b=>{if(b.isBone&&!b.parent.isBone){b.position.x=0;b.position.z=0}});root.rotation.y=o.rot||0;scene.updateMatrixWorld(true);
+ let rH,lH;root.traverse(b=>{if(b.isBone&&/RightHand$/.test(b.name))rH=b;if(b.isBone&&/LeftHand$/.test(b.name))lH=b});
+ if(o.rifle){let pr;if(o.spear){pr=new THREE.Group();const sh=new THREE.Mesh(new THREE.CylinderGeometry(.018,.022,1.7,10),new THREE.MeshStandardMaterial({color:0x6b4a2a,roughness:.9}));sh.rotation.z=Math.PI/2;pr.add(sh);const tip=new THREE.Mesh(new THREE.ConeGeometry(.045,.2,5),new THREE.MeshStandardMaterial({color:0x6e675c,roughness:.95,flatShading:true}));tip.rotation.z=-Math.PI/2;tip.position.x=.95;pr.add(tip);const wr=new THREE.Mesh(new THREE.CylinderGeometry(.028,.028,.1,8),new THREE.MeshStandardMaterial({color:0x3a2a1a}));wr.rotation.z=Math.PI/2;wr.position.x=.82;pr.add(wr);}else{const a=await load("rifle.glb");pr=a.scene;}const pb=new THREE.Box3().setFromObject(pr),ps=pb.getSize(new THREE.Vector3());pr.scale.multiplyScalar(o.rifle.len/ps.x);
+  const pb2=new THREE.Box3().setFromObject(pr);pr.position.x-=pb2.min.x+(pb2.max.x-pb2.min.x)*o.rifle.grip;pr.position.y-=(pb2.min.y+pb2.max.y)/2;pr.position.z-=(pb2.min.z+pb2.max.z)/2;
+  const prop=new THREE.Group();prop.add(pr);scene.add(prop);scene.updateMatrixWorld(true);
+  const A=new THREE.Vector3().setFromMatrixPosition(rH.matrixWorld),B=new THREE.Vector3().setFromMatrixPosition(lH.matrixWorld);const dir=B.clone().sub(A).normalize(),up=new THREE.Vector3(0,1,0);up.sub(dir.clone().multiplyScalar(up.dot(dir))).normalize();const side=new THREE.Vector3().crossVectors(dir,up);
+  prop.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(dir,up,side));prop.position.copy(A);}
+ scene.add(new THREE.HemisphereLight(0xe8e2cc,0x3a3c30,o.amb||1.8));
+ const key=new THREE.DirectionalLight(0xffe2b0,o.key||4.5);key.position.set(-3,4,4);scene.add(key);
+ const rim=new THREE.DirectionalLight(0xff8a6a,1.2);rim.position.set(4,2.5,-3);scene.add(rim);
+ const rim2=new THREE.DirectionalLight(0xcdb46a,1.4);rim2.position.set(-4,1.5,-3);scene.add(rim2);
+ const W=o.w,H=o.h,cam=new THREE.PerspectiveCamera(o.fov||28,W/H,0.1,100);cam.position.set(...o.cam);cam.lookAt(0,o.look||0.95,0);
+ const r=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});r.setSize(W,H);r.outputColorSpace=THREE.SRGBColorSpace;r.setClearColor(0,0);
+ await new Promise(z=>setTimeout(z,2500));r.render(scene,cam);return r.domElement.toDataURL("image/png");};
+window.ready=true;
+</script></body></html>

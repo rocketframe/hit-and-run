@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:BSS;src:url(bss.woff2);font-weight:900}
+@font-face{font-family:Saira;src:url(saira.woff2);font-weight:800}
+:root{--ink:#e9e5d3;--khaki:#cdb46a;--red:#f0473a;--dim:#a6a28f}
+body{margin:0;background:#0d110c;color:var(--ink);font-family:Saira,sans-serif;width:1600px}
+h2{font:800 30px Saira;letter-spacing:.04em;margin:0 0 4px;text-transform:uppercase}
+.hd{padding:34px 48px 10px;display:flex;align-items:baseline;gap:18px}
+.hd h1{font:900 52px BSS;margin:0;text-transform:uppercase}.hd h1 span{color:var(--khaki)}
+.hd p{color:var(--dim);font-size:22px;margin:0}
+.row{display:flex;align-items:center;gap:34px;padding:22px 48px;border-top:1px solid rgba(233,229,211,.12)}
+.num{font:900 64px BSS;color:var(--khaki);width:46px}
+.big svg{width:220px;height:220px;display:block}
+.sizes{display:flex;align-items:flex-end;gap:18px}
+.sizes div{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--dim);font-size:15px}
+.lock{display:flex;align-items:center;gap:18px;background:#1d241c;border-radius:14px;padding:18px 26px;margin-left:10px}
+.lock svg{width:96px;height:96px}
+@font-face{font-family:BSD;src:url(bsd.woff2)}.word{width:fit-content;-webkit-mask:linear-gradient(to top right,#000 0 49%,transparent 49% 51%,#000 51%);font:900 64px/0.86 BSD;text-transform:uppercase}.word span{color:var(--khaki)}
+.txt{width:420px}.txt p{margin:0;color:var(--dim);font-size:20px;line-height:1.3}
+.light{background:#e9e5d3;border-radius:8px;padding:6px}
+</style></head><body>
+<div class="hd"><h1>Hit and <span>Run</span></h1><p>crosshair, less bubbly · app icon, favicon sizes and a name lockup for each</p></div>
+<div id="rows"></div>
+<script>
+const K='#cdb46a',I='#e9e5d3',R='#f0473a';
+const bg=(f1='#262f22',f2='#141a12')=>`<defs><linearGradient id="g${Math.random().toString(36).slice(2)}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${f1}"/><stop offset="1" stop-color="${f2}"/></linearGradient></defs>`;
+function tile(inner,f1,f2){const id='g'+Math.random().toString(36).slice(2);
+ return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${f1||'#2a3325'}"/><stop offset="1" stop-color="${f2||'#141a12'}"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="url(#${id})"/>${inner}</svg>`}
+const sq=(inner,f1,f2,rx=12)=>{const id='g'+Math.random().toString(36).slice(2);return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${f1||'#232b20'}"/><stop offset="1" stop-color="${f2||'#12170f'}"/></linearGradient></defs><rect width="100" height="100" rx="${rx}" fill="url(#${id})"/>${inner}</svg>`};
+const bars=`<g fill="${I}" opacity=".85"><path d="M12 36h14l-3 5H9z"/><path d="M6 47.5h20l-3 5H3z"/><path d="M12 59h14l-3 5H9z"/></g>`;
+const ring=(w=5)=>`<g stroke="${K}" fill="none" stroke-linecap="butt"><circle cx="60" cy="50" r="24" stroke-width="${w}"/><path d="M60 16v14M60 70v14M94 50H80M40 50H26" stroke-width="${w}"/></g>`;
+const C=[
+ {name:'1 as it was',desc:'The original for comparison: thick strokes, round ends, round corners.',
+  svg:()=>tile(`<g stroke="${K}" stroke-linecap="round" fill="none"><circle cx="58" cy="50" r="25" stroke-width="7"/><path d="M58 17v12M58 71v12M91 50H79" stroke-width="7"/></g><g stroke="${I}" stroke-width="6" stroke-linecap="round" opacity=".85"><path d="M10 38h14M5 50h20M10 62h14"/></g><circle cx="58" cy="50" r="8" fill="${R}"/>`)},
+ {name:'1a Sharp',desc:'Thinner ring, square ends, slanted speed bars, tighter corners and a smaller red dot.',
+  svg:()=>sq(`${ring(5)}${bars}<circle cx="60" cy="50" r="5.5" fill="${R}"/>`)},
+ {name:'1b Sharp + slash',desc:'1a with the title’s slanted cut through it, so the icon and the title match.',
+  svg:()=>{const m='m'+Math.random().toString(36).slice(2);return sq(`<defs><mask id="${m}"><rect width="100" height="100" fill="#fff"/><path d="M-5 30L105 82" stroke="#000" stroke-width="3.4"/></mask></defs><g mask="url(#${m})">${ring(5)}${bars}<circle cx="60" cy="50" r="5.5" fill="${R}"/></g>`)}},
+ {name:'1c Stencil ring',desc:'The ring is broken into four stencil arcs, the ticks reach inside, and the hit is a small red diamond.',
+  svg:()=>sq(`<circle cx="60" cy="50" r="24" fill="none" stroke="${K}" stroke-width="5" stroke-dasharray="31.7 6" stroke-dashoffset="-34.7"/><g stroke="${K}" stroke-width="4"><path d="M60 18v18M60 64v18M92 50H74M46 50H28"/></g>${bars}<path d="M60 44.5l5.5 5.5-5.5 5.5-5.5-5.5z" fill="${R}"/>`)},
+ {name:'1d Bold square',desc:'Square tile with almost no rounding, heavy flat ring, no gradient. The plainest and most “military issue”.',
+  svg:()=>`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="6" fill="#1b2118"/><g stroke="${K}" fill="none"><circle cx="60" cy="50" r="23" stroke-width="6"/><path d="M60 14v15M60 71v15M95 50H81" stroke-width="6"/></g><g fill="${I}"><path d="M10 37h17l-3.5 6H6.5z"/><path d="M4 47h23l-3.5 6H.5z"/><path d="M10 57h17l-3.5 6H6.5z"/></g><rect x="55" y="45" width="10" height="10" fill="${R}"/></svg>`},
+];
+const rows=document.getElementById('rows');
+C.forEach((c,i)=>{const s=c.svg();
+ rows.insertAdjacentHTML('beforeend',`<div class="row"><div class="big">${s}</div>
+ <div class="txt"><h2>${c.name}</h2><p>${c.desc}</p></div>
+ <div class="sizes">${[64,32,16].map(n=>`<div><div style="width:${n}px;height:${n}px">${c.svg().replace('<svg ',`<svg width="${n}" height="${n}" `)}</div>${n}px</div>`).join('')}<div><div class="light" style="width:32px;height:32px">${c.svg().replace('<svg ','<svg width="32" height="32" ')}</div>tab</div></div>
+ <div class="lock">${c.svg()}<div class="word">Hit<br>and <span>Run</span></div></div></div>`)});
+</script></body></html>
