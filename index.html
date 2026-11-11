@@ -574,6 +574,91 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 // Same commands + same seed => same game, so this can run in lockstep online later.
 // ======================================================================
 let G = null;
+// Online play: only when the game hub opens this page with #hub=... (see ONLINE near the end). Without it nothing below changes.
+// Only hubs on this list may be used: the hub's script runs on this page, so a link to any other server is ignored.
+// Local hubs (http://localhost, http://127.0.0.1) are for development.
+const HUB_ORIGINS = []; // TODO: the production and staging hub origins, e.g. "https://game-hub.<account>.workers.dev"
+const HUB_LAUNCH = (() => { try {
+  const h = new URLSearchParams(location.hash.slice(1)).get("hub"); if (!h) return null;
+  const u = new URL(h), local = u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1");
+  return HUB_ORIGINS.includes(u.origin) || local ? u.origin : null;
+} catch (e) { return null; } })();
+const MP = { SUB: 3, q: [], drops: [], quiet: false }; // SUB: sim steps per hub tick (100 ms / CFG.dt)
+// Online only. Deterministic math: + - * / and sqrt are exact IEEE in every JS engine, the built-in sin/cos/atan2/exp/pow/hypot are not.
+const DM = (() => {
+  const buf = new DataView(new ArrayBuffer(8)), nPow = Math.pow, nAtan2 = Math.atan2; // natives, for the exact special cases only
+  const pow2 = k => { if (k > 1023) return Infinity; if (k < -1022) return 0; buf.setUint32(0, (k + 1023) << 20); buf.setUint32(4, 0); return buf.getFloat64(0); };
+  const PIO2_1 = 1.57079632673412561417e+00, PIO2_1T = 6.07710050650619224932e-11, INVPIO2 = 6.36619772367581382433e-01;
+  const S1 = -1.66666666666666324348e-01, S2 = 8.33333333332248946124e-03, S3 = -1.98412698298579493134e-04, S4 = 2.75573137070700676789e-06, S5 = -2.50507602534068634195e-08, S6 = 1.58969099521155010221e-10;
+  const C1 = 4.16666666666666019037e-02, C2 = -1.38888888888741095749e-03, C3 = 2.48015872894767294178e-05, C4 = -2.75573143513906633035e-07, C5 = 2.08757232129817482790e-09, C6 = -1.13596475577881948265e-11;
+  const ksin = x => { const z = x * x; return x + x * z * (S1 + z * (S2 + z * (S3 + z * (S4 + z * (S5 + z * S6))))); };
+  const kcos = x => { const z = x * x; return 1 - 0.5 * z + z * z * (C1 + z * (C2 + z * (C3 + z * (C4 + z * (C5 + z * C6))))); };
+  const red = x => { const n = Math.round(x * INVPIO2); return [n, x - n * PIO2_1 - n * PIO2_1T]; };
+  function sin(x) { if (!isFinite(x)) return NaN; const [n, r] = red(x); switch (n & 3) { case 0: return ksin(r); case 1: return kcos(r); case 2: return -ksin(r); default: return -kcos(r); } }
+  function cos(x) { if (!isFinite(x)) return NaN; const [n, r] = red(x); switch (n & 3) { case 0: return kcos(r); case 1: return -ksin(r); case 2: return -kcos(r); default: return ksin(r); } }
+  const AHI = [4.63647609000806093515e-01, 7.85398163397448278999e-01, 9.82793723247329054082e-01, 1.57079632679489655800e+00];
+  const ALO = [2.26987774529616870924e-17, 3.06161699786838301793e-17, 1.39033110312309984516e-17, 6.12323399573676603587e-17];
+  const AT = [3.33333333333329318027e-01, -1.99999999998764832476e-01, 1.42857142725034663711e-01, -1.11111104054623557880e-01, 9.09088713343650656196e-02, -7.69187620504482999495e-02, 6.66107313738753120669e-02, -5.83357013379057348645e-02, 4.97687799461593236017e-02, -3.65315727442169155270e-02, 1.62858201153657823623e-02];
+  function atan(x) {
+    if (x !== x) return NaN; const neg = x < 0; if (neg) x = -x;
+    if (x > 1e17) return neg ? -AHI[3] : AHI[3];
+    let id = -1;
+    if (x >= 0.4375) {
+      if (x < 1.1875) { if (x < 0.6875) { id = 0; x = (2 * x - 1) / (2 + x); } else { id = 1; x = (x - 1) / (x + 1); } }
+      else if (x < 2.4375) { id = 2; x = (x - 1.5) / (1 + 1.5 * x); } else { id = 3; x = -1 / x; }
+    }
+    const z = x * x, w = z * z;
+    const s1 = z * (AT[0] + w * (AT[2] + w * (AT[4] + w * (AT[6] + w * (AT[8] + w * AT[10])))));
+    const s2 = w * (AT[1] + w * (AT[3] + w * (AT[5] + w * (AT[7] + w * AT[9]))));
+    const r = id < 0 ? x - x * (s1 + s2) : AHI[id] - ((x * (s1 + s2) - ALO[id]) - x);
+    return neg ? -r : r;
+  }
+  const PI = 3.141592653589793;
+  function atan2(y, x) {
+    if (x !== x || y !== y) return NaN;
+    if (x === 0) return y > 0 ? PI / 2 : y < 0 ? -PI / 2 : (Object.is(x, -0) ? (Object.is(y, -0) ? -PI : PI) : y);
+    if (!isFinite(x) || !isFinite(y)) return nAtan2(y, x); // only exact constants come out of these cases
+    const a = atan(Math.abs(y / x));
+    if (x > 0) return y < 0 || Object.is(y, -0) ? -a : a;
+    return y < 0 || Object.is(y, -0) ? -(PI - a) : PI - a;
+  }
+  const LN2HI = 6.93147180369123816490e-01, LN2LO = 1.90821492927058770002e-10, INVLN2 = 1.44269504088896338700e+00;
+  const P1 = 1.66666666666666019037e-01, P2 = -2.77777777770155933842e-03, P3 = 6.61375632143793436117e-05, P4 = -1.65339022054652515390e-06, P5 = 4.13813679705723846039e-08;
+  function exp(x) {
+    if (x !== x) return NaN; if (x > 709.78) return Infinity; if (x < -745.2) return 0;
+    const k = Math.round(x * INVLN2), hi = x - k * LN2HI, lo = k * LN2LO, r = hi - lo, t = r * r;
+    const c = r - t * (P1 + t * (P2 + t * (P3 + t * (P4 + t * P5))));
+    const y = 1 - ((lo - (r * c) / (2 - c)) - hi);
+    return k < -1000 ? y * pow2(k + 1000) * pow2(-1000) : k > 1000 ? y * pow2(k - 1000) * pow2(1000) : y * pow2(k);
+  }
+  const LG = [6.666666666666735130e-01, 3.999999999940941908e-01, 2.857142874366239149e-01, 2.222219843214978396e-01, 1.818357216161805012e-01, 1.531383769920937332e-01, 1.479819860511658591e-01];
+  function log(x) {
+    if (x !== x || x < 0) return NaN; if (x === 0) return -Infinity; if (x === Infinity) return x;
+    let k = 0; if (x < 2.2250738585072014e-308) { x *= 18014398509481984; k = -54; }
+    buf.setFloat64(0, x); const hx = buf.getUint32(0); k += (hx >>> 20) - 1023;
+    buf.setUint32(0, (hx & 0x000fffff) | 0x3ff00000); let m = buf.getFloat64(0);
+    if (m > 1.4142135623730951) { m *= 0.5; k += 1; }
+    const f = m - 1, s = f / (2 + f), z = s * s, w = z * z;
+    const R = z * (LG[0] + w * (LG[2] + w * (LG[4] + w * LG[6]))) + w * (LG[1] + w * (LG[3] + w * LG[5]));
+    const hfsq = 0.5 * f * f;
+    return k * LN2HI - ((hfsq - (s * (hfsq + R) + k * LN2LO)) - f);
+  }
+  function pow(x, y) {
+    if (y === 0) return 1; if (x !== x || y !== y) return NaN;
+    if (Number.isInteger(y) && Math.abs(y) <= 64) { let r = 1, b = x, n = Math.abs(y); while (n) { if (n & 1) r *= b; b *= b; n >>= 1; } return y < 0 ? 1 / r : r; }
+    if (x === 0 || !isFinite(x) || !isFinite(y)) return nPow(x, y); // exact special values
+    if (x < 0) { if (!Number.isInteger(y)) return NaN; const v = exp(y * log(-x)); return y % 2 ? -v : v; }
+    return exp(y * log(x));
+  }
+  const hypot = (a, b, c) => Math.sqrt(a * a + b * b + (c === undefined ? 0 : c * c));
+  const fns = { sin, cos, atan, atan2, exp, log, pow, hypot };
+  const nat = {}; for (const k in fns) nat[k] = Math[k];
+  let depth = 0;
+  // run fn with Math's transcendental functions swapped for the deterministic ones
+  function run(fn) { if (depth++ === 0) Object.assign(Math, fns); try { return fn(); } finally { if (--depth === 0) Object.assign(Math, nat); } }
+  return { ...fns, run, nat };
+})();
+
 
 const DIFF = { 1: { mult: 0.85, respawn: 1.2, smart: false }, 2: { mult: 1.1, respawn: 0.85, smart: true }, 3: { mult: 1.3, respawn: 0.65, smart: true }, 4: { mult: 1.8, respawn: 0.45, smart: true, think: 0.7 } };
 const MAPS = [
@@ -717,6 +802,7 @@ const maxHp = u => CFG[u.kind].hp * (1 + CFG.upStep * G.players[u.owner].level) 
 // ---- commands ----
 function issue(cmd) {
   if (G.replay && cmd.p === G.human) return; // watching, not playing
+  if (G.mp && cmd.p === G.human) { if (MP.seat >= 0 && !G.over && MP.ls) mpQueue(cmd); return; } // online: it comes back from the hub for everyone
   G.cmds.push(cmd);
   if (G.rec && !G.replay && cmd.p === G.human) G.rec.cmds.push([G.tick, JSON.parse(JSON.stringify(cmd))]); // for the replay
 
@@ -748,6 +834,7 @@ function rejoin(u, p) {
 function applyCmd(c) {
   const p = G.players[c.p]; if (p.out) return;
   if (c.t === "strike") { if (p.strikes > 0) { p.strikes--; strikeAt(c.p, c.x, c.y); if (c.p === G.human && !G.attract) gStats().strikes++; } return; }
+  if (c.t === "squad") { for (const id of c.ids) { const u = G.unitById.get(id); if (u && u.owner === c.p && u.kind === "inf") u.squad = c.sq; } return; } // online: squads change in the sim, in step
   if (c.t === "rally") { p.rally = c.clear ? null : { x: clamp(c.x, 10, G.S - 10), y: clamp(c.y, 10, G.S - 10) }; return; }
   const us = c.ids.map(id => G.unitById.get(id)).filter(u => u && u.alive && u.owner === c.p && !(u.jam > G.time));
   if (!us.length) return;
@@ -812,7 +899,7 @@ function applyCmd(c) {
     u.path = path ? path.slice(1).map(q => ({ x: q.x + x - c.x, y: q.y + y - c.y })) : null;
     x = clamp(x, 10, G.S - 10); y = clamp(y, 10, G.S - 10);
     const pt = pushOutOfRocks(x, y, CFG[u.kind].r + 2);
-    u.tx = pt.x; u.ty = pt.y; u.mode = c.mode; u.focus = null; u.run = !!c.run && !p.tired; u.brk = !!c.brk; u.going = c.p === G.human && !G.attract ? G.time + 3 + Math.hypot(u.x - u.tx, u.y - u.ty) / CFG[u.kind].speed * 1.5 : 0; // the player's orders: go first, fight after (gives up if they can't get there)
+    u.tx = pt.x; u.ty = pt.y; u.mode = c.mode; u.focus = null; u.run = !!c.run && !p.tired; u.brk = !!c.brk; u.going = (G.mp ? !p.ai : c.p === G.human) && !G.attract ? G.time + 3 + Math.hypot(u.x - u.tx, u.y - u.ty) / CFG[u.kind].speed * 1.5 : 0; // the player's orders: go first, fight after (gives up if they can't get there)
   });
 }
 
@@ -1002,7 +1089,8 @@ function eliminate(owner, by) {
   if (by === G.human && owner !== G.human && !G.attract) gStats().bases++;
   if (owner === G.human) toast("Your base has fallen", "bad");
   else toast(p.team.name + " base destroyed" + (by === G.human ? " by you" : ""), by === G.human ? "gold" : "");
-  const alive = G.players.filter(q => !q.out), over = alive.length <= 1 ? { win: !G.players[G.human].out } : null;
+  p.outT = G.tick;
+  const alive = G.players.filter(q => !q.out), over = alive.length <= 1 || (G.mp && mpHumansIn() <= 1) ? { win: !G.players[G.human].out } : null;
   if (over) { if (G.doomFire) G.pendOver = over; else G.over = over; } // during the finale, wait for it to finish
   else if (owner === G.human && !G.attract && !G.replay && !G.tutorial) startSpectate();
 }
@@ -1424,7 +1512,8 @@ function crateRunners(p, inf) {
   return taken.size ? inf.filter(u => !taken.has(u)) : inf;
 }
 
-function step() {
+function step() { if (G.mp) DM.run(stepSim); else stepSim(); }
+function stepSim() {
   const dt = CFG.dt;
   if (G.replay) { const R = G.replay, cs = R.rec.cmds; while (R.i < cs.length && cs[R.i][0] <= G.tick) G.cmds.push(cs[R.i++][1]); }
   G.tick++; G.time += dt;
@@ -1825,7 +1914,7 @@ let PIXEL = false; // easter egg: Konami code
 let SW = 0, SH = 0, flatCvs = null, flatCtx = null;
 const TILT = { on: true, th: 0.82, p: 1000, oy: 0.4 };
 // test links: ?era=5 shows every army in that era (1 Stone ... 8 Space) with the 3D view on; ?3d turns the 3D view on (neither is saved)
-const URL_ERA = (n => n >= 1 && n <= 8 ? n - 1 : null)(+((location.search.match(/[?&]era=(\d)/) || [])[1]));
+const URL_ERA = HUB_LAUNCH ? null : (n => n >= 1 && n <= 8 ? n - 1 : null)(+((location.search.match(/[?&]era=(\d)/) || [])[1]));
 if (URL_ERA != null || /[?&]3d\b/.test(location.search)) TILT.on = true;
 const tvOf = dy => dy * TILT.p / (Math.cos(TILT.th) * TILT.p + dy * Math.sin(TILT.th));
 function scr2flat(x, y) { if (!TILT.on) return { x, y }; const v = tvOf(y - SH * TILT.oy), f = (TILT.p - v * Math.sin(TILT.th)) / TILT.p; return { x: W / 2 + (x - SW / 2) * f, y: H / 2 + v }; }
@@ -4156,7 +4245,7 @@ function doomFx(e) {
 function doomTarget(p) {
   const d = p.doom; if (d && d.tgt != null && !G.players[d.tgt].out) return G.players[d.tgt]; return doomPick(p); }
 function doomPick(p) {
-  let R = G.players.filter(q => q.id !== p.id && !q.out); if (p.id !== G.human && R.some(q => q.id !== G.human)) R = R.filter(q => q.id !== G.human);
+  let R = G.players.filter(q => q.id !== p.id && !q.out); if (!G.mp && p.id !== G.human && R.some(q => q.id !== G.human)) R = R.filter(q => q.id !== G.human);
   const pow = q => q.level * 1000 + G.units.filter(u => u.alive && u.owner === q.id).length;
   return R.sort((a, b) => pow(b) - pow(a) || a.id - b.id)[0] || null; }
 // lock-on: a targeting line arcs from the general over to the target base as it charges, and a reticle closes in on the base
@@ -4439,6 +4528,7 @@ const UI = { sel: new Set(), selKey: "all", mode: "move", box: null, pings: [], 
 const $ = id => document.getElementById(id);
 
 function toast(msg, cls) {
+  if (G && G.mp && MP.quiet) return; // replaying a rejoined battle at full speed
   if (G && (G.attract || (G.doomFire && G.doomFire.big))) return; // nothing competes with the finale
   const el = document.createElement("div"); el.textContent = msg; if (cls) el.className = cls;
   const box = $("toast"); box.appendChild(el);
@@ -4495,7 +4585,7 @@ function refreshBar() {
 function assignSquad(sq) {
   const list = G.units.filter(u => u.owner === G.human && u.kind === "inf" && UI.sel.has(u.id));
   if (!list.length) { toast("Select some infantry first"); return; }
-  for (const u of list) u.squad = sq;
+  if (G.mp) issue({ p: G.human, t: "squad", ids: list.map(u => u.id), sq }); else for (const u of list) u.squad = sq;
   UI.selKey = String(sq);
   toast("Group " + "ABCD"[sq] + " now has " + list.length + " infantry", "gold");
   refreshBar();
@@ -4505,6 +4595,7 @@ const keyUnits = k => k === "all" ? myUnits(() => true) : k === "army" ? myUnits
 const keyName = k => k === "gen" ? "GEN" : k === "all" ? "ALL" : k === "army" ? "ARMY" : "ABCD"[+k];
 function mergeSquad(from, to) {
   const list = keyUnits(from).filter(u => u.kind === "inf"); if (!list.length) return;
+  if (G.mp) { issue({ p: G.human, t: "squad", ids: list.map(u => u.id), sq: to }); selectKey(String(to)); toast(keyName(from) + " joined " + "ABCD"[to], "gold"); return; }
   for (const u of list) u.squad = to;
   selectKey(String(to)); toast(keyName(from) + " joined " + "ABCD"[to] + ": " + keyUnits(String(to)).filter(u => u.alive).length + " soldiers", "gold");
 }
@@ -5013,7 +5104,7 @@ function attractCam(dt) {
 // the browser's back button pauses a battle instead of leaving the page
 function guardBack() { try { if (!(history.state && history.state.hrGame)) history.pushState({ hrGame: 1 }, ""); } catch (e) {} }
 addEventListener("popstate", () => {
-  if (G && !G.attract && !G.over && $("menu").hidden) { if (!UI.paused) togglePause(); guardBack(); }
+  if (G && !G.mp && !G.attract && !G.over && $("menu").hidden) { if (!UI.paused) togglePause(); guardBack(); }
 });
 function start() {
   $("bottleChip").hidden = true; $("bottleMsg").hidden = true;
@@ -5041,6 +5132,7 @@ function start() {
   if (UI.opts.diff === 4) toast("Invincible: enemy armies of " + UI.opts.army + " vs your " + UI.opts.me, "bad");
 }
 function togglePause() {
+  if (G && G.mp) { if (!G.over) $("pause").hidden = !$("pause").hidden; return; } // online: the menu opens, the battle goes on
   if (!G || G.over || G.attract) return;
   UI.paused = !UI.paused; $("pause").hidden = !UI.paused;
   last = performance.now();
@@ -6192,7 +6284,7 @@ function setTel(on) {
 $("telYes").addEventListener("click", () => { setTel(true); const l = loadLog(), g = l[+$("telAsk").dataset.n]; if (g) logGame(g); toast("Thanks! Stats from your battles help balance the game", "gold"); });
 $("telNo").addEventListener("click", () => setTel(false));
 function reportKills() {
-  if (!G || G.attract || G.tutorial || G.replay || !G.players) return;
+  if (!G || G.mp || G.attract || G.tutorial || G.replay || !G.players) return;
   const k = G.players[G.human].kills - killsSent; if (k > 0) { killsSent += k; lbRpc("add_kills", { n: k }); }
 }
 async function loadCounters() {
@@ -6232,6 +6324,7 @@ window.addEventListener("pagehide", reportKills);
 // title splash: only the name and the stamp, centred, then everything slides into place.
 // The first tap also unlocks sound (browsers allow audio only after one).
 (function splash() {
+  if (HUB_LAUNCH) return; // online: straight into the battle
   if (navigator.webdriver && !/[?&]splash\b/.test(location.search)) return;
   const card = $("menu").querySelector(".card"), h1 = card.querySelector("h1"), st = $("stamp");
   const ov = document.createElement("div"); ov.id = "splash";
@@ -6377,7 +6470,7 @@ function enterReview() {
   document.body.classList.add("ended"); $("endPanel").hidden = false;
 }
 function leaveReview() { cvs.style.transform = ""; document.body.classList.remove("ended"); $("endPanel").hidden = true; }
-$("epScore").addEventListener("click", () => { SND.ui(); leaveReview(); showOver(); });
+$("epScore").addEventListener("click", () => { SND.ui(); if (G && G.mp) { mpLeave(); return; } leaveReview(); showOver(); });
 function showOver() {
   leaveReview();
   if (G.tutorial) { toMenu(); return; }
@@ -6455,12 +6548,13 @@ function exitReplay() { document.body.classList.remove("replay"); $("replayBar")
 $("replayBtn").addEventListener("click", () => { SND.ui(); startReplay(); });
 $("boardReplay").addEventListener("click", () => { SND.ui(); boardHome(); startReplay(); });
 $("rpPause").addEventListener("click", () => { UI.paused = !UI.paused; $("rpPause").textContent = UI.paused ? "▶" : "II"; });
-$("rpExit").addEventListener("click", () => { SND.ui(); if (G && G.spect && !G.over && !G.replay) { G.over = { win: false }; $("replayBar").hidden = true; document.body.classList.remove("replay"); return; } exitReplay(); });
+$("rpExit").addEventListener("click", () => { SND.ui(); if (G && G.mp) { mpLeave(); return; } if (G && G.spect && !G.over && !G.replay) { G.over = { win: false }; $("replayBar").hidden = true; document.body.classList.remove("replay"); return; } exitReplay(); });
 $("pauseBtn").addEventListener("click", togglePause);
 // ---- time lapse: ¼× to 8× ----
 UI.speed = 1;
 const SPEEDS = [0.25, 0.5, 1, 2, 4, 8];
 function setSpeed(v) {
+  if (G && G.mp) v = 1;
   UI.speed = v; const b = $("spdBtn");
   b.textContent = v === 0.25 ? "¼×" : v === 0.5 ? "½×" : v + "×";
   b.classList.toggle("fast", v > 1); b.classList.toggle("slow", v < 1);
@@ -6504,10 +6598,10 @@ $("aboutBack").addEventListener("click", () => { $("about").hidden = true; $(abo
 $("tutBtn").addEventListener("click", () => TUT.start());
 $("howTut").addEventListener("click", () => TUT.start());
 const toMenu = () => { document.body.classList.remove("ended"); TUT.stop(); reportKills(); loadCounters(); $("pause").hidden = true; $("over").hidden = true; $("menu").hidden = false; showBest(); startAttract(); };
-$("quitBtn").addEventListener("click", toMenu);
+$("quitBtn").addEventListener("click", () => { if (G && G.mp) mpLeave(); else toMenu(); });
 $("restartBtn").addEventListener("click", () => { SND.ui(); reportKills(); $("pause").hidden = true; document.body.classList.remove("ended", "replay"); deploy(); }); // same settings, a fresh map
 $("menuBtn").addEventListener("click", toMenu);
-document.addEventListener("visibilitychange", () => { if (document.hidden && G && !UI.paused && !G.over) togglePause(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden && G && !G.mp && !UI.paused && !G.over) togglePause(); });
 
 
 let last = performance.now(), acc = 0, miniT = 0, hudT = 0, lastAttractDraw = 0;
@@ -6526,6 +6620,7 @@ function frame(now) {
     while (acc >= CFG.dt && steps < 2) { step(); acc -= CFG.dt; steps++; }
     if (acc > CFG.dt * 4) acc = CFG.dt; // never pile up a backlog behind the menu
     attractCam(dtReal);
+  } else if (G && G.mp) { mpLoop(dtReal);
   } else if (G && UI.loading) { loadTick(dtReal);
   } else if (G && !UI.paused) {
     const ps = 700 / cam.z * dtReal;
@@ -6556,7 +6651,7 @@ function frame(now) {
   } else if (!G) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = "#07090a"; ctx.fillRect(0, 0, cvs.width, cvs.height); }
   requestAnimationFrame(frame);
 }
-startAttract();
+if (HUB_LAUNCH) mpBoot(); else startAttract();
 requestAnimationFrame(frame);
 // test links (?era=1..8): straight into a fight at your base, 30 of yours vs 10 of theirs plus both generals, at quarter speed
 if (URL_ERA != null) setTimeout(() => {
@@ -6571,7 +6666,263 @@ if (URL_ERA != null) setTimeout(() => {
 }, 400);
 
 // test hook
-window.__hr = { get G() { return G; }, replay: r => { lastRec = r; startReplay(); }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
+// ======================================================================
+// ONLINE: a battle between players from the game hub (rocketframe/game-hub). Only runs when the hub
+// opens this page with #hub=...; single player never gets here.
+// Lockstep: every browser runs the same battle from the same seed. Each player's orders go to the hub and
+// come back to everyone for the same tick, so every browser applies the same orders at the same moment.
+// One hub tick (100 ms) is MP.SUB sim steps. A checksum of the battle goes to the hub every 10 ticks.
+// ======================================================================
+async function mpBoot() {
+  document.body.classList.add("online");
+  $("menu").hidden = true;
+  mpWait("Joining the battle", "Connecting to the game hub…");
+  let mod = null;
+  try { mod = await import(HUB_LAUNCH.replace(/\/+$/, "") + "/hub-client.js"); } catch (e) { mpFallback("Couldn't reach the game hub"); return; }
+  const hub = mod.Hub.fromLaunch();
+  if (!hub || !hub.launch || !hub.launch.room) { mpFallback("That battle link is incomplete"); return; }
+  const room = hub.joinRoom(hub.launch.room);
+  Object.assign(MP, { hub, room, lobby: hub.origin + "/?room=" + encodeURIComponent(hub.launch.room) });
+  MP.ls = new mod.Lockstep(room, { onStart: mpStart, onFrame: mpFrame, onDrop: (pid, tick) => MP.drops.push({ pid, tick }), onDesync: mpDesync });
+  room.on("game", m => {
+    if (m.k === "frame" && MP.ls) MP.ls.update(); // keeps inputs flowing even when the tab is in the background
+    else if (m.k === "lost" && !(G && G.mp)) mpWait("This battle was lost", "The server restarted during the match. Start a new one from the lobby.", true);
+  });
+  room.on("room", m => {
+    if (G && G.mp) return;
+    const ph = m.room && m.room.phase;
+    if (ph === "waiting") mpWait("Waiting for the host", "The battle starts when the host presses Start in the lobby.", true);
+    else if (ph === "done") mpWait("This battle is over", "Head back to the lobby to see the result or play again.", true);
+  });
+  room.on("result", mpResult);
+  room.on("fail", () => { if (!(G && G.mp)) mpFallback("That battle is over or the link has expired"); });
+  setInterval(() => { if (MP.ls) MP.ls.update(); }, 250);
+}
+
+function mpWait(title, sub, back) {
+  let w = $("mpWait");
+  if (!w) {
+    w = document.createElement("div"); w.className = "screen"; w.id = "mpWait";
+    w.innerHTML = '<div class="card"><div class="eyebrow">Online battle</div><h2></h2><p class="mpw-s"></p><button class="go ghost" type="button" hidden>Back to lobby</button></div>';
+    w.querySelector("button").addEventListener("click", () => { if (MP.lobby) location.href = MP.lobby; });
+    document.body.appendChild(w);
+  }
+  w.querySelector("h2").textContent = title; w.querySelector(".mpw-s").textContent = sub || "";
+  w.querySelector("button").hidden = !(back && MP.lobby); w.hidden = false;
+}
+function mpWaitHide() { const w = $("mpWait"); if (w) w.hidden = true; }
+
+// the room doesn't exist or the hub can't be reached: carry on as the normal single player game
+function mpFallback(msg) {
+  try { if (MP.room) MP.room.close(); } catch (e) {}
+  MP.ls = null; mpWaitHide(); document.body.classList.remove("online");
+  try { history.replaceState(history.state, "", location.pathname + location.search); } catch (e) {}
+  $("menu").hidden = false; startAttract(); setTimeout(() => toast(msg + ". Playing offline", "bad"), 50);
+}
+
+function mpName(id) {
+  const r = MP.room && MP.room.room, p = r && (r.players || []).find(q => q.id === id);
+  return p && p.name ? String(p.name).slice(0, 14) : null;
+}
+function mpMap(v) {
+  if (v != null && v !== "" && Number.isInteger(+v) && MAPS[+v]) return +v;
+  const i = MAPS.findIndex(m => m.n.toLowerCase() === String(v).toLowerCase()); return i < 0 ? 0 : i;
+}
+function mpArmy(v) {
+  if (typeof v === "number" && isFinite(v)) return clamp(Math.round(v), 5, 80);
+  return { small: 20, medium: 30, large: 45 }[v] || CFG.army;
+}
+function mpHumansIn() { return G.players.filter(q => q.human && !q.out && !q.left).length; }
+
+// the hub says start (or, when this page connects after the start, "resume" with every frame so far)
+function mpStart(m) {
+  const ids = (m.players || []).slice(0, 4), o = m.opts || {}, you = (MP.room.you && MP.room.you.id) || (MP.hub.user && MP.hub.user.id);
+  const seat = ids.indexOf(you), bots = clamp(o.bots | 0, 0, 4 - ids.length), lvl = DIFF[o.botLevel] ? +o.botLevel : 2;
+  const n = Math.max(2, ids.length + bots), army = mpArmy(o.army), map = mpMap(o.map), same = G && G.mp && MP.seed === m.seed;
+  Object.assign(MP, { ids, seed: m.seed, q: [], sub: 0, acc: 0, drops: [], reported: false, result: null, desync: false, leaveArm: 0,
+    SUB: Math.max(1, Math.round((o.tickMs || 100) / 1000 / CFG.dt)) });
+  // players who left before this page (re)joined: when the hub says when, use that; otherwise it's the first frame without their input
+  const fr = m.frames || [];
+  for (const d of m.drops || []) MP.drops.push({ pid: d.pid, tick: d.tick });
+  for (const pid of m.dropped || []) if (!MP.drops.some(d => d.pid === pid)) { const i = fr.findIndex(f => !(f.in && pid in f.in)); MP.drops.push({ pid, tick: i < 0 ? fr.length : fr[i].tick }); }
+
+  TUT.stop(); leaveReview(); mpWaitHide();
+  ["menu", "over", "pause", "board", "about"].forEach(id => { const e = $(id); if (e) e.hidden = true; });
+  document.body.classList.remove("attract", "replay", "ended");
+  const keep = same ? { x: cam.x, y: cam.y, z: cam.z } : null;
+  initGame(DM.run(() => newGame(n, 100, m.seed >>> 0, lvl, army, army, map)));
+  G.mp = true; G.human = seat >= 0 ? seat : 0;
+  MP.seat = seat >= 0 && !MP.drops.some(d => d.pid === you) ? seat : -1;
+  G.cratesOn = o.crates !== false && o.crates !== 0; G.missionsOn = false; G.misTypes = []; // missions are written for one human player
+  G.players.forEach((p, i) => {
+    p.human = i < ids.length;
+    if (!p.human) return;
+    p.ai = false; p.mult = 1; p.respawnMult = 1; p.smart = false; p.autoSpread = false; p.autoEngage = false;
+    p.team = { ...TEAM[i], name: mpName(ids[i]) || TEAM[i].name };
+    const inf = G.units.filter(u => u.owner === i && u.kind === "inf"); inf.forEach((u, k) => { u.squad = Math.min(2, Math.floor(k * 3 / inf.length)); });
+  });
+
+  setSpeed(1); $("spdPop").hidden = true; $("spdBtn").hidden = true; $("restartBtn").hidden = true; $("quitBtn").textContent = "Leave battle";
+  { const pz = $("pause"); pz.querySelector(".eyebrow").textContent = "Online battle"; pz.querySelector("h2").textContent = "The battle goes on"; $("resumeBtn").textContent = "Back to the battle"; }
+  const me = G.players[G.human];
+  if (keep) Object.assign(cam, keep);
+  else { cam.z = Math.min(SW, SH) < 600 ? 0.9 : 1.05; cam.x = me.base.x + me.fwd.x * 160; cam.y = me.base.y + me.fwd.y * 160; }
+  clampCam();
+  UI.sel.clear(); UI.forms = {}; UI.combo = null; UI.rallyMode = UI.strikeMode = UI.boxMode = false; closeTray(); disarmKill();
+  UI.mode = "move"; UI.pings = []; UI.use = {}; applyExpert(); selectKey("all");
+  $("toast").innerHTML = ""; $("msgLog").innerHTML = ""; $("replayBar").hidden = true;
+  if (seat < 0) { // not one of the players: watch the whole map
+    G.spect = true; document.body.classList.add("replay"); $("replayBar").hidden = false;
+    $("replayBar").querySelector("b").textContent = "👁 WATCHING"; $("rpPause").hidden = true;
+    if (!keep) { cam.x = cam.y = G.S / 2; cam.z = 0.05; clampCam(); }
+  }
+  UI.paused = false; acc = 0; last = performance.now();
+  if (!same) {
+    SND.reset(); if (SND.music && SND.music.nextTune) SND.music.nextTune();
+    const L = $("loadScr"); L.className = ""; L.hidden = false; $("ldTip").textContent = "Online battle: " + ids.map((id, i) => G.players[i].team.name).join(" vs ");
+    void L.offsetWidth; L.classList.add("ld-go"); UI.loading = { t0: performance.now(), ok: 0 };
+  }
+  updateFog();
+  if (!fr.length && seat >= 0) toast("Online battle. Destroy the other bases. Orders take a moment to reach everyone.");
+}
+
+function mpFrame(tick, inputs) { MP.q.push({ tick, inputs }); }
+// an order of ours, on its way to the hub. The hub refuses a tick's input over 4 KB or 32 orders, so the oldest unsent ones give way
+function mpQueue(cmd) {
+  const r = v => typeof v === "number" ? Math.round(v * 10) / 10 : v, c = JSON.parse(JSON.stringify(cmd));
+  if (c.x != null) c.x = r(c.x); if (c.y != null) c.y = r(c.y); if (c.pts) c.pts = c.pts.map(q => ({ x: r(q.x), y: r(q.y) }));
+  const pend = MP.ls.pending; MP.ls.queue(c);
+  if (pend.length > 30) pend.splice(0, pend.length - 30);
+  while (pend.length > 1 && JSON.stringify(pend).length > 3500) pend.shift();
+}
+
+// a player's order as it came over the network: keep only the fields and values an order can have
+const MP_T = new Set(["path", "reform", "regroup", "escort", "spread", "kill", "rally", "strike", "focus", "squad"]);
+function mpCmd(c, seat) {
+  if (!c || typeof c !== "object") return null;
+  const num = v => typeof v === "number" && isFinite(v) ? v : 0, o = { p: seat, ids: [] };
+  if (Array.isArray(c.ids)) for (const id of c.ids.slice(0, 400)) if (Number.isInteger(id)) o.ids.push(id);
+  if (c.t != null) { if (!MP_T.has(c.t)) return null; o.t = c.t; }
+  o.x = num(c.x); o.y = num(c.y);
+  o.mode = c.mode === "attack" ? "attack" : "move";
+  if (["box", "line", "wedge", "column"].includes(c.form)) o.form = c.form;
+  if (c.run) o.run = 1; if (c.brk) o.brk = 1; if (c.clear) o.clear = true;
+  if (Number.isInteger(c.tid)) o.tid = c.tid;
+  if (Number.isInteger(c.tb) && c.tb >= 0 && c.tb < G.players.length) o.tb = c.tb;
+  if (Number.isInteger(c.sq) && c.sq >= 0 && c.sq <= 3) o.sq = c.sq;
+  if (o.t === "squad" && o.sq == null) return null;
+  if (o.t === "focus" && o.tid == null && o.tb == null) return null;
+  if (o.t === "path") { o.pts = Array.isArray(c.pts) ? c.pts.slice(0, 24).map(q => ({ x: num(q && q.x), y: num(q && q.y) })) : []; if (!o.pts.length) return null; }
+  return o;
+}
+
+// one sim step of the frame queue; the hub tick's orders go in before its first step
+function mpSub() {
+  const f = MP.q[0];
+  if (MP.sub === 0) {
+    for (const d of MP.drops) if (!d.done && d.tick <= f.tick) { d.done = true; mpDropNow(d.pid); }
+    MP.ids.forEach((id, i) => {
+      const list = !G.players[i].left && f.inputs && f.inputs[id];
+      if (Array.isArray(list)) for (const c of list.slice(0, 32)) { const o = mpCmd(c, i); if (o) G.cmds.push(o); }
+    });
+  }
+  step();
+  if (++MP.sub >= MP.SUB) { MP.sub = 0; MP.q.shift(); if (f.tick % 10 === 0 && !G.over) MP.room.sendGame({ k: "hash", tick: f.tick, h: mpHash() }); }
+  if (G.over && !MP.reported) mpReport();
+}
+// runs the queued steps at the normal pace; when far behind (rejoined, hidden tab, slow phone) it catches up as fast as it can
+function mpPump(dtReal) {
+  if (G.over) return;
+  const backlog = () => MP.q.length * MP.SUB - MP.sub;
+  const n = backlog();
+  if (!n) { MP.acc = 0; return; }
+  if (n > MP.SUB * 4) {
+    const t0 = performance.now(); if (n > 90) MP.quiet = true;
+    while (backlog() > MP.SUB && !G.over && performance.now() - t0 < 30) mpSub();
+    if (MP.quiet && backlog() <= 90) { MP.quiet = false; G.fx.length = 0; G.tracers.length = 0; }
+    MP.acc = 0; return;
+  }
+  MP.acc += dtReal;
+  while (MP.acc >= CFG.dt && backlog() > 0 && !G.over) { mpSub(); MP.acc -= CFG.dt; }
+  if (MP.acc > CFG.dt * 2) MP.acc = CFG.dt * 2;
+}
+
+// a player left (or stayed away 30 s): the AI takes over their army, on the same tick in every browser
+function mpDropNow(pid) {
+  const i = MP.ids.indexOf(pid), p = G.players[i]; if (!p || p.left) return;
+  p.left = true; p.leftT = G.tick; p.ai = true; p.smart = true; p.aiState.t = 0.5;
+  if (!G.over && !p.out) toast(p.team.name + " left the battle. The AI takes over their army", "bad");
+  if (!G.over && mpHumansIn() <= 1) { const me = G.players[G.human], over = { win: !me.out && !me.left, forfeit: true }; if (G.doomFire) G.pendOver = over; else G.over = over; }
+}
+
+// a short checksum of the battle; every browser must get the same one
+function mpHash() {
+  let h = 2166136261;
+  const mix = v => { h = Math.imul(h ^ (v | 0), 16777619); }, f = v => mix(Math.round(v * 64));
+  mix(G.tick); mix(G.units.length); mix(G.crates.length);
+  for (const p of G.players) { mix(p.points); mix(p.level); mix(p.kills); mix(p.out ? 1 : 0); f(p.base.hp); }
+  for (const u of G.units) { mix(u.id); mix(u.owner); if (!u.alive) { mix(-1); continue; } f(u.x); f(u.y); f(u.hp); }
+  return (h >>> 0).toString(16);
+}
+
+// the battle is over: every browser reports the same places (last one standing first, then by who went out last)
+function mpReport() {
+  MP.reported = true;
+  const end = q => Math.min(q.out ? q.outT : Infinity, q.left ? q.leftT : Infinity), places = {}, scores = {};
+  G.players.forEach((q, i) => { if (!q.human) return; const e = end(q); places[MP.ids[i]] = 1 + G.players.filter(o => o.human && end(o) > e).length; scores[MP.ids[i]] = q.kills; });
+  MP.places = places;
+  if (MP.seat >= 0 && MP.ls) MP.ls.reportOver(places, scores);
+}
+function mpDesync() {
+  if (MP.desync) return; MP.desync = true;
+  toast("Out of step with the other players. This battle won't count", "bad");
+}
+// the hub's verdict. When it ends the match itself (the others left), the frames stop, so the battle ends here too
+function mpResult(m) {
+  const r = MP.result = m && m.result || m; if (!r || !G || !G.mp) return;
+  if (!MP.places || !G.over) { MP.places = {}; for (const q of r.players || []) MP.places[q.id] = q.place; }
+  if (!G.over) { MP.reported = true; G.pendOver = null; G.over = { win: MP.places[MP.ids[G.human]] === 1 && MP.seat >= 0, forfeit: true }; }
+  mpEndText();
+}
+function mpEndText() {
+  if (!G || !G.mp || !G.over || $("endPanel").hidden) return;
+  const r = MP.result, pl = MP.places || {}, mine = pl[MP.ids[G.human]];
+  const order = MP.ids.map((id, i) => ({ n: G.players[i].team.name, k: pl[id] || 9 })).sort((a, b) => a.k - b.k).map(x => x.k + ". " + x.n).join("  ·  ");
+  $("epTitle").firstChild.textContent = MP.seat < 0 ? "Battle over" : mine === 1 ? "Victory" : "Defeated";
+  $("epSub").textContent = order + (r ? (r.valid ? "  ·  Result recorded" : "  ·  Not counted" + (r.reason ? ": " + r.reason : "")) : MP.desync ? "  ·  Not counted: out of step" : "");
+  $("epScore").textContent = "Back to lobby";
+}
+function mpLeave() {
+  const leaving = G && !G.over && MP.seat >= 0;
+  if (leaving && !(MP.leaveArm > performance.now())) { MP.leaveArm = performance.now() + 3000; toast("Tap again to leave. Leaving counts as a loss", "bad"); return; }
+  try { if (leaving) MP.room.leave(); } catch (e) {}
+  setTimeout(() => { location.href = MP.lobby || location.pathname; }, leaving ? 300 : 0);
+}
+
+// the online branch of the animation loop
+function mpLoop(dtReal) {
+  if (MP.ls) MP.ls.update();
+  if (UI.loading) { loadTick(dtReal); return; } // orders keep flowing; the sim catches up once the screen is ready
+  const ps = 700 / cam.z * dtReal;
+  if (UI.keys.has("w") || UI.keys.has("arrowup")) cam.y -= ps;
+  if (UI.keys.has("s") || UI.keys.has("arrowdown")) cam.y += ps;
+  if (UI.keys.has("a") || UI.keys.has("arrowleft")) cam.x -= ps;
+  if (UI.keys.has("d") || UI.keys.has("arrowright")) cam.x += ps;
+  if (G.doomFire && G.doomFire.big && !G.review) { const F = G.doomFire, k = Math.min(1, dtReal * 2.5), zt = Math.min(SW, SH) < 600 ? 0.75 : 0.9; cam.x += (F.tx - cam.x) * k; cam.y += (F.ty - cam.y) * k; cam.z += (zt - cam.z) * k; }
+  clampCam();
+  mpPump(dtReal);
+  for (const pg of UI.pings) pg.t -= dtReal;
+  UI.pings = UI.pings.filter(p => p.t > 0);
+  updateFog();
+  hudT -= dtReal; if (hudT <= 0) { hudT = 0.2; renderScore(); refreshBar(); }
+  if (G.over && !G.review) {
+    if (!G.spect) endBanner(G.over.win);
+    if (G.spect) { $("replayBar").hidden = true; document.body.classList.remove("replay"); }
+    $("pause").hidden = true; SND.sting(G.over.win); updateFog(); renderScore(); enterReview(); mpEndText();
+  }
+}
+
+window.__hr = { MP, DM, get G() { return G; }, replay: r => { lastRec = r; startReplay(); }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
 })();
 </script>
 
