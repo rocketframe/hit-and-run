@@ -346,7 +346,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <p class="lede">Find the enemy in the fog, shoot first, keep your general alive, and take their base.</p>
     <details class="custom" id="custom"><summary><span>Custom game</span><em id="customSum"></em></summary>
     <div class="opt"><label>Map</label>
-      <div class="seg" id="optMap"><button data-v="0" class="on">Plain</button><button data-v="1">Lakes</button><button data-v="2">Marsh</button><button data-v="3">Canyons</button></div>
+      <div class="seg" id="optMap"><button data-v="0" class="on">Plain</button><button data-v="1">Lakes</button><button data-v="2">Marsh</button><button data-v="3">Canyons</button><button data-v="4">Winter</button></div>
       <p class="fine" id="mapLine"></p></div>
     <div class="opt"><label>Enemy armies (AI)</label>
       <div class="seg" id="optPlayers"><button data-v="2" class="on">1</button><button data-v="3">2</button><button data-v="4">3</button></div></div>
@@ -665,7 +665,8 @@ const MAPS = [
   { n: "Plain", line: "Open ground and rocks. The classic map." },
   { n: "Lakes", k: 1, line: "Lakes slow soldiers down, and some drown on the way across." },
   { n: "Marsh", k: 2, line: "Quicksand slows soldiers to a crawl and slowly sinks them." },
-  { n: "Canyons", k: 3, line: "Deep rifts: soldiers who get pushed in fall to their death." }
+  { n: "Canyons", k: 3, line: "Deep rifts: soldiers who get pushed in fall to their death." },
+  { n: "Winter", k: 4, line: "Snowy hills round a mountain in the middle. Deep snow on its slopes slows soldiers down." }
 ];
 const HZ_CELL = 10;
 function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy, map) {
@@ -705,7 +706,13 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy, map) {
   }
   // map hazards: built in one quadrant and mirrored like the rocks, so every corner faces the same ground
   g.map = MAPS[map | 0] ? map | 0 : 0; g.haz = [];
-  if (MAPS[g.map].k) {
+  if (MAPS[g.map].k === 4) { // winter: a mountain in the middle nobody can cross or shoot through, ringed by deep snow that slows soldiers
+    const h = S / 2, mr = Math.round(S * 0.08), sr = Math.round(S * 0.18);
+    g.mtn = { x: h, y: h, r: mr, sr };
+    g.rocks.push({ x: h, y: h, r: mr, verts: [], mtn: true });
+    g.hzW = Math.ceil(S / HZ_CELL); g.hz = new Uint8Array(g.hzW * g.hzW);
+    for (let cy = 0; cy < g.hzW; cy++) for (let cx = 0; cx < g.hzW; cx++) if (Math.hypot((cx + 0.5) * HZ_CELL - h, (cy + 0.5) * HZ_CELL - h) < sr) g.hz[cy * g.hzW + cx] = 4;
+  } else if (MAPS[g.map].k) {
     const hr = mulberry32((seed ^ 0x2b7e15) >>> 0), k = MAPS[g.map].k, h = S / 2, I = g.island, q = [];
     const isleR = (x, y) => { const aa = Math.atan2(y - I.c, x - I.c); return I.R[Math.round(((aa + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2) * I.R.length) % I.R.length]; };
     const fits = (x, y, r) => Math.hypot(x - inset, y - inset) > 330 + r && Math.hypot(x - h, y - h) < isleR(x, y) - r - 70 && x > 30 && y > 30;
@@ -745,6 +752,7 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy, map) {
     { const I = g.island, aa = Math.atan2(y - I.c, x - I.c), ri = Math.round(((aa + Math.PI * 2) % (Math.PI * 2)) / (Math.PI * 2) * I.R.length) % I.R.length; if (Math.hypot(x - I.c, y - I.c) > I.R[ri] - r - 40) continue; }
     if (q.some(o => Math.hypot(o.x - x, o.y - y) < o.r + r + 50)) continue;
     if (g.haz.some(o => Math.hypot(o.x - x, o.y - y) < o.r + r + 40)) continue;
+    if (g.mtn && Math.hypot(g.mtn.x - x, g.mtn.y - y) < g.mtn.sr + r + 30) continue;
     q.push({ x, y, r });
   }
   for (const o of q) for (const [mx, my] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
@@ -1622,7 +1630,7 @@ function stepSim() {
       u.idleT = 0;
       const [vx, vy] = navDir(u.x, u.y, gx, gy, C.r + 2, dx / dist, dy / dist);
       const P = G.players[u.owner], runK = u.run && !P.tired ? 1.8 : 1; if (runK > 1) P.ran = true;
-      const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * runK * (u.form === "wedge" ? FORM_FX.wedge.speed : 1) * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : 1), dist - stopAt + 0.5);
+      const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * runK * (u.form === "wedge" ? FORM_FX.wedge.speed : 1) * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : hz === 4 ? 0.62 : 1), dist - stopAt + 0.5);
       u.x += vx * sp; u.y += vy * sp; u.moving = true; u.face = u.walk = Math.atan2(vy, vx); if (u.owner === G.human && !G.attract) gStats().walk += sp;
       if (G.island && !onLand(u.x, u.y, C.r + 2)) { const q = toLand(u.x, u.y, C.r + 2); u.x = q.x; u.y = q.y; }
     }
@@ -1651,6 +1659,7 @@ function stepSim() {
     if (!u.alive) continue; const hz = hazAt(u.x, u.y); if (!hz) continue;
     const inf = u.kind === "inf";
     if (u.owner === G.human && !G.attract && !(G.hzSeen & (1 << hz))) { G.hzSeen = (G.hzSeen || 0) | (1 << hz); pushFx({ k: "hazIn", hz, x: u.x, y: u.y, owner: u.owner }); }
+    if (hz === 4) continue; // deep snow only slows
     if (hz === 3) { if (inf) hazDeath(u, "fall"); else if (hazAt(u.px, u.py) !== 3) { u.x = u.px; u.y = u.py; } }
     else if (hz === 1) { if (inf && G.rng() < 0.07 * dt) hazDeath(u, "drown"); }
     else { u.hp -= (inf ? 10 : maxHp(u) * 0.03) * dt; if (u.hp <= 0) hazDeath(u, "sink"); }
@@ -2011,7 +2020,7 @@ function drawStanding() {
   for (const q of STAND) {
     const fx = (q.x - cam.x) * cam.z + W / 2, fy = (q.y - cam.y) * cam.z + H / 2, f = (TILT.p - (fy - H / 2) * s) / TILT.p, k = cam.z / f;
     const p0 = flat2scr(fx, fy), p1 = flat2scr(fx + Math.cos(q.a) * 10, fy + Math.sin(q.a) * 10);
-    if (p0.x < -60 || p0.x > SW + 60 || p0.y < -60 || p0.y > SH + 60) continue;
+    if (!q.big && (p0.x < -60 || p0.x > SW + 60 || p0.y < -60 || p0.y > SH + 60)) continue;
     if (q.draw) { const P = (wx, wy, h) => { const fx2 = (wx - cam.x) * cam.z + W / 2, fy2 = (wy - cam.y) * cam.z + H / 2, pp = flat2scr(fx2, fy2); return [pp.x, pp.y - h * k]; };
       c.save(); c.globalAlpha = q.al; q.draw(c, P, k); c.restore(); continue; }
     if (q.atl) { const A = q.atl.M, sc = A.wpp * A.k * k, w = A.S * sc, x0 = p0.x - A.fx * sc, y0 = p0.y - A.fy * sc - (q.hov || 0) * k;
@@ -2674,13 +2683,22 @@ const BB3 = {};
 const ROCK3 = { src: "sprites/rocks.png", S: 128, H: 133, N: 6, gx: 64, gy: 86.2, wpp: 0.0203125 };
 const ROCK3B = { src: "sprites/rocks2.png", S: 128, H: 133, N: 8, gx: 64, gy: 86.2, wpp: 0.0203125 }; // Rocks by AspectStudios (CC-BY)
 function rock3(o) { const h = Math.floor(Math.abs(o.x * 7 + o.y * 3)), R = (G.rockSet != null ? G.rockSet : (G.rockSet = G.rec ? (G.rec.seed >>> 3) % 2 : 0)) ? ROCK3B : ROCK3; /* one kind of stone per map (T) */ if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
-  const i = Math.floor(h / 7) % R.N, cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, i * R.S, 0, R.S, R.H, 0, 0, R.S, R.H);
+  const i = Math.floor(h / 7) % R.N, cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; const x = cv.getContext("2d"); if (G.mtn) x.filter = "saturate(0.2) brightness(1.05)"; x.drawImage(R.img, i * R.S, 0, R.S, R.H, 0, 0, R.S, R.H); x.filter = "none";
+  if (G.mtn) snowCap(x, R.S, R.H * 0.62, 0.9); // winter: grey stone with snow lying on top
   const f = R.wpp * o.r * 1.12; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; return cv; }
+// winter: a layer of snow over the top of a sprite, fading out by `depth` px down
+function snowCap(x, w, depth, a) {
+  const top = x.getImageData(0, 0, w, x.canvas.height), d = top.data, H = x.canvas.height; let y0 = H;
+  for (let y = 0; y < H && y0 === H; y++) for (let i = 0; i < w; i++) if (d[(y * w + i) * 4 + 3] > 40) { y0 = y; break; }
+  x.save(); x.globalCompositeOperation = "source-atop"; const gr = x.createLinearGradient(0, y0, 0, y0 + depth * 0.7);
+  gr.addColorStop(0, `rgba(244,248,255,${a})`); gr.addColorStop(0.5, `rgba(236,242,252,${a * 0.75})`); gr.addColorStop(1, "rgba(236,242,252,0)"); x.fillStyle = gr; x.fillRect(0, 0, w, H); x.restore();
+}
 // island plants: date palm, curly palm, coconut palm (evolveduk), fern grass (Digital screen official), green shrub (Somersby, CC-BY-NC), shrub (Ryan Chaney); two turns each
 const PLANT3 = { src: "sprites/plants2.png", S: 256, H: 219, N: 12, gx: 64, gy: 172.2, wpp: 0.0203125, cv: {} };
 function plant3(d) { const R = PLANT3; if (!R.img) { R.img = new Image(); R.img.onload = () => { R.ok = true; }; R.img.src = R.src; } if (!R.ok) return null;
-  const i = d.k * 2 + d.t, key = i + ":" + d.r.toFixed(1); if (R.cv[key]) return R.cv[key];
+  const i = d.k * 2 + d.t, key = i + ":" + d.r.toFixed(1) + (G.mtn ? "w" : ""); if (R.cv[key]) return R.cv[key];
   const cv = document.createElement("canvas"); cv.width = R.S; cv.height = R.H; cv.getContext("2d").drawImage(R.img, i * R.S, 0, R.S, R.H, 0, 0, R.S, R.H);
+  if (G.mtn) snowCap(cv.getContext("2d"), R.S, R.H * 0.7, 0.55);
   const f = R.wpp * d.r; cv.bw = R.S * f; cv.bh = R.H * f; cv.ay = R.gy / R.H; return (R.cv[key] = cv); }
 // baked Stone Age hut (Basic Stone Age House by CristianPiotto, CC-BY) in 3 turns; footprint radius 1 = the model's 10 x 10 plot
 const HUT3 = { src: "sprites/huts.png", S: 160, H: 183, N: 3, gx: 80, gy: 125.8, wpp: 0.0175, r: 27, cv: [] };
@@ -2720,6 +2738,72 @@ function base3(era) { const R = BASE3[era]; if (!R) return null;
     im.onerror = () => { R.img = null; R.wait = performance.now() + 3000; }; // try again in a moment
     im.src = R.src; }
   return R.cv && R.cv.complete && R.cv.naturalWidth ? R.cv : null; }
+// ---- winter mountain: a heightfield on rings x sectors, lit once with smoothed normals, then drawn through the 3D view's own
+// projection into a cached image. The picture only changes with zoom and the mountain's height on screen, so panning just moves it.
+function mtnMesh(M) {
+  const NR = 12, NS = 52, R0 = M.r * 1.22, Hp = M.r * 1.5, rr = mulberry32(G.S * 3 + 17), nz = makeNoise(G.S + 401), V = [];
+  const pk = [M.x + (rr() - 0.5) * R0 * 0.14, M.y + (rr() - 0.5) * R0 * 0.14];
+  const rid = (x, y) => { let s = 0, a = 0.5, f = 1 / 70; for (let o = 0; o < 4; o++) { s += (1 - Math.abs(nz(x * f, y * f) * 2 - 1)) * a; a *= 0.5; f *= 2.1; } return s / 0.9375; }; // ridged noise: sharp crests, soft gullies
+  const hAt = (x, y, f) => { if (f >= 1) return 0; const dp = Math.min(1, Math.hypot(x - pk[0], y - pk[1]) / R0);
+    const base = (1 - dp) ** 1.5, rg = rid(x, y); return Hp * base * (0.62 + 0.55 * rg * (0.35 + dp)) * Math.min(1, (1 - f) * 4); };
+  for (let j = 0; j <= NR; j++) { const row = []; for (let i = 0; i < NS; i++) {
+    const a = i / NS * TAU, f = j / NR, rad = R0 * f * (j && j < NR ? 1 + (rr() - 0.5) * 0.08 : 1), x = M.x + Math.cos(a) * rad, y = M.y + Math.sin(a) * rad;
+    row.push([x, y, Math.max(0, hAt(x, y, f))]); } V.push(row); }
+  // vertex normals from the faces around each vertex
+  const N = V.map(r => r.map(() => [0, 0, 0])), T = [];
+  for (let j = 0; j < NR; j++) for (let i = 0; i < NS; i++) { const i1 = (i + 1) % NS; if (j) T.push([[j, i], [j, i1], [j + 1, i]]); T.push([[j, i1], [j + 1, i1], [j + 1, i]]); }
+  const fn = t => { const [A, B, C] = t.map(([j, i]) => V[j][i]), ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2];
+    let x = uy * vz - uz * vy, y = uz * vx - ux * vz, z = ux * vy - uy * vx; if (z < 0) { x = -x; y = -y; z = -z; } const l = Math.hypot(x, y, z) || 1; return [x / l, y / l, z / l]; };
+  for (const t of T) { const n = fn(t); for (const [j, i] of t) { const q = N[j][i]; q[0] += n[0]; q[1] += n[1]; q[2] += n[2]; } }
+  const L = [-0.55, -0.62, 0.56], Ln = Math.hypot(...L), F = [];
+  for (const t of T) {
+    const fnn = fn(t); let nx = 0, ny = 0, nzz = 0; for (const [j, i] of t) { const q = N[j][i]; nx += q[0]; ny += q[1]; nzz += q[2]; } const nl = Math.hypot(nx, ny, nzz) || 1;
+    nx = nx / nl * 0.6 + fnn[0] * 0.4; ny = ny / nl * 0.6 + fnn[1] * 0.4; nzz = nzz / nl * 0.6 + fnn[2] * 0.4; // mostly smooth, a little crisp
+    const P3 = t.map(([j, i]) => V[j][i]), h = (P3[0][2] + P3[1][2] + P3[2][2]) / 3 / Hp, foot = clamp(1 - h * 9, 0, 1);
+    const lam = Math.max(0, (nx * L[0] + ny * L[1] + nzz * L[2]) / Ln), cold = 1 - lam;
+    const snow = clamp((h - 0.26) * 3 + (nzz - 0.6) * 2.8 + (rr() - 0.5) * 0.7, 0, 1), sl = 0.56 + lam * 0.6 + (rr() - 0.5) * 0.04;
+    let c = [(236 - cold * 52) * snow + 86 * (1 - snow), (242 - cold * 40) * snow + 82 * (1 - snow), (252 - cold * 10) * snow + 86 * (1 - snow)].map(v => v * sl);
+    c = c.map((v, k) => v * (1 - foot) + [178, 184, 196][k] * (0.66 + lam * 0.32) * foot); // the foot melts into the snowfield around it
+    F.push({ p: P3, y: (P3[0][1] + P3[1][1] + P3[2][1]) / 3 + h * 8, c: c.map(v => Math.min(255, v)) });
+  }
+  F.sort((p, q) => p.y - q.y); // far faces first
+  return { F, Hp, R0, key: "" };
+}
+function drawMtn(g, P, k, units) {
+  const M = G.mtn; if (!M) return; const m = M.mesh || (M.mesh = mtnMesh(M));
+  const an = P(M.x, M.y, 0), top = P(M.x, M.y, m.Hp), bl = P(M.x - m.R0, M.y, 0), br = P(M.x + m.R0, M.y, 0), bb = P(M.x, M.y + m.R0, 0);
+  if (bb[1] < -20 || top[1] > SH + 20 || br[0] < -20 || bl[0] > SW + 20) return;
+  const fk = Math.round(clamp(fogAt(M.x, M.y + m.R0 * 0.5), 0, 1) * 6), key = Math.round(cam.z * 60) + ":" + Math.round(an[1] / 18) + ":" + fk + ":" + DPR;
+  if (key !== m.key) { // redraw the cached picture
+    m.key = key; const dk = 1 - fk / 6 * 0.75, pts = m.F.map(f => f.p.map(v => P(v[0], v[1], v[2])));
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const t of pts) for (const [x, y] of t) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    const oc = m.oc || (m.oc = document.createElement("canvas")), pad = 2, w = Math.ceil((x1 - x0 + pad * 2) * DPR), h = Math.ceil((y1 - y0 + pad * 2) * DPR);
+    if (w > 4096 || h > 4096) { m.key = ""; m.off = null; } else {
+      oc.width = w; oc.height = h; const o = oc.getContext("2d"); o.setTransform(DPR, 0, 0, DPR, (pad - x0) * DPR, (pad - y0) * DPR); o.lineJoin = "round"; o.lineWidth = 0.7;
+      m.F.forEach((f, i) => { const [a, b, c] = pts[i]; o.fillStyle = o.strokeStyle = `rgb(${f.c[0] * dk | 0},${f.c[1] * dk | 0},${f.c[2] * dk | 0})`; o.beginPath(); o.moveTo(a[0], a[1]); o.lineTo(b[0], b[1]); o.lineTo(c[0], c[1]); o.closePath(); o.fill(); o.stroke(); });
+      m.off = [x0 - pad - an[0], y0 - pad - an[1], w / DPR, h / DPR]; }
+  }
+  // fade it when it would hide your own soldiers standing behind it
+  let hid = false; const ar = (x1, y1, x2, y2, x3, y3) => (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
+  for (const u of units) { if (u.owner !== G.human || u.y > M.y || Math.abs(u.x - M.x) > m.R0 * 1.3) continue; const [x, y] = P(u.x, u.y, 6);
+    const s1 = ar(top[0], top[1], bl[0], bl[1], x, y), s2 = ar(bl[0], bl[1], br[0], br[1], x, y), s3 = ar(br[0], br[1], top[0], top[1], x, y); if ((s1 >= 0 && s2 >= 0 && s3 >= 0) || (s1 <= 0 && s2 <= 0 && s3 <= 0)) { hid = true; break; } }
+  M.al = (M.al == null ? 1 : M.al) + ((hid ? 0.45 : 1) - (M.al == null ? 1 : M.al)) * 0.15;
+  if (m.off) { g.globalAlpha = M.al; g.drawImage(m.oc, an[0] + m.off[0], an[1] + m.off[1], m.off[2], m.off[3]); }
+}
+// winter: light snow drifting down over the screen (fewer flakes on lower graphics settings)
+const SNOW = [];
+function drawSnowfall(c, dt) {
+  const n = [40, 70, 110][clamp(qLevel(), 0, 2)] || 70; dt = Math.min(dt, 0.1);
+  while (SNOW.length < n) SNOW.push({ x: rnd() * SW, y: rnd() * SH, z: 0.4 + rnd() * 0.8, ph: rnd() * 7 });
+  SNOW.length = n; const t = performance.now() / 1000;
+  c.setTransform(DPR, 0, 0, DPR, 0, 0); c.fillStyle = "#f4f8ff";
+  for (const f of SNOW) {
+    f.y += (18 + 26 * f.z) * dt; f.x += (Math.sin(t * 0.7 + f.ph) * 10 - 6) * f.z * dt;
+    if (f.y > SH + 4) { f.y = -4; f.x = rnd() * SW; } if (f.x < -4) f.x = SW + 4; else if (f.x > SW + 4) f.x = -4;
+    c.globalAlpha = 0.25 + f.z * 0.45; const r = 0.6 + f.z * 1.3; c.fillRect(f.x - r / 2, f.y - r / 2, r, r);
+  }
+  c.globalAlpha = 1;
+}
 function boulder3(o) { const r = o.r, rr = mulberry32(Math.floor(o.x * 7 + o.y * 3)); return bbSprite(r * 2.3, r * 1.7, g => {
   const n = 9, pts = []; for (let i = 0; i <= n; i++) { const a = Math.PI + i / n * Math.PI, q = r * (0.85 + rr() * 0.25); pts.push([Math.cos(a) * q * 1.08, Math.sin(a) * q * 0.72 * (1 + (i > 2 && i < 7 ? 0.25 : 0))]); }
   const gr = g.createLinearGradient(-r, -r * 1.2, r, 0); gr.addColorStop(0, "#a8a490"); gr.addColorStop(0.5, "#6d6a5a"); gr.addColorStop(1, "#2e2d26"); g.fillStyle = gr;
@@ -3189,6 +3273,13 @@ function paintReef(g) {
     g.save(); g.translate(x, y); g.rotate(t + Math.PI / 2); if (mir) g.scale(-1, 1);
     g.drawImage(REEF.cv, 0, sp.p * REEF.H, w, REEF.H, -w / 2 * k, -(REEF.top + 4) * k, w * k, REEF.H * k); g.restore(); }
   g.restore();
+  frostCoast(g);
+}
+// winter: snow over the beach and the shore rocks, once both scans are painted (the repaints after loading would stack it)
+function frostCoast(g) {
+  const I = G.island; if (!G.mtn || !I || !COAST.ok || !REEF.ok || !groundCvs || groundCvs.frost) return; groundCvs.frost = 1;
+  const n = I.R.length, ring = (c, off) => { for (let i = 0; i <= n; i++) { const t = i / n * TAU, rr = I.R[i % n] + off, x = I.c + Math.cos(t) * rr, y = I.c + Math.sin(t) * rr; i ? c.lineTo(x, y) : c.moveTo(x, y); } c.closePath(); };
+  g.save(); for (const [a, b, al] of [[-70, 4, 0.32], [-56, -6, 0.3], [-44, -16, 0.25]]) { g.beginPath(); ring(g, b); ring(g, a); g.fillStyle = `rgba(236,242,250,${al})`; g.fill("evenodd"); } g.restore();
 }
 // the whole coast: one strip cut along the shore of the same reef scan (rocks, wet sand, surf), bent around the island.
 // Each eighth of the coast gets the strip once, mirrored in every other eighth, so it is seamless and as symmetric as the island
@@ -3221,8 +3312,10 @@ function buildWorld() {
   const g = groundCvs.getContext("2d");
   // heightmap + moisture at 1/5 world scale, hill-shaded
   const hs = 5, hw = Math.ceil(S / hs), n1 = makeNoise(G.S * 7 + 3), n2 = makeNoise(G.S + 99), n3 = makeNoise(555);
-  const hgt = new Float32Array(hw * hw);
-  for (let y = 0; y < hw; y++) for (let x = 0; x < hw; x++) hgt[y * hw + x] = fbm(n1, x * hs / 380, y * hs / 380, 5);
+  const hgt = new Float32Array(hw * hw), MT = G.mtn; // winter: rolling snowy hills rising to the mountain in the middle
+  for (let y = 0; y < hw; y++) for (let x = 0; x < hw; x++) { let v = fbm(n1, x * hs / 380, y * hs / 380, 5);
+    if (MT) { const dm = Math.hypot(x * hs - MT.x, y * hs - MT.y) / (MT.sr * 1.25); v = v * 1.5 + fbm(n2, x * hs / 900 + 7, y * hs / 900 + 3, 3) * 1.6 + (dm < 1 ? (1 - dm) ** 1.7 * 1.1 : 0); }
+    hgt[y * hw + x] = v; }
   const img = new ImageData(hw, hw), d = img.data, r = mulberry32(42), dryA = new Float32Array(hw * hw);
   const L = [-0.6, -0.7, 0.55];
   for (let y = 0; y < hw; y++) for (let x = 0; x < hw; x++) {
@@ -3235,12 +3328,19 @@ function buildWorld() {
     const det = fbm(n3, x * hs / 40, y * hs / 40, 2);
     // lush moss -> olive -> dry straw
     let R = 34 + dry * 62 + det * 14, Gc = 50 + dry * 44 + det * 16, B = 30 + dry * 22 + det * 8;
+    if (MT) { // snow, blue in the shade, with dark rock and frozen grass showing through on steep or windswept ground
+      const st = clamp((Math.hypot(hx, hy) - 0.55) * 1.4, 0, 0.85), bare = clamp((m - 0.62) * 4 + (det - 0.5) * 1.5, 0, 0.6) * (1 - st), sl = 0.62 + lam * 0.5 + (r() - 0.5) * 0.03, cold = 1 - lam;
+      let sr = 226 + det * 18 - cold * 34, sg = 232 + det * 16 - cold * 24, sb = 242 + det * 10 - cold * 4;
+      sr = sr * (1 - st) + 92 * st; sg = sg * (1 - st) + 90 * st; sb = sb * (1 - st) + 92 * st;
+      sr = sr * (1 - bare) + 110 * bare; sg = sg * (1 - bare) + 104 * bare; sb = sb * (1 - bare) + 84 * bare;
+      d[i * 4] = sr * sl; d[i * 4 + 1] = sg * sl; d[i * 4 + 2] = Math.min(255, sb * sl); d[i * 4 + 3] = 255; dryA[i] = 0; continue;
+    }
     const sh = 0.55 + lam * 0.75 + (r() - 0.5) * 0.05;
     d[i * 4] = R * sh; d[i * 4 + 1] = Gc * sh; d[i * 4 + 2] = B * sh; d[i * 4 + 3] = 255;
   }
   const tmp = document.createElement("canvas"); tmp.width = tmp.height = hw; tmp.getContext("2d").putImageData(img, 0, 0);
   g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high"; g.drawImage(tmp, 0, 0, w, w);
-  if (texOk("grass", "leaves")) { // the photo lawn on top, keeping the hills' light and shade from the heightmap
+  if (!MT && texOk("grass", "leaves")) { // the photo lawn on top, keeping the hills' light and shade from the heightmap
     g.save(); g.scale(GK, GK);
     g.fillStyle = texPat(g, "grass", 560); g.globalAlpha = 0.9; g.fillRect(0, 0, S, S);
     g.fillStyle = texPat(g, "grass", 430, 37); g.globalAlpha = 0.35; g.fillRect(0, 0, S, S); // a second, turned layer hides the tiling
@@ -3257,7 +3357,7 @@ function buildWorld() {
   for (const p of G.players) {
     const b = p.base, cx = S / 2, cy = S / 2, mx = (b.x + cx) / 2 + p.fwd.y * 160, my = (b.y + cy) / 2 - p.fwd.x * 160;
     g.lineCap = "round";
-    for (const [lw, col] of [[46, "rgba(70,56,36,.28)"], [26, "rgba(112,92,62,.32)"], [3, "rgba(40,30,18,.35)"]]) {
+    for (const [lw, col] of MT ? [[46, "rgba(150,160,178,.22)"], [26, "rgba(128,120,112,.26)"], [3, "rgba(70,62,54,.3)"]] : [[46, "rgba(70,56,36,.28)"], [26, "rgba(112,92,62,.32)"], [3, "rgba(40,30,18,.35)"]]) {
       g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); g.moveTo(b.x, b.y); g.quadraticCurveTo(mx, my, cx, cy); g.stroke();
     }
     g.strokeStyle = "rgba(40,30,18,.25)"; g.lineWidth = 2;
@@ -3266,13 +3366,13 @@ function buildWorld() {
   // cleared ground around bases
   for (const p of G.players) {
     const b = p.base, gr = g.createRadialGradient(b.x, b.y, 40, b.x, b.y, 150);
-    gr.addColorStop(0, "rgba(96,78,50,.55)"); gr.addColorStop(1, "rgba(96,78,50,0)");
+    const mud = MT ? "112,102,92" : "96,78,50"; gr.addColorStop(0, `rgba(${mud},.55)`); gr.addColorStop(1, `rgba(${mud},0)`);
     g.fillStyle = gr; g.beginPath(); g.arc(b.x, b.y, 150, 0, 7); g.fill();
   }
   // grass tufts and pebbles
   const tr = mulberry32(G.S);
-  for (let i = 0; i < S * S / 900; i++) {
-    const x = tr() * S, y = tr() * S, l = 3 + tr() * 4, dark = tr() < 0.5;
+  for (let i = 0; i < S * S / (MT ? 5400 : 900); i++) { // (in winter only a few dry stalks poke through the snow)
+    const x = tr() * S, y = tr() * S, l = 3 + tr() * 4, dark = MT || tr() < 0.5;
     g.strokeStyle = dark ? "rgba(16,26,12,.35)" : "rgba(150,160,96,.18)"; g.lineWidth = 1.1;
     g.beginPath(); for (let k = -1; k <= 1; k++) { g.moveTo(x + k * 1.5, y); g.lineTo(x + k * 2.6, y - l); } g.stroke();
   }
@@ -3287,7 +3387,8 @@ function buildWorld() {
     const x = tr() * S, y = tr() * S;
     if (G.rocks.some(o => Math.hypot(o.x - x, o.y - y) < o.r + 30)) continue;
     if (G.players.some(p => Math.hypot(p.base.x - x, p.base.y - y) < 190)) continue;
-    if (TILT.on) { if (!onLand(x, y, 20)) continue; const q = tr(), k = q < 0.4 ? 3 : q < 0.7 ? 5 : q < 0.9 ? 4 : (tr() * 3 | 0); G.deco.push({ x, y, k, t: tr() < 0.5 ? 0 : 1, r: k < 3 ? 26 + tr() * 10 : k === 4 ? 13 + tr() * 5 : 10 + tr() * 5 }); if (tr() < 0.5) { const a = tr() * 7; G.deco.push({ x: x + Math.cos(a) * 16, y: y + Math.sin(a) * 16, k: 3 + (tr() * 3 | 0), t: tr() < 0.5 ? 0 : 1, r: 8 + tr() * 4 }); } continue; }
+    if (MT && (tr() < 0.6 || Math.hypot(x - MT.x, y - MT.y) < MT.r + 40)) continue; // winter: fewer, hardier bushes
+    if (TILT.on) { if (!onLand(x, y, 20)) continue; const q = tr(), k = MT ? (q < 0.5 ? 4 : 5) : q < 0.4 ? 3 : q < 0.7 ? 5 : q < 0.9 ? 4 : (tr() * 3 | 0); G.deco.push({ x, y, k, t: tr() < 0.5 ? 0 : 1, r: k < 3 ? 26 + tr() * 10 : k === 4 ? 13 + tr() * 5 : 10 + tr() * 5 }); if (tr() < 0.5) { const a = tr() * 7; G.deco.push({ x: x + Math.cos(a) * 16, y: y + Math.sin(a) * 16, k: MT ? 4 + (tr() * 2 | 0) : 3 + (tr() * 3 | 0), t: tr() < 0.5 ? 0 : 1, r: 8 + tr() * 4 }); } continue; }
     const n = 3 + (tr() * 4 | 0), base = 5 + tr() * 6;
     const blobs = []; for (let k = 0; k < n; k++) blobs.push([x + (tr() - 0.5) * base * 2.2, y + (tr() - 0.5) * base * 2.2, base * (0.6 + tr() * 0.6)]);
     g.fillStyle = "rgba(0,0,0,.35)"; for (const [bx, by, br] of blobs) { g.beginPath(); g.arc(bx + br * 0.5, by + br * 0.6, br, 0, 7); g.fill(); }
@@ -3297,7 +3398,7 @@ function buildWorld() {
       g.fillStyle = gr; g.beginPath(); g.arc(bx, by, br, 0, 7); g.fill();
     }
   }
-  if (TILT.on && G.island) { // palms along the top of the beach, in loose clumps
+  if (TILT.on && G.island && !MT) { // palms along the top of the beach, in loose clumps
     for (let i = 0; i < S * S / 60000; i++) {
       const x = tr() * S, y = tr() * S;
       if (!onLand(x, y, 30) || onLand(x, y, 130)) continue;
@@ -3306,8 +3407,17 @@ function buildWorld() {
     }
   }
   G.deco.sort((a, b) => a.y - b.y);
+  if (MT) { // the mountain's deep-snow apron: fresh, brighter snow with a soft blue edge, so the slow ground reads at a glance
+    const gr = g.createRadialGradient(MT.x, MT.y, MT.r, MT.x, MT.y, MT.sr + 10);
+    gr.addColorStop(0, "rgba(246,250,255,.38)"); gr.addColorStop(0.85, "rgba(240,246,255,.22)"); gr.addColorStop(1, "rgba(240,246,255,0)");
+    g.fillStyle = gr; g.beginPath(); g.arc(MT.x, MT.y, MT.sr + 10, 0, TAU); g.fill();
+    g.strokeStyle = "rgba(110,135,175,.28)"; g.lineWidth = 5; g.setLineDash([22, 14]); g.beginPath(); g.arc(MT.x, MT.y, MT.sr, 0, TAU); g.stroke(); g.setLineDash([]);
+    const sc = g.createRadialGradient(MT.x, MT.y, MT.r * 0.6, MT.x, MT.y, MT.r * 1.3); // scree round the foot of the peak
+    sc.addColorStop(0, "rgba(70,68,70,.9)"); sc.addColorStop(0.75, "rgba(90,88,92,.45)"); sc.addColorStop(1, "rgba(90,88,92,0)");
+    g.fillStyle = sc; g.beginPath(); g.arc(MT.x, MT.y, MT.r * 1.3, 0, TAU); g.fill();
+  }
   // rock contact shadows (light from top-left)
-  for (const o of G.rocks) {
+  for (const o of G.rocks) { if (o.mtn) continue;
     const gr = g.createRadialGradient(o.x + o.r * 0.25, o.y + o.r * 0.3, o.r * 0.6, o.x + o.r * 0.25, o.y + o.r * 0.3, o.r * 1.6);
     gr.addColorStop(0, "rgba(0,0,0,.55)"); gr.addColorStop(1, "rgba(0,0,0,0)");
     g.fillStyle = gr; g.beginPath(); g.arc(o.x + o.r * 0.25, o.y + o.r * 0.3, o.r * 1.6, 0, 7); g.fill();
@@ -3315,7 +3425,7 @@ function buildWorld() {
   g.restore();
 
   // rock sprites
-  for (const o of G.rocks) {
+  for (const o of G.rocks) { if (o.mtn) continue;
     const size = o.r * 2.6, rr = mulberry32(Math.floor(o.x * 13 + o.y));
     o.spr = sprite(size, c => {
       const n = o.verts.length, pts = [];
@@ -3418,7 +3528,7 @@ function buildWorld() {
   }
   miniGround = document.createElement("canvas"); miniGround.width = miniGround.height = mini.width;
   const mg = miniGround.getContext("2d"); mg.fillStyle = SEA; mg.fillRect(0, 0, mini.width, mini.width); mg.drawImage(groundCvs, 0, 0, mini.width, mini.width);
-  for (const o of G.rocks) { mg.fillStyle = "#7a7766"; mg.beginPath(); mg.arc(o.x / S * mini.width, o.y / S * mini.width, o.r / S * mini.width, 0, 7); mg.fill(); }
+  for (const o of G.rocks) { mg.fillStyle = o.mtn ? "#8f939c" : "#7a7766"; mg.beginPath(); mg.arc(o.x / S * mini.width, o.y / S * mini.width, o.r / S * mini.width, 0, 7); mg.fill(); }
   parts = [];
 }
 
@@ -3518,7 +3628,7 @@ function consumeFx() {
       else toast(`${G.players[e.owner].team.name} reached the ${E.n}`, "bad");
       continue;
     }
-    if (e.k === "hazIn") { tip("haz" + e.hz, ["", "Water slows your soldiers, and some drown on the way across. They walk around lakes on their own unless you send them in.", "Quicksand slows soldiers to a crawl and sinks them slowly. Get them out fast.", "Rifts are deadly: a soldier who gets pushed in falls. Keep crowds away from the edge."][e.hz], "bad"); continue; }
+    if (e.k === "hazIn") { tip("haz" + e.hz, ["", "Water slows your soldiers, and some drown on the way across. They walk around lakes on their own unless you send them in.", "Quicksand slows soldiers to a crawl and sinks them slowly. Get them out fast.", "Rifts are deadly: a soldier who gets pushed in falls. Keep crowds away from the edge.", "Deep snow on the mountain slopes slows your soldiers down. Nobody can climb or shoot over the peak."][e.hz], "bad"); continue; }
     if (e.k === "haz") {
       if (seen && e.how === "drown") addPart({ k: "ring", x: e.x, y: e.y, life: 0.7, max: 0.7, s: 26, c: "170,220,230" });
       if (e.owner === me && !G.attract && performance.now() - (consumeFx.hzT || 0) > 6000) { consumeFx.hzT = performance.now(); toast({ drown: "Soldiers are drowning in the lake", fall: "A soldier fell into a rift", sink: "Soldiers are sinking in quicksand" }[e.how], "bad"); }
@@ -3854,6 +3964,7 @@ function render(dtReal) {
 
   // rocks
   for (const o of G.rocks) {
+    if (o.mtn) { if (c !== ctx) STAND.push({ x: o.x, y: o.y, al: 1, big: true, draw: (g, P, k) => drawMtn(g, P, k, showU) }); continue; } // the winter mountain: a real 3D mesh, drawn in turn with everything standing
     if (!inView(o.x, o.y)) continue;
     if (c !== ctx && !o.bb3m) o.bb3m = rock3(o);
     const s = o.spr.size; if (!(c !== ctx && o.bb3m)) c.drawImage(o.spr, o.x - s / 2, o.y - s / 2, s, s); // the 3D model brings its own shadow
@@ -4192,6 +4303,7 @@ function render(dtReal) {
 
   // screen space: vignette, selection box
   if (c !== ctx) { warpFlat(); c = renderCtx = ctx; drawStanding(); }
+  if (G.mtn) drawSnowfall(c, dtReal || 0.016);
   c.setTransform(1, 0, 0, 1, 0, 0);
   c.drawImage(vignetteCvs, 0, 0, cvs.width, cvs.height);
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -6319,7 +6431,7 @@ function lbRpc(fn, body) {
 }
 // anonymous game log, on by default (Settings can switch it off) (see sql/supabase-update-5-game-log.sql and -7-battle-stats.sql)
 // No names, ids, device ids or addresses: game settings and what happened in the battle. Sent once, after it ends.
-const GAME_VER = "v126";
+const GAME_VER = "v127";
 function logGame(g, stats, rec) {
   if (!g || !LB.url) return;
   const use = {}; for (const [k, v] of Object.entries(g.use || {}).slice(0, 24)) if (/^[a-z]{1,12}$/.test(k)) use[k] = Math.min(9999, v | 0);
