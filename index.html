@@ -833,7 +833,7 @@ function rejoin(u, p) {
 }
 function applyCmd(c) {
   const p = G.players[c.p]; if (p.out) return;
-  if (c.t === "strike") { if (p.strikes > 0) { p.strikes--; strikeAt(c.p, c.x, c.y); if (c.p === G.human && !G.attract) gStats().strikes++; } return; }
+  if (c.t === "strike") { if (p.strikes > 0) { p.strikes--; strikeAt(c.p, c.x, c.y); if (c.p === G.human && !G.attract) gStats().strikes++; if (G.dx) G.dx.str[c.p]++; } return; }
   if (c.t === "squad") { for (const id of c.ids) { const u = G.unitById.get(id); if (u && u.owner === c.p && u.kind === "inf") u.squad = c.sq; } return; } // online: squads change in the sim, in step
   if (c.t === "rally") { p.rally = c.clear ? null : { x: clamp(c.x, 10, G.S - 10), y: clamp(c.y, 10, G.S - 10) }; return; }
   const us = c.ids.map(id => G.unitById.get(id)).filter(u => u && u.alive && u.owner === c.p && !(u.jam > G.time));
@@ -970,6 +970,7 @@ function hazAt(x, y) {
 }
 function hazDeath(u, how) {
   killQuiet(u); pushFx({ k: "haz", how, x: u.x, y: u.y, owner: u.owner });
+  if (G.dx) { const m = G.dx.haz[u.owner]; if (m) m[how] = (m[how] || 0) + 1; }
 }
 // direction to walk from (x,y) toward goal: straight if clear, else follow the flow field around rocks
 function navDir(x, y, gx, gy, rad, dvx, dvy) {
@@ -1033,14 +1034,14 @@ function damage(t, amount, by) {
   if (!t.alive || t.free) return;
   if (t.kind === "truck") amount *= 0.35; // armoured
   if (t.escort) { const g = G.gens[t.owner]; if (g && g.alive && d2(t, g) < GUARD_R * GUARD_R) amount *= 0.85; } // guards in the ring hold firm
-  if (!G.attract) { const st = gStats(), a = Math.min(amount, Math.max(0, t.hp)); if (by === G.human) st.dealt += a; else if (t.owner === G.human) st.taken += a; }
+  if (!G.attract) { const st = gStats(), a = Math.min(amount, Math.max(0, t.hp)); if (by === G.human) st.dealt += a; else if (t.owner === G.human) st.taken += a; if (G.dx && G.dx.c == null && (by === G.human || t.owner === G.human)) G.dx.c = Math.round(G.time); }
   t.hp -= amount; t.flash = 0.12; t.hitAt = G.time;
   if (t.owner === G.human && by !== G.human && !G.attract) alertHit(t.x, t.y);
   if (t.hp > 0) return;
   if (t.isBase) { eliminate(t.owner, by); return; }
   t.alive = false; t.respawn = (t.kind === "gen" ? CFG.genRespawn : CFG.respawn) * G.players[t.owner].respawnMult; t.seen = t.tgt = null;
   pushFx({ k: "death", x: t.x, y: t.y, a: t.face, owner: t.owner, c: G.players[t.owner].team.c, big: t.kind === "gen" });
-  G.players[t.owner].losses++;
+  G.players[t.owner].losses++; dxDeath(t, by);
   const killer = G.players[by];
   killer.kills++; addPoints(killer, 1);
   if (t.kind === "gen" && !G.attract) { const st = gStats(); if (by === G.human) st.genKills++; if (t.owner === G.human) st.genLost++; }
@@ -1057,6 +1058,47 @@ function damage(t, amount, by) {
 function gStats() { return G.st || (G.st = { dealt: 0, taken: 0, genKills: 0, genLost: 0, bases: 0, crates: 0, misWon: 0, misLost: 0, strikes: 0, low: Infinity, walk: 0, spawned: 0, taps: 0, ups: [] }); }
 // every tap or click during a battle counts
 document.addEventListener("pointerdown", () => { if (G && !G.attract && !G.over && !G.tutorial) gStats().taps++; }, true);
+// gameplay diagnostics for the anonymous game log (sql/supabase-update-7-battle-stats.sql): only plain counters and a
+// sample every 30 s of game time; nothing here touches the sim or its random numbers. Single player battles only.
+const DX_EVERY = 30;
+function dxNew(n) { return { k: Array.from({ length: n }, () => ({})), haz: Array.from({ length: n }, () => ({})), crate: Array.from({ length: n }, () => ({})), str: new Array(n).fill(0), mis: [], ev: [], tl: [], c: null, nextT: 0, pause: 0, pauseT: 0, pausedS: 0, spd: {}, revT: 0 }; }
+function dxEv(...a) { const D = G.dx; if (D && D.ev.length < 300) D.ev.push([Math.round(G.time), ...a]); }
+// who killed what: [victim owner][killer owner + kind] counts, e.g. k[0]["1gen"] = your generals killed by army 1
+function dxDeath(t, by) { const D = G.dx; if (!D) return; const m = D.k[t.owner], key = by + (t.kind || "inf"); m[key] = (m[key] || 0) + 1; if (t.kind === "gen") dxEv("g", t.owner, by); }
+function dxSample() {
+  const D = G.dx; if (!D || G.time < D.nextT) return; D.nextT += DX_EVERY;
+  const row = [Math.round(G.time)], al = G.players.map(() => 0), idle = G.players.map(() => 0);
+  for (const u of G.units) if (u.alive && !u.free && al[u.owner] != null) { al[u.owner]++; if (u.idleT > 1.5) idle[u.owner]++; }
+  for (const p of G.players) row.push([al[p.id], p.level + 1, Math.round(100 * Math.max(0, p.base.hp) / CFG.base.hp), p.kills, p.losses, idle[p.id], G.gens[p.id] && G.gens[p.id].alive ? 1 : 0]);
+  D.tl.push(row); if (D.tl.length > 240) D.tl.splice(0, 2); // a 2 hour cap, thinned from the front
+}
+// everything for one battle in one small object, built once when it ends
+function dxPack(outcome) {
+  const D = G.dx; if (!D) return null;
+  D.nextT = 0; dxSample(); // one last sample at the end
+  const st = gStats(), O = UI.opts || {}, n = Object.values(UI.use || {}).reduce((a, b) => a + b, 0);
+  let games = 0, tut = 0; try { games = loadLog().length; tut = localStorage.getItem("hr-tut") === "1" ? 1 : 0; } catch (e) {}
+  const band = games < 1 ? "0" : games < 3 ? "1-2" : games < 10 ? "3-9" : games < 30 ? "10-29" : "30+"; // a band, not a count, so rows can't be chained
+  return {
+    v: 1, outcome,
+    set: { map: G.map, players: G.players.length, up: G.upEvery, crates: !!G.cratesOn, missions: !!G.missionsOn, misTypes: G.misTypes || [], split: O.split || 3, advice: !!O.advice },
+    dev: { touch: matchMedia("(pointer:coarse)").matches ? 1 : 0, small: Math.min(SW, SH) < 600 ? 1 : 0, q: Q.level, qDrop: Q.dropped ? 1 : 0, ms: Math.round(Q.ema) },
+    who: { games: band, tut },
+    me: { dealt: Math.round(st.dealt), taken: Math.round(st.taken), genKills: st.genKills, genLost: st.genLost, bases: st.bases, crates: st.crates, misWon: st.misWon, misLost: st.misLost, strikes: st.strikes, low: st.low === Infinity ? null : st.low, walk: Math.round(st.walk / 15.5), spawned: st.spawned, taps: st.taps, ups: st.ups.slice(0, 40), orders: n, contact: D.c, out: G.players[G.human].out ? Math.round(G.players[G.human].base.diedAt || G.time) : null, pauses: D.pause, pausedS: Math.round(D.pausedS), spd: D.spd, slowmo: !!G.slowmo, spect: G.spect ? Math.round(G.time - G.spectAt) : null, review: D.revT ? Math.round(D.revT) : null, doom: G.over && G.over.doom != null ? { w: G.over.doom, by: G.over.by } : null },
+    armies: G.players.map(p => ({ ai: p.ai ? 1 : 0, lvl: p.level + 1, pts: p.points, kills: p.kills, losses: p.losses, out: p.out ? Math.round(p.base.diedAt || 0) : null, gen: p.genDeaths || 0, str: D.str[p.id], hp: Math.round(100 * Math.max(0, p.base.hp) / CFG.base.hp) })),
+    kills: D.k, haz: D.haz, crate: D.crate, mis: D.mis, ev: D.ev, tl: D.tl
+  };
+}
+// the orders list replays the whole battle with this build; gzipped in the background, dropped if it is too big
+async function dxReplay(rec) {
+  try {
+    if (!rec || !window.CompressionStream || rec.cmds.length > 20000) return null;
+    const s = new Blob([JSON.stringify(rec)]).stream().pipeThrough(new CompressionStream("gzip"));
+    const b = new Uint8Array(await new Response(s).arrayBuffer()); if (b.length > 60000) return null;
+    let bin = ""; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return btoa(bin);
+  } catch (e) { return null; }
+}
 function addPoints(p, n) {
   // opponents who fall two or more ages behind the leader learn faster, so nobody is left in the stone age
   if (p.ai && n > 0) { let top = 0; for (const q of G.players) if (!q.out && q.level > top) top = q.level; if (top - p.level >= 2) n = Math.round(n * 1.5); }
@@ -1089,7 +1131,7 @@ function eliminate(owner, by) {
   if (by === G.human && owner !== G.human && !G.attract) gStats().bases++;
   if (owner === G.human) toast("Your base has fallen", "bad");
   else toast(p.team.name + " base destroyed" + (by === G.human ? " by you" : ""), by === G.human ? "gold" : "");
-  p.outT = G.tick;
+  p.outT = G.tick; dxEv("b", owner, by == null ? -1 : by);
   const alive = G.players.filter(q => !q.out), over = alive.length <= 1 || (G.mp && mpHumansIn() <= 1) ? { win: !G.players[G.human].out } : null;
   if (over) { if (G.doomFire) G.pendOver = over; else G.over = over; } // during the finale, wait for it to finish
   else if (owner === G.human && !G.attract && !G.replay && !G.tutorial) startSpectate();
@@ -1166,7 +1208,7 @@ function killQuiet(u) { // no points for anyone
   u.alive = false; u.respawn = u.temp ? Infinity : (u.kind === "gen" ? CFG.genRespawn : CFG.respawn) * G.players[u.owner].respawnMult; u.seen = u.tgt = null;
   pushFx({ k: "death", x: u.x, y: u.y, a: u.face, owner: u.owner, c: G.players[u.owner].team.c, big: u.kind === "gen" });
 }
-function onLevel(p, before) { if (p.id === G.human && !G.attract) gStats().ups.push(Math.round(G.time));
+function onLevel(p, before) { if (p.id === G.human && !G.attract) gStats().ups.push(Math.round(G.time)); dxEv("l", p.id, p.level + 1);
   if (eraOfLevel(p.level) !== eraOfLevel(before) && G.eraFix == null && URL_ERA == null) pushFx({ k: "era", owner: p.id, e: eraOfLevel(p.level), x: p.base.x, y: p.base.y });
   if (p.level >= DOOM.lvl) doomArm(p);
 }
@@ -1228,7 +1270,7 @@ function stepDoom(dt) {
     d.t -= dt;
     if (d.t <= 0) {
       const T = doomTarget(p), tb = T.base;
-      G.doomFire = { owner: p.id, tgt: T.id, big: T.id === G.human || G.players.filter(q => !q.out).length <= 2, w: d.w, t: DOOM.show, t0: G.time, x: gen.x, y: gen.y, tx: tb.x, ty: tb.y }; pushFx({ k: "doomFire", owner: p.id, w: d.w }); return; }
+      G.doomFire = { owner: p.id, tgt: T.id, big: T.id === G.human || G.players.filter(q => !q.out).length <= 2, w: d.w, t: DOOM.show, t0: G.time, x: gen.x, y: gen.y, tx: tb.x, ty: tb.y }; pushFx({ k: "doomFire", owner: p.id, w: d.w }); dxEv("d", p.id, T.id, d.w); return; }
   }
 }
 // ---- easter egg: a message in a bottle washes up on the shore now and then; one of your soldiers can pick it up ----
@@ -1294,6 +1336,7 @@ function openCrate(c, u) {
   const group = G.units.filter(v => v.alive && v.owner === u.owner && d2(v, u) < 160 * 160);
   const kinds = c.mission ? ["upgrade", "mercs", "medkit"] : [c.kind];
   if (me && !G.attract) gStats().crates++;
+  if (G.dx && G.dx.crate[u.owner]) { const m = G.dx.crate[u.owner], ck = c.mission ? "mission" : c.kind; m[ck] = (m[ck] || 0) + 1; }
   pushFx({ k: "open", x: c.x, y: c.y, owner: u.owner, bad: CRATE.bad.includes(c.kind) && !c.mission, mission: c.mission });
   if (!G.attract) {
     if (c.mission) { if (me) toast("Supplies secured! Army upgraded, mercenaries and healers on the way", "gold"); }
@@ -1424,6 +1467,7 @@ function endMission(win, why, by) {
   const m = G.mis; if (!m) return;
   if (by != null && by !== G.human && G.players[by] && !G.players[by].out) { const pos0 = m.unit && m.unit.alive ? m.unit : m; missionReward(pos0.x, pos0.y, by); }
   if (!G.attract) gStats()[win ? "misWon" : "misLost"]++;
+  if (G.dx && G.dx.mis.length < 60) G.dx.mis.push([Math.round(G.time), m.type, win ? 1 : 0, by == null ? -1 : by, why || ""]);
   G.mis = null; G.misLast = m.type; G.misT = rr(MIS.gap[0], MIS.gap[1]);
   if (m.crate) { const i = G.crates.indexOf(m.crate); if (i >= 0) G.crates.splice(i, 1); }
   const pos = m.unit && m.unit.alive ? m.unit : m;
@@ -1517,6 +1561,7 @@ function stepSim() {
   const dt = CFG.dt;
   if (G.replay) { const R = G.replay, cs = R.rec.cmds; while (R.i < cs.length && cs[R.i][0] <= G.tick) G.cmds.push(cs[R.i++][1]); }
   G.tick++; G.time += dt;
+  if (G.dx) dxSample();
   // apply orders
   for (const c of G.cmds) applyCmd(c);
   G.cmds.length = 0;
@@ -5115,6 +5160,7 @@ function start() {
   G.cratesOn = !!O.crates; G.missionsOn = !!O.missions && O.misTypes.length > 0 && (EXP() || loadLog().length >= 3); G.misTypes = O.misTypes.slice();
   G.players[G.human].autoSpread = !EXP(); G.players[G.human].autoEngage = !EXP(); UI.use = {};
   { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = O.split || 3; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
+  G.dx = URL_ERA == null ? dxNew(G.players.length) : null; // diagnostics for the game log (test links stay out)
   G.rec = { seed, players: O.players, up: O.up, diff: O.diff, army: O.army, me: O.me, map: O.map, crates: G.cratesOn, missions: G.missionsOn, misTypes: G.misTypes.slice(), spread: !EXP(), engage: !EXP(), split: O.split || 3, cmds: [] };
   document.body.classList.remove("replay"); $("replayBar").hidden = true;
   UI.forms = {}; UI.combo = null; UI.rallyMode = false; closeTray(); disarmKill();
@@ -5135,6 +5181,7 @@ function togglePause() {
   if (G && G.mp) { if (!G.over) $("pause").hidden = !$("pause").hidden; return; } // online: the menu opens, the battle goes on
   if (!G || G.over || G.attract) return;
   UI.paused = !UI.paused; $("pause").hidden = !UI.paused;
+  if (G.dx) { if (UI.paused) { G.dx.pause++; G.dx.pauseT = performance.now(); } else if (G.dx.pauseT) { G.dx.pausedS += (performance.now() - G.dx.pauseT) / 1000; G.dx.pauseT = 0; } }
   last = performance.now();
 }
 // ======================================================================
@@ -6270,11 +6317,28 @@ function lbRpc(fn, body) {
   if (!LB.url) return Promise.resolve();
   return fetch(LB.url + "/rest/v1/rpc/" + fn, { method: "POST", keepalive: true, headers: { ...lbHead(), "Content-Type": "application/json" }, body: JSON.stringify(body || {}) }).catch(() => {});
 }
-// anonymous game log, on by default (Settings can switch it off) (see sql/supabase-update-5-game-log.sql)
-function logGame(g) {
+// anonymous game log, on by default (Settings can switch it off) (see sql/supabase-update-5-game-log.sql and -7-battle-stats.sql)
+// No names, ids, device ids or addresses: game settings and what happened in the battle. Sent once, after it ends.
+const GAME_VER = "v126";
+function logGame(g, stats, rec) {
   if (!g || !LB.url) return;
   const use = {}; for (const [k, v] of Object.entries(g.use || {}).slice(0, 24)) if (/^[a-z]{1,12}$/.test(k)) use[k] = Math.min(9999, v | 0);
-  lbRpc("log_game", { diff: g.diff, enemies: g.enemies, army: g.army, my_army: g.me, win: !!g.win, secs: Math.min(36000, g.secs | 0), kills: g.kills | 0, losses: g.losses | 0, level: g.level | 0, expert: !!g.expert, use });
+  const row = { diff: g.diff, enemies: g.enemies, army: g.army, my_army: g.me, win: !!g.win, secs: Math.min(36000, g.secs | 0), kills: g.kills | 0, losses: g.losses | 0, level: g.level | 0, expert: !!g.expert, use };
+  if (!stats) { lbRpc("log_game", row); return; }
+  // the detailed version waits for an idle moment, then falls back to the plain one if the database doesn't have it yet
+  const send = async () => {
+    const replay = await dxReplay(rec);
+    const r = await lbRpc("log_battle", { d: { ...row, outcome: stats.outcome, ver: GAME_VER, stats, replay } });
+    if (!r || r.status === 404) lbRpc("log_game", row);
+  };
+  (window.requestIdleCallback || (f => setTimeout(f, 1500)))(() => send(), { timeout: 4000 });
+}
+// leaving a battle half way (Back to menu or Restart) is worth knowing too: which settings make people give up
+function logQuit(outcome) {
+  if (!G || !G.dx || G.over || G.attract || G.tutorial || G.replay || G.mp || G.time < 15) return;
+  let asked = null; try { asked = localStorage.getItem("hr-tel"); } catch (e) {} if (asked === "0") return;
+  const me = G.players[G.human], stats = dxPack(outcome); G.dx = null; // once per battle
+  logGame({ diff: G.diff, enemies: G.players.length - 1, army: G.enemyArmy, me: G.myArmy, win: false, secs: Math.floor(G.time), kills: me.kills, losses: me.losses, level: me.level + 1, expert: EXP() ? 1 : 0, use: UI.use || {} }, stats, G.rec);
 }
 function setTel(on) {
   UI.opts.tel = on ? 1 : 0; try { localStorage.setItem("hr-tel", on ? "1" : "0"); } catch (e) {}
@@ -6470,7 +6534,7 @@ function enterReview() {
   document.body.classList.add("ended"); $("endPanel").hidden = false;
 }
 function leaveReview() { cvs.style.transform = ""; document.body.classList.remove("ended"); $("endPanel").hidden = true; }
-$("epScore").addEventListener("click", () => { SND.ui(); if (G && G.mp) { mpLeave(); return; } leaveReview(); showOver(); });
+$("epScore").addEventListener("click", () => { SND.ui(); if (G && G.mp) { mpLeave(); return; } if (G && G.dx && G.reviewAt) G.dx.revT = (performance.now() - G.reviewAt) / 1000; leaveReview(); showOver(); });
 function showOver() {
   leaveReview();
   if (G.tutorial) { toMenu(); return; }
@@ -6497,7 +6561,7 @@ function showOver() {
   startNameEntry({ score, diff: G.diff, enemies, army: G.enemyArmy, my_army: G.myArmy, secs, kills: me.kills, win });
   if (G.slowmo) { $("nameEntry").hidden = true; navLock(false); }
   { const entry = log[log.length - 1]; let asked = null; try { asked = localStorage.getItem("hr-tel"); } catch (e) {}
-    if (asked !== "0") logGame(entry);
+    if (asked !== "0") logGame(entry, dxPack(win ? "win" : "loss"), G.rec); G.dx = null;
     $("telAsk").hidden = true; $("telAsk").dataset.n = String(log.length - 1); }
   { let offered = false; try { offered = localStorage.getItem("hr-expoffer") === "1"; } catch (e) {}
     const show = false && win && G.diff >= 2 && !offered; $("expOffer").hidden = !show;
@@ -6555,7 +6619,7 @@ UI.speed = 1;
 const SPEEDS = [0.25, 0.5, 1, 2, 4, 8];
 function setSpeed(v) {
   if (G && G.mp) v = 1;
-  UI.speed = v; const b = $("spdBtn");
+  UI.speed = v; if (G && G.dx && !G.over && v !== 1) G.dx.spd[v] = 1; const b = $("spdBtn");
   b.textContent = v === 0.25 ? "¼×" : v === 0.5 ? "½×" : v + "×";
   b.classList.toggle("fast", v > 1); b.classList.toggle("slow", v < 1);
   $("spdPop").querySelectorAll("button").forEach(x => x.classList.toggle("on", +x.dataset.s === v));
@@ -6598,8 +6662,8 @@ $("aboutBack").addEventListener("click", () => { $("about").hidden = true; $(abo
 $("tutBtn").addEventListener("click", () => TUT.start());
 $("howTut").addEventListener("click", () => TUT.start());
 const toMenu = () => { document.body.classList.remove("ended"); TUT.stop(); reportKills(); loadCounters(); $("pause").hidden = true; $("over").hidden = true; $("menu").hidden = false; showBest(); startAttract(); };
-$("quitBtn").addEventListener("click", () => { if (G && G.mp) mpLeave(); else toMenu(); });
-$("restartBtn").addEventListener("click", () => { SND.ui(); reportKills(); $("pause").hidden = true; document.body.classList.remove("ended", "replay"); deploy(); }); // same settings, a fresh map
+$("quitBtn").addEventListener("click", () => { if (G && G.mp) mpLeave(); else { logQuit("quit"); toMenu(); } });
+$("restartBtn").addEventListener("click", () => { SND.ui(); reportKills(); logQuit("restart"); $("pause").hidden = true; document.body.classList.remove("ended", "replay"); deploy(); }); // same settings, a fresh map
 $("menuBtn").addEventListener("click", toMenu);
 document.addEventListener("visibilitychange", () => { if (document.hidden && G && !G.mp && !UI.paused && !G.over) togglePause(); });
 
