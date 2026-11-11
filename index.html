@@ -577,7 +577,7 @@ let G = null;
 // Online play: only when the game hub opens this page with #hub=... (see ONLINE near the end). Without it nothing below changes.
 // Only hubs on this list may be used: the hub's script runs on this page, so a link to any other server is ignored.
 // Local hubs (http://localhost, http://127.0.0.1) are for development.
-const HUB_ORIGINS = []; // TODO: the production and staging hub origins, e.g. "https://game-hub.<account>.workers.dev"
+const HUB_ORIGINS = ["https://game-hub.rocketframe.workers.dev", "https://game-hub-staging.rocketframe.workers.dev"]; // production, staging
 const HUB_LAUNCH = (() => { try {
   const h = new URLSearchParams(location.hash.slice(1)).get("hub"); if (!h) return null;
   const u = new URL(h), local = u.protocol === "http:" && (u.hostname === "localhost" || u.hostname === "127.0.0.1");
