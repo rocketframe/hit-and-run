@@ -36,6 +36,11 @@ button:focus-visible{outline:2px solid var(--khaki);outline-offset:2px}
 #score{top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);display:flex;flex-direction:column;gap:4px;max-width:calc(100vw - 170px)}
 .row{display:grid;grid-template-columns:10px auto 1fr;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:3px 8px 3px 6px;font-size:13px;line-height:1.1;min-width:0}
 .row.out{opacity:.4;text-decoration:line-through}
+.row.dip{grid-template-columns:10px auto 1fr auto}.row.ally{border-color:#7fc98a}.row.asks{border-color:var(--khaki);animation:dipP 1s ease-in-out infinite}@keyframes dipP{50%{box-shadow:0 0 0 3px rgba(205,180,106,.4)}}
+.dp{display:flex;gap:4px;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:.04em;white-space:nowrap}.dp i{font-style:normal;color:var(--ink-dim)}.dp .al{color:#9fe07a;font-weight:700}
+.dp button{background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:3px;padding:3px 6px;font:700 10px/1 system-ui,sans-serif;letter-spacing:.04em;color:var(--ink);touch-action:manipulation}.dp button.y{background:var(--khaki);border-color:var(--khaki);color:#1a1608}.dp button.x{border-color:var(--danger);color:var(--danger)}.dp button.arm{background:var(--danger);border-color:var(--danger);color:#1a0d0b}
+@media (max-width:760px){.row.dip{grid-template-columns:10px auto 1fr}.row.dip .dp{grid-column:2/-1;margin-top:2px}}
+#score .mis.peace{border-color:#7fc98a}#score .mis.peace b,#score .mis.peace em{color:#9fe07a}
 #score .mis{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(20,18,12,.78);border:1px solid #c9a14a;border-radius:4px;padding:4px 7px;font-size:11px;letter-spacing:.03em;color:#efe6c8;max-width:250px}#score .mis b{color:#f3c85a;text-transform:uppercase;font-weight:900}#score .mis em{font-style:normal;color:#f3c85a;font-weight:800;margin-left:auto}
 .sw{width:10px;height:10px;border-radius:2px}
 .row .nm{font-weight:700;letter-spacing:.04em;text-transform:uppercase}
@@ -350,6 +355,9 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
       <p class="fine" id="mapLine"></p></div>
     <div class="opt"><label>Enemy armies (AI)</label>
       <div class="seg" id="optPlayers"><button data-v="2" class="on">1</button><button data-v="3">2</button><button data-v="4">3</button></div></div>
+    <div class="opt"><label>Alliances</label>
+      <div class="seg" id="optAllies"><button data-v="0" class="on">Off</button><button data-v="1">On</button></div>
+      <p class="fine" id="alliesLine"></p></div>
     <div class="opt"><label>Game pace (army upgrades)</label>
       <div class="seg" id="optUp"><button data-v="25">Quick</button><button data-v="50">Medium</button><button data-v="100" class="on">Slow</button></div></div>
     <div class="opt"><label>Army sizes (soldiers, 1 to 100)</label>
@@ -469,6 +477,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <section><h3>The ⋯ button</h3><p>The squad row has what you need most: squads, GEN, ARMY, ALL. Tap <b>⋯</b> for everything else: SELECT, IDLE, formations, SPREAD, REGROUP, GUARD, RALLY, the order modes and KILL. Tap <b>▾</b> to fold them away again.</p></section>
     <section><h3>Picking exactly who you want</h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, healing, rapid fire, sharpshooters with longer range, scouts that lift the fog, spies that show every army and base through the fog for 20 seconds, camouflage, or a strike you aim with <b>STRIKE</b>: a boulder, a cannonball or an airstrike, depending on your era). Some are bad (plague that spreads between soldiers standing close, a trap, lost orders, a signal fire that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
+    <section><h3>Alliances</h3><p>Turn on Alliances under Custom game (with 2 or 3 enemy armies). In battle, tap 🤝 next to an army on the scoreboard to ask for an alliance; when someone asks you, answer Yes or No right there. Allies can't hurt each other and share what they see. Either side can break it at any time, no warning needed (tap Break twice). The AI teams up against whoever is pulling ahead and drops an ally who gets too strong. An army that reaches the Endgame (level 9) stands alone: its alliances break at once and nobody can ally with it until it drops back, while everyone else's alliances stay. There are no shared wins: when every army left is allied, it's a truce until someone breaks a deal or reaches the Endgame. Crates and missions keep levelling everyone up meanwhile, so it never lasts.</p></section>
     <section><h3>Missions</h3><p>Every couple of minutes new orders bring a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Supplies:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply cart (a sled, wagon, truck or drone, by era) cannot be destroyed. It rolls toward the base of whoever has the most soldiers around it, so fight for it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it. The first army to hold it for 30 seconds in total wins.</li><li><b>Rescue:</b> find the missing scout in the marked area, then walk him home. Like the cart, he follows whoever controls the area around him.</li><li><b>Assassinate:</b> an enemy captain with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> destroy the supply camp near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
     <section><h3>Squads</h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation. <b>Box</b> is plain. <b>Line</b> holds the line: 15% better aim while standing still. <b>Wedge</b> is the charge: 10% faster, and 25% harder hits for the first 3 seconds of a fight. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> puts the selected soldiers in a ring round the general. They follow him and take 15% less damage while they stay close.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
     <section><h3>Spread out</h3><p>Tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, strikes and traps. The general always gets right of way through his own soldiers.</p></section>
@@ -845,6 +854,7 @@ function rejoin(u, p) {
 }
 function applyCmd(c) {
   const p = G.players[c.p]; if (p.out) return;
+  if (c.t === "ally") { dipCmd(c.p, c.tb, c.a); return; }
   if (c.t === "strike") { if (p.strikes > 0) { p.strikes--; strikeAt(c.p, c.x, c.y); if (c.p === G.human && !G.attract) gStats().strikes++; if (G.dx) G.dx.str[c.p]++; } return; }
   if (c.t === "squad") { for (const id of c.ids) { const u = G.unitById.get(id); if (u && u.owner === c.p && u.kind === "inf") u.squad = c.sq; } return; } // online: squads change in the sim, in step
   if (c.t === "rally") { p.rally = c.clear ? null : { x: clamp(c.x, 10, G.S - 10), y: clamp(c.y, 10, G.S - 10) }; return; }
@@ -869,7 +879,7 @@ function applyCmd(c) {
     return;
   }
   if (c.t === "focus") { // hold on an enemy: everyone picked goes after that one target first
-    const t = c.tb != null ? G.players[c.tb] && G.players[c.tb].base : G.unitById.get(c.tid); if (!t || !t.alive || t.owner === c.p) return;
+    const t = c.tb != null ? G.players[c.tb] && G.players[c.tb].base : G.unitById.get(c.tid); if (!t || !t.alive || !hostile(c.p, t.owner)) return;
     for (const u of us) { u.focus = t; u.mode = "attack"; u.escort = false; u.path = null; u.run = false; }
     return;
   }
@@ -1020,9 +1030,9 @@ function clearShot(x1, y1, x2, y2) {
 
 function scan(u) {
   const C = CFG[u.kind], R = rangeOf(u), s2 = Math.max(C.sight, R) ** 2, r2 = R * R;
-  let seen = null, sd = 1e18, tgt = null, td = 1e18, gen = null; const g2 = Math.max(C.sight + 120, R) ** 2;
+  let seen = null, sd = 1e18, tgt = null, td = 1e18, gen = null; const g2 = Math.max(C.sight + 120, R) ** 2, F = G.dip ? G.dip.al[u.owner] : null;
   for (const v of G.units) {
-    if (!v.alive || v.owner === u.owner || v.free) continue;
+    if (!v.alive || v.owner === u.owner || v.free || (F && F[v.owner])) continue;
     const dx = v.x - u.x, dy = v.y - u.y, dd = dx * dx + dy * dy;
     if (v.camo > G.time && dd > 45 * 45) continue; // camouflaged: only spotted up close
     if (v.kind === "gen" && dd < g2 && (!gen || dd < d2(u, gen))) gen = v; // a general stands out further than a soldier (he shoots from 235)
@@ -1033,7 +1043,7 @@ function scan(u) {
   }
   if (gen) seen = gen; // an enemy general in sight is the one to close in on (shots still go to whoever is in range meanwhile)
   for (const p of G.players) {
-    const b = p.base; if (p.id === u.owner || !b.alive) continue;
+    const b = p.base; if (p.id === u.owner || !b.alive || (F && F[p.id])) continue;
     const dd = d2(u, b), rr = R + b.r, ss = C.sight + b.r;
     if (!seen && dd < ss * ss) seen = b;
     if (!tgt && dd < rr * rr) tgt = b;
@@ -1093,7 +1103,7 @@ function dxPack(outcome) {
   const band = games < 1 ? "0" : games < 3 ? "1-2" : games < 10 ? "3-9" : games < 30 ? "10-29" : "30+"; // a band, not a count, so rows can't be chained
   return {
     v: 1, outcome,
-    set: { map: G.map, players: G.players.length, up: G.upEvery, crates: !!G.cratesOn, missions: !!G.missionsOn, misTypes: G.misTypes || [], dis: !!G.disOn, disTypes: G.disOn ? G.disTypes || [] : [], split: O.split || 3, advice: !!O.advice },
+    set: { map: G.map, allies: G.dip ? 1 : 0, players: G.players.length, up: G.upEvery, crates: !!G.cratesOn, missions: !!G.missionsOn, misTypes: G.misTypes || [], dis: !!G.disOn, disTypes: G.disOn ? G.disTypes || [] : [], split: O.split || 3, advice: !!O.advice },
     dev: { touch: matchMedia("(pointer:coarse)").matches ? 1 : 0, small: Math.min(SW, SH) < 600 ? 1 : 0, q: Q.level, qDrop: Q.dropped ? 1 : 0, ms: Math.round(Q.ema) },
     who: { games: band, tut },
     me: { dealt: Math.round(st.dealt), taken: Math.round(st.taken), genKills: st.genKills, genLost: st.genLost, bases: st.bases, crates: st.crates, misWon: st.misWon, misLost: st.misLost, strikes: st.strikes, low: st.low === Infinity ? null : st.low, walk: Math.round(st.walk / 15.5), spawned: st.spawned, taps: st.taps, ups: st.ups.slice(0, 40), orders: n, contact: D.c, out: G.players[G.human].out ? Math.round(G.players[G.human].base.diedAt || G.time) : null, pauses: D.pause, pausedS: Math.round(D.pausedS), spd: D.spd, slowmo: !!G.slowmo, spect: G.spect ? Math.round(G.time - G.spectAt) : null, review: D.revT ? Math.round(D.revT) : null, doom: G.over && G.over.doom != null ? { w: G.over.doom, by: G.over.by } : null },
@@ -1159,6 +1169,116 @@ function startSpectate() {
   $("replayBar").hidden = false; $("replayBar").querySelector("b").textContent = "👁 WATCHING"; $("rpPause").hidden = true;
   toast("You're out. Watch who wins, or tap Exit", "bad");
 }
+// ======================================================================
+// ALLIANCES (Custom game option, 3 or more armies). During the battle any army can ask another for an alliance;
+// the other side accepts or says no, and either side can break it at any moment, without warning.
+// Allies don't shoot each other and share what they see. There are no shared wins (T): when every army left is
+// allied the battle goes on, crates and missions keep levelling armies up, and whoever reaches the Endgame stands alone.
+// Everything goes through orders ({t:"ally", tb, a}) and the sim, so it replays and runs in online lockstep.
+// ======================================================================
+const DIP = { ask: 20, again: 30, broke: 60, lull: 60, think: 3, stay: 45 }; // seconds: an offer stands, after a no, after a break, an all-allied lull before AIs get restless, AI rethinks, AI keeps a fresh deal at least
+const allied = (a, b) => !!(G.dip && a !== b && G.dip.al[a][b]);
+const hostile = (a, b) => a !== b && !(G.dip && G.dip.al[a][b]);
+const mineOrAlly = o => o === G.human || allied(G.human, o);
+function dipInit() {
+  const n = G.players.length, grid = v => Array.from({ length: n }, () => new Array(n).fill(v));
+  G.dip = { al: grid(0), req: grid(0), cool: grid(0), since: grid(0), peace: null };
+  G.players.forEach((p, i) => { p.dipT = 4 + i * 0.7; });
+}
+const dipNm = id => G.players[id].team.name;
+const dipLoner = id => G.players[id].level >= DOOM.lvl; // an army carrying the Endgame stands alone (T): no allies until it drops back
+// an army reaches the Endgame: every alliance it has breaks and its offers lapse; the others' alliances stay as they are
+function dipLone(p) {
+  const D = G.dip, me = G.human, a = p.id, wasMine = !!D.al[a][me]; let n = 0;
+  for (let b = 0; b < G.players.length; b++) { D.req[a][b] = D.req[b][a] = 0; if (D.al[a][b]) { D.al[a][b] = D.al[b][a] = 0; D.cool[a][b] = D.cool[b][a] = G.time + DIP.broke; n++; dipEv("x", a, b); } }
+  if (!n) return;
+  dipSay(a === me ? "You reached the Endgame: an army that carries it can't have allies, so your alliances are over" : dipNm(a) + " reached the Endgame and stands alone: " + (wasMine ? "your alliance with them is over" : "its alliances are over"), a === me ? "gold" : "bad");
+}
+function dipSay(msg, cls) { if (!G.attract && !G.tutorial) toast(msg, cls); }
+function dipCmd(a, b, act) {
+  const D = G.dip, T = G.time; if (!D || a === b || !G.players[a] || !G.players[b] || G.players[a].out || G.players[b].out) return;
+  if (act !== "break" && act !== "no" && (dipLoner(a) || dipLoner(b))) return; // nobody allies with the Endgame
+  const me = G.human;
+  if (act === "ask") {
+    if (D.al[a][b] || D.req[a][b] > T || D.cool[a][b] > T) return;
+    if (D.req[b][a] > T) { dipJoin(a, b); return; } // they had already asked us: that's a yes
+    D.req[a][b] = T + DIP.ask;
+    if (b === me) { dipSay(dipNm(a) + " asks you for an alliance. Answer on the scoreboard", "gold"); SND.ui(); }
+    else if (a === me) dipSay("You asked " + dipNm(b) + " for an alliance");
+  } else if (act === "yes") {
+    if (!D.al[a][b] && D.req[b][a] > T) dipJoin(a, b);
+  } else if (act === "no") {
+    if (!(D.req[b][a] > T)) return;
+    D.req[b][a] = 0; D.cool[b][a] = T + DIP.again;
+    if (b === me) dipSay(dipNm(a) + " turned down your alliance", "bad");
+  } else if (act === "break") {
+    if (!D.al[a][b]) return;
+    D.al[a][b] = D.al[b][a] = 0; D.cool[a][b] = D.cool[b][a] = T + DIP.broke;
+    if (b === me) dipSay(dipNm(a) + " broke the alliance! They're your enemy again", "bad");
+    else if (a === me) dipSay("You broke the alliance with " + dipNm(b), "bad");
+    else dipSay(dipNm(a) + " broke their alliance with " + dipNm(b));
+    dipEv("x", a, b);
+  }
+}
+function dipJoin(a, b) {
+  const D = G.dip, T = G.time, me = G.human;
+  D.al[a][b] = D.al[b][a] = 1; D.req[a][b] = D.req[b][a] = 0; D.since[a][b] = D.since[b][a] = T;
+  for (const x of [a, b]) if (G.players[x].ai) D.req[x].fill(0); // an AI with a new ally takes back its other offers
+  for (const u of G.units) { // everyone stops shooting at the new friends at once
+    if (!u.alive || (u.owner !== a && u.owner !== b)) continue; const o = u.owner === a ? b : a;
+    if (u.tgt && u.tgt.owner === o) u.tgt = null; if (u.seen && u.seen.owner === o) u.seen = null; if (u.focus && u.focus.owner === o) u.focus = null;
+  }
+  if (a === me || b === me) dipSay("Allied with " + dipNm(a === me ? b : a) + ": you share what you see and can't hurt each other", "gold");
+  else dipSay(dipNm(a) + " and " + dipNm(b) + " are now allies");
+  dipEv("a", a, b);
+}
+function dipEv(k, a, b) { if (G.dx) dxEv(k === "a" ? "al" : "ax", a, b); }
+// strength for the AI's sums: its soldiers (weighted by level, like power()) plus what's left of its base
+function dipStr(q) { let s = 8 * Math.max(0, q.base.hp) / (q.base.max || CFG.base.hp); for (const u of G.units) if (u.alive && u.owner === q.id && !u.free) { const f = (1 + CFG.upStep * q.level) * q.mult; s += (u.kind === "gen" ? 5 : 1) * f * f; } return s; }
+function stepDip(dt) {
+  const D = G.dip, T = G.time, me = G.human, n = G.players.length;
+  for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) if (D.req[a][b] && D.req[a][b] <= T) { // an offer ran out
+    D.req[a][b] = 0; D.cool[a][b] = T + DIP.again;
+    if (a === me && !G.players[b].out) dipSay(dipNm(b) + " didn't answer your alliance offer");
+  }
+  const alive = G.players.filter(q => !q.out), all = alive.length > 1 && alive.every(q => alive.every(r => q === r || D.al[q.id][r.id]));
+  // everyone left is allied: no shared win, only a truce until someone breaks a deal or reaches the Endgame
+  if (all && D.peace == null) { D.peace = T; dipSay("Every army left is allied. Only one can win: grab crates and missions, reach the Endgame and you stand alone", "gold"); dxEv("p", ...alive.map(q => q.id)); }
+  else if (!all && D.peace != null) { D.peace = null; if (alive.length > 1) dipSay("The truce is over. Fight on!", "bad"); }
+  for (const p of G.players) if (p.ai && !p.out) { p.dipT -= dt; if (p.dipT <= 0) { p.dipT = DIP.think; aiDiplo(p); } }
+}
+// how the AI plays it: gang up on whoever is ahead, keep away from the leader, switch sides when an ally runs away
+// with the game, and betray at the peace table when it feels strong enough to take the island alone
+function aiDiplo(p) {
+  if (dipLoner(p.id)) return;
+  const D = G.dip, T = G.time, me = p.id, alive = G.players.filter(q => !q.out), others = alive.filter(q => q.id !== me), S = [];
+  for (const q of alive) S[q.id] = dipStr(q);
+  let lead = alive[0]; for (const q of alive) if (S[q.id] > S[lead.id]) lead = q;
+  let second = 0; for (const q of alive) if (q !== lead) second = Math.max(second, S[q.id]);
+  const nAllies = others.filter(q => D.al[me][q.id]).length;
+  // an AI never makes the deal that would leave nobody to fight: peace has to be won, not handed out
+  const closes = q => alive.every(x => alive.every(y => x === y || D.al[x.id][y.id] || (x.id === me && y.id === q.id) || (x.id === q.id && y.id === me)));
+  // answer offers (after a moment's thought): one ally at a time, never the runaway leader, and not when it's ahead itself
+  for (const q of others) if (D.req[q.id][me] > T && D.req[q.id][me] - T < DIP.ask - 2 && !D.al[me][q.id]) {
+    let yes = !nAllies && !closes(q) && !(lead.id === me && S[me] > second * 1.3) && !(lead.id === q.id && S[q.id] > S[me] * 1.3);
+    if (!p.smart && yes) yes = G.rng() < 0.6;
+    dipCmd(me, q.id, yes ? "yes" : "no");
+  }
+  // betrayal
+  for (const q of others) if (D.al[me][q.id]) {
+    let brk = false;
+    if (D.peace != null) brk = (p.smart && S[me] > S[q.id] * 1.4 && G.rng() < 0.5) || (T - D.peace > DIP.lull && G.rng() < 0.15); // strong enough to go it alone, or tired of waiting
+    else if (T - D.since[me][q.id] > DIP.stay && lead.id === q.id && S[q.id] > S[me] * 1.5 && others.some(r => r !== q && !D.al[me][r.id])) brk = G.rng() < 0.4;
+    if (brk) { dipCmd(me, q.id, "break"); return; }
+  }
+  // offers: someone else is pulling ahead, so team up with the strongest of the rest
+  // (not in the opening minutes, and only when the leader is clearly ahead on points too, not just after one bad skirmish)
+  if (T > 90 && !nAllies && lead.id !== me && S[lead.id] > S[me] * 1.3 && lead.points - p.points >= G.upEvery * 0.5) {
+    const c = others.filter(q => q.id !== lead.id && !dipLoner(q.id) && !closes(q) && !(D.req[me][q.id] > T) && !(D.cool[me][q.id] > T)).sort((x, y) => S[y.id] - S[x.id] || x.id - y.id)[0];
+    if (c && (p.smart || G.rng() < 0.3)) dipCmd(me, c.id, "ask");
+  }
+}
+
 function genAura(owner) {
   const gnl = G.gens[owner];
   return gnl && gnl.alive ? gnl : null;
@@ -1222,7 +1342,7 @@ function killQuiet(u) { // no points for anyone
 }
 function onLevel(p, before) { if (p.id === G.human && !G.attract) gStats().ups.push(Math.round(G.time)); dxEv("l", p.id, p.level + 1);
   if (eraOfLevel(p.level) !== eraOfLevel(before) && G.eraFix == null && URL_ERA == null) pushFx({ k: "era", owner: p.id, e: eraOfLevel(p.level), x: p.base.x, y: p.base.y });
-  if (p.level >= DOOM.lvl) doomArm(p);
+  if (p.level >= DOOM.lvl) { doomArm(p); if (G.dip) dipLone(p); }
 }
 function levelUp(p) {
   const before = p.level; p.level++;
@@ -1268,7 +1388,7 @@ function stepDoom(dt) {
     const d = p.doom; if (!d) continue;
     if (p.out) { p.doom = null; continue; }
     const gen = G.gens[p.id], up = gen && gen.alive;
-    if (d.on && (d.tgt == null || G.players[d.tgt].out)) { const t = doomPick(p); d.tgt = t ? t.id : null; } // lock on to one army for the whole charge
+    if (d.on && (d.tgt == null || G.players[d.tgt].out || !hostile(p.id, d.tgt))) { const t = doomPick(p); d.tgt = t ? t.id : null; } // lock on to one army for the whole charge
     if (!d.on) { if (up) { d.on = true; d.t = DOOM.charge; { const t = doomPick(p); d.tgt = t ? t.id : null; } pushFx({ k: "doomGo", owner: p.id, fresh: G.time - d.armT < 0.5 }); } continue; }
     if (!up) { // the general fell or was withdrawn: the charge fizzles
       d.on = false; d.t = DOOM.charge; d.tgt = null;
@@ -1281,7 +1401,8 @@ function stepDoom(dt) {
     }
     d.t -= dt;
     if (d.t <= 0) {
-      const T = doomTarget(p), tb = T.base;
+      const T = doomTarget(p); if (!T) { d.t = 0; continue; } // nobody left to aim at (all allies): it waits, fully charged
+      const tb = T.base;
       G.doomFire = { owner: p.id, tgt: T.id, big: T.id === G.human || G.players.filter(q => !q.out).length <= 2, w: d.w, t: DOOM.show, t0: G.time, x: gen.x, y: gen.y, tx: tb.x, ty: tb.y }; pushFx({ k: "doomFire", owner: p.id, w: d.w }); dxEv("d", p.id, T.id, d.w); return; }
   }
 }
@@ -1378,7 +1499,7 @@ function openCrate(c, u) {
     else if (k === "jam") for (const v of group) v.jam = T + 10;
     else if (k === "flare") for (const v of group) v.flare = T + 20;
     else if (k === "desert") {
-      let foe = null, fd = 1e18; for (const q of G.players) if (q.id !== u.owner && !q.out) { const dd = d2(q.base, c); if (dd < fd) { fd = dd; foe = q; } }
+      let foe = null, fd = 1e18; for (const q of G.players) if (hostile(u.owner, q.id) && !q.out) { const dd = d2(q.base, c); if (dd < fd) { fd = dd; foe = q; } }
       const inf = group.filter(v => v.kind === "inf" && !v.temp), n = Math.min(inf.length, 3);
       if (foe) for (let i = 0; i < n; i++) { const v = inf[i]; v.alive = false; v.respawn = CFG.respawn * p.respawnMult; v.seen = v.tgt = null; pushFx({ k: "recall", x: v.x, y: v.y, owner: v.owner, c: p.team.c }); tempUnit(foe.id, v.x, v.y, 0, 60).turncoat = true; }
       if (me && foe) toast(n + (n === 1 ? " soldier ran off to " : " soldiers ran off to ") + foe.team.name, "bad");
@@ -1405,8 +1526,8 @@ function stepCrates(dt) {
     G.strikes.splice(i, 1);
     pushFx({ k: "strike", x: s.x, y: s.y, owner: s.owner, era: eraOf(s.owner) });
     const lv = 1 + CFG.upStep * G.players[s.owner].level;
-    for (const v of G.units) if (v.alive && v.owner !== s.owner) { const d = Math.sqrt(d2(v, s)); if (d < 120) damage(v, 75 * lv * (1 - d / 240), s.owner); }
-    for (const q of G.players) if (q.id !== s.owner && q.base.alive && d2(q.base, s) < 160 * 160) damage(q.base, 700 * lv, s.owner);
+    for (const v of G.units) if (v.alive && hostile(s.owner, v.owner)) { const d = Math.sqrt(d2(v, s)); if (d < 120) damage(v, 75 * lv * (1 - d / 240), s.owner); }
+    for (const q of G.players) if (hostile(s.owner, q.id) && q.base.alive && d2(q.base, s) < 160 * 160) damage(q.base, 700 * lv, s.owner);
   }
   // timed effects: mercenaries leave, plague drains and spreads to anyone standing close
   for (const u of G.units) {
@@ -1443,13 +1564,14 @@ function misUnit(owner, kind, x, y) {
 }
 function missionsInit() { G.mis = null; G.misT = rr(MIS.first[0], MIS.first[1]); G.misLast = null; G.misN = 0; }
 function startMission() {
-  const me = G.players[G.human], foes = G.players.filter(q => q.id !== G.human && !q.out);
-  if (me.out || !foes.length) return;
-  const pool = (G.misTypes && G.misTypes.length ? G.misTypes : Object.keys(MIS.types));
+  const me = G.players[G.human], foes = G.players.filter(q => hostile(G.human, q.id) && !q.out);
+  if (me.out) return;
+  let pool = (G.misTypes && G.misTypes.length ? G.misTypes : Object.keys(MIS.types));
+  if (!foes.length) { pool = pool.filter(k => k !== "kill" && k !== "sabo"); if (!pool.length) return; } // everyone left is your ally: only the races, no enemy officer or camp
   const keys = pool.length > 1 ? pool.filter(k => k !== G.misLast) : pool;
   const type = keys[Math.floor(G.rng() * keys.length)], T = MIS.types[type];
   const spot = crateSpot(true) || { x: G.S / 2, y: G.S / 2 };
-  const m = { type, t0: G.time, until: G.time + T.life, x: spot.x, y: spot.y, prog: 0, foe: foes[Math.floor(G.rng() * foes.length)].id, id: ++G.misN };
+  const m = { type, t0: G.time, until: G.time + T.life, x: spot.x, y: spot.y, prog: 0, foe: foes.length ? foes[Math.floor(G.rng() * foes.length)].id : null, id: ++G.misN };
   if (type === "cargo") { const c = { id: G.crateId++, x: spot.x, y: spot.y, kind: "upgrade", mission: true, land: G.time + CRATE.land, until: m.until }; G.crates.push(c); m.crate = c; pushFx({ k: "crate", x: c.x, y: c.y, mission: true }); }
   else if (type === "escort") { m.unit = misUnit(G.human, "truck", spot.x, spot.y); m.unit.free = true; }
   else if (type === "hold") { m.r = 110; m.progBy = {}; }
@@ -1799,7 +1921,7 @@ function stepSim() {
   // apply orders
   for (const c of G.cmds) applyCmd(c);
   G.cmds.length = 0;
-  stepCrates(dt); stepMissions(dt); stepDoom(dt); stepBottle(dt); stepDisasters(dt);
+  stepCrates(dt); stepMissions(dt); stepDoom(dt); stepBottle(dt); stepDisasters(dt); if (G.dip) stepDip(dt);
   // AI thinking
   for (const p of G.players) if (p.ai && !p.out) { p.aiState.t -= dt; if (p.aiState.t <= 0) { p.aiState.t = p.thinkEvery; (p.think || aiThink)(p); } }
 
@@ -1926,8 +2048,8 @@ function stepSim() {
     const b = p.base; if (!b.alive) continue;
     b.flash = Math.max(0, b.flash - dt);
     b.cd -= dt; if (b.cd > 0) continue;
-    let best = null, bd = (CFG.base.range + b.r) ** 2;
-    for (const v of G.units) { if (!v.alive || v.owner === p.id) continue; const dd = d2(v, b); if (dd < bd) { bd = dd; best = v; } }
+    let best = null, bd = (CFG.base.range + b.r) ** 2; const F = G.dip ? G.dip.al[p.id] : null;
+    for (const v of G.units) { if (!v.alive || v.owner === p.id || (F && F[v.owner])) continue; const dd = d2(v, b); if (dd < bd) { bd = dd; best = v; } }
     if (best) {
       b.cd = CFG.base.cd;
       b.aim = Math.atan2(best.y - b.y, best.x - b.x);
@@ -1938,7 +2060,7 @@ function stepSim() {
     }
   }
   // arrows in flight land now
-  if (G.pend.length) { for (const q of G.pend) { q.t -= dt; if (q.t <= 0 && q.tgt.alive) damage(q.tgt, q.dmg, q.by); } G.pend = G.pend.filter(q => q.t > 0); }
+  if (G.pend.length) { for (const q of G.pend) { q.t -= dt; if (q.t <= 0 && q.tgt.alive && hostile(q.by, q.tgt.owner)) damage(q.tgt, q.dmg, q.by); } G.pend = G.pend.filter(q => q.t > 0); }
   // fx decay
   for (const t of G.tracers) t.t -= dt;
   G.tracers = G.tracers.filter(t => t.t > 0);
@@ -1997,15 +2119,15 @@ function aiThink(p) {
   // the mystery weapon overrides everything: hunt a charging general, or guard our own
   if (!G.doomFire) {
     const all = G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive && !u.mis);
-    let hunt = null; for (const q of G.players) if (q.id !== me && !q.out && q.doom && q.doom.on && G.gens[q.id].alive && (!hunt || d2(G.gens[q.id], b) < d2(hunt, b))) hunt = G.gens[q.id];
+    let hunt = null; for (const q of G.players) if (hostile(me, q.id) && !q.out && q.doom && q.doom.on && G.gens[q.id].alive && (!hunt || d2(G.gens[q.id], b) < d2(hunt, b))) hunt = G.gens[q.id];
     if (hunt && !(p.doom && p.doom.on)) { order(all, hunt.x, hunt.y, "attack"); if (gen.alive && gen.hp > maxHp(gen) * 0.5) order([gen], hunt.x, hunt.y, "attack"); return; }
     if (p.doom && p.doom.on && gen.alive) { const hx = b.x + p.fwd.x * 40, hy = b.y + p.fwd.y * 40; order([gen], hx, hy, "move"); order(all, (gen.x + hx) / 2, (gen.y + hy) / 2, "attack"); return; }
   }
 
   // target the strongest player (most points), nudged by distance: everyone hunts the leader
-  if (!A.retarget || G.time > A.retarget || !A.target || !A.target.alive) {
+  if (!A.retarget || G.time > A.retarget || !A.target || !A.target.alive || !hostile(me, A.target.owner)) {
     let best = null, bs = -1e18;
-    for (const q of G.players) if (q.id !== me && !q.out) {
+    for (const q of G.players) if (hostile(me, q.id) && !q.out) {
       const sc = q.points * (p.smart ? 1 : 0) - Math.sqrt(d2(b, q.base)) / 25;
       if (sc > bs) { bs = sc; best = q.base; }
     }
@@ -2017,7 +2139,7 @@ function aiThink(p) {
   // what my army can see
   const known = new Set();
   for (const u of G.units) if (u.alive && u.owner === me && u.seen && !u.seen.isBase) known.add(u.seen);
-  for (const v of G.units) if (v.alive && v.owner !== me && (d2(v, b) < 520 * 520 || v.flare > G.time || p.recon > G.time)) known.add(v);
+  for (const v of G.units) if (v.alive && hostile(me, v.owner) && (d2(v, b) < 520 * 520 || v.flare > G.time || p.recon > G.time)) known.add(v);
   const knownArr = [...known];
   // estimated defence of an enemy base: its turret plus every unit of theirs not seen out in the field
   // (scouts report roughly what is at home: units out in the field don't count)
@@ -2075,7 +2197,7 @@ function aiThink(p) {
       const local = knownArr.filter(v => d2(v, mid) < 420 * 420);
       let enemyPow = power(local), nearBase = null;
       // fighting near an enemy base also means facing its turret and fresh respawns
-      for (const q of G.players) if (q.id !== me && !q.out && d2(q.base, mid) < 700 * 700) { enemyPow = Math.max(enemyPow, basePow(q)); nearBase = q.base; }
+      for (const q of G.players) if (hostile(me, q.id) && !q.out && d2(q.base, mid) < 700 * 700) { enemyPow = Math.max(enemyPow, basePow(q)); nearBase = q.base; }
       if (army.length < A.threshold * 0.35) { A.state = "retreat"; }
       else if (p.smart && local.length && enemyPow > myPow * 1.2) {
         // outgunned: units already in the fight and far from home would only feed points,
@@ -2145,6 +2267,10 @@ function updateFog() {
   const me = G.players[G.human];
   if (me.base.alive) stamp(me.base.x, me.base.y, CFG.base.sight);
   for (const u of G.units) if (u.alive && u.owner === G.human && !(u.kind === "pilot" && !u.found)) stamp(u.x, u.y, CFG[u.kind].sight);
+  if (G.dip) for (const q of G.players) if (allied(G.human, q.id)) { // allies share what they see
+    if (q.base.alive) stamp(q.base.x, q.base.y, CFG.base.sight);
+    for (const u of G.units) if (u.alive && u.owner === q.id && !u.free && CFG[u.kind].sight) stamp(u.x, u.y, CFG[u.kind].sight);
+  }
   if (G.over || G.attract || G.replay || G.spect || G.reveal > G.time) visible.fill(1), explored.fill(1), soft.fill(255);
 }
 const isVis = (x, y) => { const cx = Math.floor(x / CFG.fogCell), cy = Math.floor(y / CFG.fogCell); if (cx < 0 || cy < 0 || cx >= G.gw || cy >= G.gh) return false; return G.visible[cy * G.gw + cx] === 1; };
@@ -3874,7 +4000,7 @@ function consumeFx() {
     if (e.k === "toss") { if (!G.attract) { for (let i = 0; i < 5; i++) { const q = i / 4; addPart({ k: "debris", x: e.x, y: e.y, vx: (e.x2 - e.x) * (0.9 + q * 0.3), vy: (e.y2 - e.y) * (0.9 + q * 0.3), life: 1, max: 1, s: i ? 1.6 : 3, c: i ? "#6b5a44" : e.c, rot: rnd() * 7 }); } } continue; }
     const pub = e.k === "crate" || e.k === "strike" || e.k === "strikeIn" || e.k === "open" || e.k === "trap" || e.k === "lost";
     if (!seen && !pub) continue;
-    if (e.k === "strikeIn" && e.owner !== me && !G.attract) toast("Incoming strike!", "bad");
+    if (e.k === "strikeIn" && hostile(me, e.owner) && !G.attract) toast("Incoming strike!", "bad");
     if (e.k === "crate" && !e.mission) tip("crate", "A supply crate is coming down. Walk any soldier over it to open it. Most help, some bite.");
     if (e.k === "open" && e.owner === me && e.bad && EXP()) tip("bad", "Bad crates hurt bunched-up soldiers. Tap ALL then SPREAD to open up the ranks.", "bad");
     if (e.k === "mission" && !G.attract) tip("mission", "Missions pay off big: an army upgrade, mercenaries and healers. Follow the gold beacon.");
@@ -4263,7 +4389,7 @@ function render(dtReal) {
   // bases
   for (const p of G.players) {
     const b = p.base; if (!b.alive) { if ((seeAll || isExp(b.x, b.y) || G.intel > G.time) && inView(b.x, b.y)) drawRuin(c, p, now); continue; }
-    const ghost = !(p.id === G.human || vis(b.x, b.y) || G.intel > G.time);
+    const ghost = !(mineOrAlly(p.id) || vis(b.x, b.y) || G.intel > G.time);
     if (ghost && !(seeAll || isExp(b.x, b.y) || G.intel > G.time)) continue;
     if (!inView(b.x, b.y)) continue;
     const E = SPR.team[p.id].eras[eraOf(p.id)], BB = c !== ctx && E.bb, S = BB ? BB.ground : E.fort;
@@ -4322,7 +4448,7 @@ function render(dtReal) {
   for (const u of G.units) {
     if (!u.alive || !inView(u.x, u.y)) continue;
     if (u.kind === "pilot" && !u.found && !seeAll) continue;
-    if (u.owner !== G.human && !seeAll && !(u.free && u.found !== false && isVis(u.x, u.y))) {
+    if (!mineOrAlly(u.owner) && !seeAll && !(u.free && u.found !== false && isVis(u.x, u.y))) {
       if (!(vis(u.x, u.y) || u.flare > G.time || G.intel > G.time)) continue;
       if (u.camo > G.time && !G.units.some(v => v.alive && v.owner === G.human && d2(u, v) < 45 * 45)) continue;
     }
@@ -4509,6 +4635,7 @@ function render(dtReal) {
         const hole = (x, y, r) => { if (x > r && y > r && x < mw - r && y < mh - r) return; const g = fl.createRadialGradient(x, y, Math.max(0, r - 46), x, y, r); g.addColorStop(0, "#000"); g.addColorStop(1, "rgba(0,0,0,0)"); fl.fillStyle = g; fl.fillRect(x - r, y - r, r * 2, r * 2); };
         const me = G.players[G.human]; if (me.base.alive) hole(me.base.x, me.base.y, CFG.base.sight);
         for (const u of G.units) if (u.alive && u.owner === G.human && !(u.kind === "pilot" && !u.found)) hole(u.x, u.y, CFG[u.kind].sight);
+        if (G.dip) for (const u of G.units) if (u.alive && u.owner !== G.human && allied(G.human, u.owner) && !u.free && CFG[u.kind].sight) hole(u.x, u.y, CFG[u.kind].sight);
         fl.restore();
       }
     }
@@ -4746,9 +4873,9 @@ function doomFx(e) {
 }
 // the base an Endgame will hit: yours if it's an enemy's, otherwise the nearest enemy base
 function doomTarget(p) {
-  const d = p.doom; if (d && d.tgt != null && !G.players[d.tgt].out) return G.players[d.tgt]; return doomPick(p); }
+  const d = p.doom; if (d && d.tgt != null && !G.players[d.tgt].out && hostile(p.id, d.tgt)) return G.players[d.tgt]; return doomPick(p); }
 function doomPick(p) {
-  let R = G.players.filter(q => q.id !== p.id && !q.out); if (!G.mp && p.id !== G.human && R.some(q => q.id !== G.human)) R = R.filter(q => q.id !== G.human);
+  let R = G.players.filter(q => hostile(p.id, q.id) && !q.out); if (!G.mp && p.id !== G.human && R.some(q => q.id !== G.human)) R = R.filter(q => q.id !== G.human);
   const pow = q => q.level * 1000 + G.units.filter(u => u.alive && u.owner === q.id).length;
   return R.sort((a, b) => pow(b) - pow(a) || a.id - b.id)[0] || null; }
 // lock-on: a targeting line arcs from the general over to the target base as it charges, and a reticle closes in on the base
@@ -4958,7 +5085,7 @@ function drawEdgeMarks() {
   const marks = [];
   for (const cr of G.crates || []) if (cr.land <= G.time) marks.push({ x: cr.x, y: cr.y, col: cr.mission ? "#f3c85a" : "#e9dfc0", kind: "crate" });
   if (G.mis && G.mis.x !== undefined) { const u = G.mis.unit, q = u && u.alive ? u : G.mis; marks.push({ x: q.x, y: q.y, col: "#f3c85a", kind: "star" }); }
-  for (const p of G.players) if (p.id !== G.human && p.doom && p.doom.on && !p.out && G.gens[p.id].alive) marks.push({ x: G.gens[p.id].x, y: G.gens[p.id].y, col: "#ff3b30", kind: "gen" });
+  for (const p of G.players) if (hostile(G.human, p.id) && p.doom && p.doom.on && !p.out && G.gens[p.id].alive) marks.push({ x: G.gens[p.id].x, y: G.gens[p.id].y, col: "#ff3b30", kind: "gen" });
   if (G.bottle) marks.push({ x: G.bottle.x, y: G.bottle.y, col: "#9fe0b0", kind: "bottle" });
   const g = G.gens[G.human]; if (g && g.alive && G.time - (g.hitAt || -99) < 3) marks.push({ x: g.x, y: g.y, col: "#ff6b5e", kind: "gen" });
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -4994,11 +5121,11 @@ function renderMini() {
   if (!mAll) { c.imageSmoothingEnabled = true; c.drawImage(fogCvs, 0, 0, G.gw * CFG.fogCell * k, G.gh * CFG.fogCell * k); }
   for (const p of G.players) {
     const b = p.base; if (!b.alive) continue;
-    if (mAll || p.id === G.human || isExp(b.x, b.y) || G.intel > G.time) { c.fillStyle = p.team.c; c.fillRect(b.x * k - 6, b.y * k - 6, 12, 12); c.strokeStyle = "#000"; c.lineWidth = 2; c.strokeRect(b.x * k - 6, b.y * k - 6, 12, 12); }
+    if (mAll || mineOrAlly(p.id) || isExp(b.x, b.y) || G.intel > G.time) { c.fillStyle = p.team.c; c.fillRect(b.x * k - 6, b.y * k - 6, 12, 12); c.strokeStyle = "#000"; c.lineWidth = 2; c.strokeRect(b.x * k - 6, b.y * k - 6, 12, 12); }
   }
   for (const u of G.units) {
     if (!u.alive) continue;
-    if (!mAll && u.owner !== G.human && !isVis(u.x, u.y) && !(G.intel > G.time && !(u.camo > G.time))) continue;
+    if (!mAll && !mineOrAlly(u.owner) && !isVis(u.x, u.y) && !(G.intel > G.time && !(u.camo > G.time))) continue;
     if (u.kind === "pilot" && !u.found) continue;
     c.fillStyle = G.players[u.owner].team.c;
     const s = u.kind === "gen" ? 7 : 3.5; c.fillRect(u.x * k - s / 2, u.y * k - s / 2, s, s);
@@ -5293,8 +5420,8 @@ function handleTap(sx, sy, additive) {
   }
   // visible enemy or enemy base => engage there
   let enemy = false;
-  for (const u of G.units) if (u.alive && u.owner !== G.human && isVis(u.x, u.y) && d2(u, w) < hitR * hitR * 2) { enemy = true; break; }
-  for (const p of G.players) if (p.id !== G.human && p.base.alive && isExp(p.base.x, p.base.y) && d2(p.base, w) < (p.base.r + 10) ** 2) enemy = true;
+  for (const u of G.units) if (u.alive && hostile(G.human, u.owner) && isVis(u.x, u.y) && d2(u, w) < hitR * hitR * 2) { enemy = true; break; }
+  for (const p of G.players) if (hostile(G.human, p.id) && p.base.alive && isExp(p.base.x, p.base.y) && d2(p.base, w) < (p.base.r + 10) ** 2) enemy = true;
   orderTo(w.x, w.y, enemy ? "attack" : null);
 }
 
@@ -5302,8 +5429,8 @@ function handleTap(sx, sy, additive) {
 const HOLD_MS = 380;
 function holdEnemy(sx, sy) {
   const w = s2w(sx, sy), hr = Math.max(18, 26 / cam.z); let best = null, bd = hr * hr;
-  for (const u of G.units) if (u.alive && u.owner !== G.human && !u.isBase && isVis(u.x, u.y)) { const dd = d2(u, w); if (dd < bd) { bd = dd; best = u; } }
-  if (!best) for (const p of G.players) { const b = p.base; if (p.id === G.human || p.out || !b.alive || !isVis(b.x, b.y)) continue; if (d2(b, w) < (b.r + hr) * (b.r + hr)) return b; } // hold on an enemy base: attack it
+  for (const u of G.units) if (u.alive && hostile(G.human, u.owner) && !u.isBase && isVis(u.x, u.y)) { const dd = d2(u, w); if (dd < bd) { bd = dd; best = u; } }
+  if (!best) for (const p of G.players) { const b = p.base; if (!hostile(G.human, p.id) || p.out || !b.alive || !isVis(b.x, b.y)) continue; if (d2(b, w) < (b.r + hr) * (b.r + hr)) return b; } // hold on an enemy base: attack it
   return best;
 }
 function holdRelease(sx, sy) {
@@ -5433,14 +5560,41 @@ window.addEventListener("blur", () => UI.keys.clear());
 // ======================================================================
 // HUD
 // ======================================================================
+// the alliance controls on an army's scoreboard row (alliances on, while you're still in)
+function dipCell(p) {
+  const D = G.dip, me = G.human, T = G.time;
+  if (!D || G.attract || p.id === me || p.out || G.players[me].out || G.replay || G.over || (G.mp && MP.seat < 0)) return null;
+  const id = p.id, b = (a, t, c) => `<button type="button" data-dip="${a}" data-p="${id}"${c ? ` class="${c}"` : ""}>${t}</button>`;
+  if (dipLoner(id) || dipLoner(me)) return { cls: "", html: `<span class="dp"><i>${dipLoner(id) ? "Endgame: no allies" : "no allies at Endgame"}</i></span>` };
+  if (D.al[me][id]) { const arm = UI.dipArm && UI.dipArm.p === id && UI.dipArm.t > performance.now(); return { cls: " ally", html: `<span class="dp"><span class="al">🤝 Ally</span>${b("break", arm ? "Sure?" : "Break", arm ? "arm" : "x")}</span>` }; }
+  if (D.req[id][me] > T) return { cls: " asks", html: `<span class="dp"><i>Ally?</i>${b("yes", "Yes", "y")}${b("no", "No")}</span>` };
+  if (D.req[me][id] > T) return { cls: "", html: `<span class="dp"><i>asked…</i></span>` };
+  if (D.cool[me][id] > T) return { cls: "", html: `<span class="dp"><i>wait ${Math.ceil(D.cool[me][id] - T)}s</i></span>` };
+  return { cls: "", html: `<span class="dp">${b("ask", "🤝 Ally?")}</span>` };
+}
+// pointerdown, not click: the row redraws every second while an offer counts down
+$("score").addEventListener("pointerdown", e => {
+  const bt = e.target.closest && e.target.closest("button[data-dip]"); if (!bt || !G || !G.dip) return;
+  e.preventDefault(); e.stopPropagation();
+  const a = bt.dataset.dip, tb = +bt.dataset.p;
+  if (a === "break" && !(UI.dipArm && UI.dipArm.p === tb && UI.dipArm.t > performance.now())) { UI.dipArm = { p: tb, t: performance.now() + 3000 }; SND.ui(); renderScore(); return; } // tap twice: a betrayal shouldn't be an accident
+  UI.dipArm = null; SND.ui();
+  issue({ p: G.human, t: "ally", tb, a, ids: [] });
+  renderScore();
+});
 function renderScore() {
   const el = $("score");
   let html = "";
   for (const p of G.players) {
     const lvlBase = (p.level - (p.bonus || 0)) * G.upEvery, prog = clamp((p.points - lvlBase) / G.upEvery, 0, 1);
-    html += `<div class="row${p.out ? " out" : ""}"><span class="sw" style="background:${p.team.c}"></span><span class="nm">${p.id === G.human ? "You" : p.team.name}</span>` +
+    const dp = dipCell(p);
+    html += `<div class="row${p.out ? " out" : ""}${dp ? " dip" + dp.cls : ""}"><span class="sw" style="background:${p.team.c}"></span><span class="nm">${p.id === G.human ? "You" : p.team.name}</span>` +
       `<span class="st"><span class="lv" title="Army level ${p.level + 1}">${eraLabel(p)}</span><span>${p.points}</span><span class="prog"><i style="width:${(prog * 100).toFixed(0)}%"></i></span>` +
-      `<span class="hpb" title="Base health"><i style="width:${(p.base.hp / (p.base.max || CFG.base.hp) * 100).toFixed(0)}%"></i></span></span></div>`;
+      `<span class="hpb" title="Base health"><i style="width:${(p.base.hp / (p.base.max || CFG.base.hp) * 100).toFixed(0)}%"></i></span></span>${dp ? dp.html : ""}</div>`;
+  }
+  if (G.dip && G.dip.peace != null && !G.attract) {
+    const left = Math.max(0, Math.floor(G.time - G.dip.peace));
+    html += `<div class="mis peace"><b>🤝 Truce</b><span>Everyone left is allied. Only one wins</span><em>${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}</em></div>`;
   }
   if (G.mis && !G.attract) {
     const m = G.mis, left = Math.max(0, Math.ceil(m.until - G.time)), tx = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
@@ -5467,7 +5621,8 @@ function applyExpert() {
 function customSummary() {
   const el = $("customSum"); if (!el) return;
   const e = UI.opts.players - 1, pace = { 25: "Quick", 50: "Medium", 100: "Slow" }[UI.opts.up] || "";
-  el.textContent = `${UI.opts.map ? MAPS[UI.opts.map].n + " · " : ""}${e} ${e > 1 ? "enemies" : "enemy"} · ${pace} · ${UI.opts.me} vs ${UI.opts.army}`;
+  el.textContent = `${UI.opts.map ? MAPS[UI.opts.map].n + " · " : ""}${e} ${e > 1 ? "enemies" : "enemy"}${UI.opts.allies && e > 1 ? " · alliances" : ""} · ${pace} · ${UI.opts.me} vs ${UI.opts.army}`;
+  const al = $("alliesLine"); if (al) al.textContent = !UI.opts.allies ? "Every army for itself." : e < 2 ? "Needs 2 or 3 enemy armies: with just one there's nobody to team up with." : "Ask other armies to team up during the battle, tap 🤝 on the scoreboard. Allies share what they see and can't hurt each other, and anyone can break a deal at any time. An army that reaches the Endgame stands alone. There are no shared wins: only one army can win.";
 }
 // one-time hints the first time something happens (saved on this device)
 function tip(key, text, kind) {
@@ -5496,6 +5651,9 @@ function mapLine() { $("mapLine").textContent = MAPS[UI.opts.map].line; customSu
 $("optMap").addEventListener("click", () => { try { localStorage.setItem("hr-map", UI.opts.map); } catch (e) {} mapLine(); });
 mapLine();
 for (const [k, lo, hi] of [["players", 2, 4], ["up", 1, 1000], ["diff", 0, 9]]) { try { const v = localStorage.getItem("hr-" + k); if (v !== null && isFinite(+v)) UI.opts[k] = clamp(+v, lo, hi); } catch (e) {} } // remember the last pick (T)
+UI.opts.allies = 0; try { UI.opts.allies = localStorage.getItem("hr-allies") === "1" ? 1 : 0; } catch (e) {}
+seg("optAllies", "allies"); $("optAllies").addEventListener("click", () => { try { localStorage.setItem("hr-allies", String(UI.opts.allies)); } catch (e) {} customSummary(); });
+$("optPlayers").addEventListener("click", () => customSummary());
 seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optCrates", "crates"); seg("optMissions", "missions");
 for (const [id, k] of [["optPlayers", "players"], ["optUp", "up"], ["optDiff", "diff"]]) $(id).addEventListener("click", () => { try { localStorage.setItem("hr-" + k, String(UI.opts[k])); } catch (e) {} });
 $("optMissions").addEventListener("click", () => { try { localStorage.setItem("hr-missions", String(UI.opts.missions)); } catch (e) {} renderMisTypes(); });
@@ -5641,12 +5799,13 @@ function start() {
   const seed = (Date.now() & 0xffffffff) >>> 0, O = UI.opts;
   initGame(newGame(O.players, O.up, seed, O.diff, O.army, O.me, O.map));
   G.cratesOn = !!O.crates; G.missionsOn = !!O.missions && O.misTypes.length > 0 && (EXP() || loadLog().length >= 3); G.misTypes = O.misTypes.slice();
+  if (O.allies && O.players >= 3) dipInit();
   G.disOn = !!O.dis && O.disTypes.length > 0; G.disTypes = O.disTypes.slice();
   { const q = (location.search.match(/[?&]disaster=(\w+)/) || [])[1]; if (q && DIS.types[q] && !HUB_LAUNCH) { G.disOn = true; G.disTypes = [q]; G.disT = 12; } } // test link: ?disaster=volcano brings that one after 12 s
   G.players[G.human].autoSpread = !EXP(); G.players[G.human].autoEngage = !EXP(); UI.use = {};
   { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = O.split || 3; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
   G.dx = URL_ERA == null ? dxNew(G.players.length) : null; // diagnostics for the game log (test links stay out)
-  G.rec = { seed, players: O.players, up: O.up, diff: O.diff, army: O.army, me: O.me, map: O.map, crates: G.cratesOn, missions: G.missionsOn, misTypes: G.misTypes.slice(), dis: G.disOn, disTypes: G.disTypes.slice(), spread: !EXP(), engage: !EXP(), split: O.split || 3, cmds: [] };
+  G.rec = { seed, players: O.players, up: O.up, diff: O.diff, army: O.army, me: O.me, map: O.map, crates: G.cratesOn, missions: G.missionsOn, misTypes: G.misTypes.slice(), dis: G.disOn, disTypes: G.disTypes.slice(), allies: G.dip ? 1 : 0, spread: !EXP(), engage: !EXP(), split: O.split || 3, cmds: [] };
   document.body.classList.remove("replay"); $("replayBar").hidden = true;
   UI.forms = {}; UI.combo = null; UI.rallyMode = false; closeTray(); disarmKill();
   const b = G.players[G.human].base, p = G.players[G.human];
@@ -6481,7 +6640,7 @@ const SND = (() => {
       if (endMode && S.force == null && (!G || !G.over || G.attract)) endMode = null; // left the result screen
       // tension follows battle heat: rises fast, falls slowly; enemies in sight put the music on edge before shots fly
       let seen = 0;
-      if (G && !G.attract && !G.over && G.units) for (const u of G.units) if (u.alive && u.owner !== G.human && isVis(u.x, u.y)) seen++;
+      if (G && !G.attract && !G.over && G.units) for (const u of G.units) if (u.alive && hostile(G.human, u.owner) && isVis(u.x, u.y)) seen++;
       const pn = performance.now(), recent = pn - lastShot < 5000;
       let target = Math.max(clamp(0.15 + heat / 9, 0, 1) * (heat > 0.3 ? 1 : 0), recent ? 0.45 : 0, seen ? clamp(0.3 + seen * 0.04, 0, 0.6) : 0) * (G && G.attract ? 0.55 : 1);
       if (S.force != null) target = S.force;
@@ -6816,7 +6975,7 @@ function lbRpc(fn, body) {
 }
 // anonymous game log, on by default (Settings can switch it off) (see sql/supabase-update-5-game-log.sql and -7-battle-stats.sql)
 // No names, ids, device ids or addresses: game settings and what happened in the battle. Sent once, after it ends.
-const GAME_VER = "v127";
+const GAME_VER = "v128";
 function logGame(g, stats, rec) {
   if (!g || !LB.url) return;
   const use = {}; for (const [k, v] of Object.entries(g.use || {}).slice(0, 24)) if (/^[a-z]{1,12}$/.test(k)) use[k] = Math.min(9999, v | 0);
@@ -7093,7 +7252,7 @@ function startReplay() {
   const rec = lastRec; if (!rec) return;
   TUT.stop(); leaveReview(); document.body.classList.remove("attract"); setTimeout(resize, 0);
   initGame(newGame(rec.players, rec.up, rec.seed, rec.diff, rec.army, rec.me, rec.map));
-  G.cratesOn = rec.crates; G.missionsOn = rec.missions; G.misTypes = rec.misTypes.slice(); G.disOn = !!rec.dis; G.disTypes = (rec.disTypes || []).slice();
+  G.cratesOn = rec.crates; G.missionsOn = rec.missions; G.misTypes = rec.misTypes.slice(); G.disOn = !!rec.dis; G.disTypes = (rec.disTypes || []).slice(); if (rec.allies) dipInit();
   G.players[G.human].autoSpread = rec.spread; G.players[G.human].autoEngage = rec.engage; UI.use = {};
   { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = rec.split; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
   G.replay = { rec, i: 0 }; $("replayBar").querySelector("b").textContent = "▶ REPLAY"; $("rpPause").hidden = false;
@@ -7325,6 +7484,7 @@ function mpStart(m) {
   G.missionsOn = ids.length === 1 && o.missions !== false && G.misTypes.length > 0;
   G.disTypes = Array.isArray(o.disTypes) ? o.disTypes.filter(k => DIS.types[k]) : Object.keys(DIS.types);
   G.disOn = !!o.disasters && G.disTypes.length > 0; // only if the hub lobby sends the switch (off otherwise)
+  if ((o.allies === true || o.allies === 1 || o.allies === "on") && n >= 3) dipInit(); // the lobby's Alliances option
   G.players.forEach((p, i) => {
     p.human = i < ids.length;
     if (!p.human) return;
@@ -7368,7 +7528,7 @@ function mpQueue(cmd) {
 }
 
 // a player's order as it came over the network: keep only the fields and values an order can have
-const MP_T = new Set(["path", "reform", "regroup", "escort", "spread", "kill", "rally", "strike", "focus", "squad"]);
+const MP_T = new Set(["path", "reform", "regroup", "escort", "spread", "kill", "rally", "strike", "focus", "squad", "ally"]);
 function mpCmd(c, seat) {
   if (!c || typeof c !== "object") return null;
   const num = v => typeof v === "number" && isFinite(v) ? v : 0, o = { p: seat, ids: [] };
@@ -7383,6 +7543,7 @@ function mpCmd(c, seat) {
   if (Number.isInteger(c.sq) && c.sq >= 0 && c.sq <= 3) o.sq = c.sq;
   if (o.t === "squad" && o.sq == null) return null;
   if (o.t === "focus" && o.tid == null && o.tb == null) return null;
+  if (o.t === "ally") { if (o.tb == null || !["ask", "yes", "no", "break"].includes(c.a)) return null; o.a = c.a; }
   if (o.t === "path") { o.pts = Array.isArray(c.pts) ? c.pts.slice(0, 24).map(q => ({ x: num(q && q.x), y: num(q && q.y) })) : []; if (!o.pts.length) return null; }
   return o;
 }
@@ -7432,6 +7593,7 @@ function mpHash() {
   const mix = v => { h = Math.imul(h ^ (v | 0), 16777619); }, f = v => mix(Math.round(v * 64));
   mix(G.tick); mix(G.units.length); mix(G.crates.length);
   for (const p of G.players) { mix(p.points); mix(p.level); mix(p.kills); mix(p.out ? 1 : 0); f(p.base.hp); }
+  if (G.dip) for (const r of G.dip.al) for (const v of r) mix(v);
   for (const u of G.units) { mix(u.id); mix(u.owner); if (!u.alive) { mix(-1); continue; } f(u.x); f(u.y); f(u.hp); }
   return (h >>> 0).toString(16);
 }
@@ -7494,7 +7656,7 @@ function mpLoop(dtReal) {
   }
 }
 
-window.__hr = { MP, DM, DIS, disZone, get G() { return G; }, replay: r => { lastRec = r; startReplay(); }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
+window.__hr = { MP, DM, DIS, disZone, get G() { return G; }, replay: r => { lastRec = r; startReplay(); }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate, dipInit, dipCmd };
 })();
 </script>
 
