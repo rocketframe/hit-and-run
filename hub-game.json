@@ -15,6 +15,27 @@
     "delay": 2
   },
   "reconnectGraceMs": 30000,
+  "minMatchMs": 30000,
+  "ai": {
+    "max": 3,
+    "default": 1,
+    "label": "AI armies",
+    "levels": {
+      "choices": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "names": {
+        "1": "Recruit",
+        "2": "Veteran",
+        "3": "Elite",
+        "4": "Invincible"
+      },
+      "default": 2
+    }
+  },
   "options": [
     {
       "key": "map",
@@ -48,39 +69,6 @@
         "large": "Large"
       },
       "default": "medium"
-    },
-    {
-      "key": "bots",
-      "label": "AI armies",
-      "type": "choice",
-      "choices": [
-        0,
-        1,
-        2
-      ],
-      "names": {
-        "0": "None",
-        "1": "One",
-        "2": "Two"
-      }
-    },
-    {
-      "key": "botLevel",
-      "label": "AI level",
-      "type": "choice",
-      "choices": [
-        1,
-        2,
-        3,
-        4
-      ],
-      "names": {
-        "1": "Recruit",
-        "2": "Veteran",
-        "3": "Elite",
-        "4": "Invincible"
-      },
-      "default": 2
     },
     {
       "key": "crates",

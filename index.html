@@ -1144,7 +1144,7 @@ function eliminate(owner, by) {
   if (owner === G.human) toast("Your base has fallen", "bad");
   else toast(p.team.name + " base destroyed" + (by === G.human ? " by you" : ""), by === G.human ? "gold" : "");
   p.outT = G.tick; dxEv("b", owner, by == null ? -1 : by);
-  const alive = G.players.filter(q => !q.out), over = alive.length <= 1 || (G.mp && mpHumansIn() <= 1) ? { win: !G.players[G.human].out } : null;
+  const alive = G.players.filter(q => !q.out), over = alive.length <= 1 || (G.mp && mpHumansIn() <= (MP.solo ? 0 : 1)) ? { win: !G.players[G.human].out } : null; // solo (one human): ends when your base falls
   if (over) { if (G.doomFire) G.pendOver = over; else G.over = over; } // during the finale, wait for it to finish
   else if (owner === G.human && !G.attract && !G.replay && !G.tutorial) startSpectate();
 }
@@ -7243,7 +7243,7 @@ async function mpBoot() {
   const hub = mod.Hub.fromLaunch();
   if (!hub || !hub.launch || !hub.launch.room) { mpFallback("That battle link is incomplete"); return; }
   const room = hub.joinRoom(hub.launch.room);
-  Object.assign(MP, { hub, room, lobby: hub.origin + "/?room=" + encodeURIComponent(hub.launch.room) });
+  Object.assign(MP, { hub, room, lobby: hub.returnUrl || hub.origin + "/?room=" + encodeURIComponent(hub.launch.room) });
   MP.ls = new mod.Lockstep(room, { onStart: mpStart, onFrame: mpFrame, onDrop: (pid, tick) => MP.drops.push({ pid, tick }), onDesync: mpDesync });
   room.on("game", m => {
     if (m.k === "frame" && MP.ls) MP.ls.update(); // keeps inputs flowing even when the tab is in the background
@@ -7298,9 +7298,11 @@ function mpHumansIn() { return G.players.filter(q => q.human && !q.out && !q.lef
 // the hub says start (or, when this page connects after the start, "resume" with every frame so far)
 function mpStart(m) {
   const ids = (m.players || []).slice(0, 4), o = m.opts || {}, you = (MP.room.you && MP.room.you.id) || (MP.hub.user && MP.hub.user.id);
-  const seat = ids.indexOf(you), bots = clamp(o.bots | 0, 0, 4 - ids.length), lvl = DIFF[o.botLevel] ? +o.botLevel : 2;
+  // AI armies: the hub's standard "ai" and "aiLevel" settings (older hubs sent "bots" and "botLevel")
+  const aiN = o.ai != null ? o.ai : o.bots, aiL = o.aiLevel != null ? o.aiLevel : o.botLevel;
+  const seat = ids.indexOf(you), bots = clamp(aiN | 0, 0, 4 - ids.length), lvl = DIFF[aiL] ? +aiL : 2;
   const n = Math.max(2, ids.length + bots), army = mpArmy(o.army), map = mpMap(o.map), same = G && G.mp && MP.seed === m.seed;
-  Object.assign(MP, { ids, seed: m.seed, q: [], sub: 0, acc: 0, drops: [], reported: false, result: null, desync: false, leaveArm: 0,
+  Object.assign(MP, { ids, solo: ids.length === 1, seed: m.seed, q: [], sub: 0, acc: 0, drops: [], reported: false, result: null, desync: false, leaveArm: 0,
     SUB: Math.max(1, Math.round((o.tickMs || 100) / 1000 / CFG.dt)) });
   // players who left before this page (re)joined: when the hub says when, use that; otherwise it's the first frame without their input
   const fr = m.frames || [];
@@ -7345,7 +7347,7 @@ function mpStart(m) {
     void L.offsetWidth; L.classList.add("ld-go"); UI.loading = { t0: performance.now(), ok: 0 };
   }
   updateFog();
-  if (!fr.length && seat >= 0) toast("Online battle. Destroy the other bases. Orders take a moment to reach everyone.");
+  if (!fr.length && seat >= 0) toast(MP.solo ? "Destroy the other bases." : "Online battle. Destroy the other bases. Orders take a moment to reach everyone.");
 }
 
 function mpFrame(tick, inputs) { MP.q.push({ tick, inputs }); }
@@ -7431,7 +7433,8 @@ function mpHash() {
 function mpReport() {
   MP.reported = true;
   const end = q => Math.min(q.out ? q.outT : Infinity, q.left ? q.leftT : Infinity), places = {}, scores = {};
-  G.players.forEach((q, i) => { if (!q.human) return; const e = end(q); places[MP.ids[i]] = 1 + G.players.filter(o => o.human && end(o) > e).length; scores[MP.ids[i]] = q.kills; });
+  // places count the AI armies too: an army still standing at the end is ahead of every army that fell
+  G.players.forEach((q, i) => { if (!q.human) return; const e = end(q); places[MP.ids[i]] = 1 + G.players.filter(o => end(o) > e).length; scores[MP.ids[i]] = q.kills; });
   MP.places = places;
   if (MP.seat >= 0 && MP.ls) MP.ls.reportOver(places, scores);
 }
