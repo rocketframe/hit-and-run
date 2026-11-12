@@ -1176,7 +1176,7 @@ function startSpectate() {
 // allied the battle goes on, crates and missions keep levelling armies up, and whoever reaches the Endgame stands alone.
 // Everything goes through orders ({t:"ally", tb, a}) and the sim, so it replays and runs in online lockstep.
 // ======================================================================
-const DIP = { ask: 20, again: 30, broke: 60, lull: 60, think: 3, stay: 45 }; // seconds: an offer stands, after a no, after a break, an all-allied lull before AIs get restless, AI rethinks, AI keeps a fresh deal at least
+const DIP = { ask: 20, again: 30, broke: 60, lull: [60, 120], think: 3, stay: 45 }; // seconds: an offer stands, after a no, after a break, an all-allied truce lasts this long (random) before an AI breaks it, AI rethinks, AI keeps a fresh deal at least
 const allied = (a, b) => !!(G.dip && a !== b && G.dip.al[a][b]);
 const hostile = (a, b) => a !== b && !(G.dip && G.dip.al[a][b]);
 const mineOrAlly = o => o === G.human || allied(G.human, o);
@@ -1243,7 +1243,8 @@ function stepDip(dt) {
   }
   const alive = G.players.filter(q => !q.out), all = alive.length > 1 && alive.every(q => alive.every(r => q === r || D.al[q.id][r.id]));
   // everyone left is allied: no shared win, only a truce until someone breaks a deal or reaches the Endgame
-  if (all && D.peace == null) { D.peace = T; dipSay("Every army left is allied. Only one can win: grab crates and missions, reach the Endgame and you stand alone", "gold"); dxEv("p", ...alive.map(q => q.id)); }
+  if (all && D.peace == null) { D.peace = T; D.lullAt = T + DIP.lull[0] + G.rng() * (DIP.lull[1] - DIP.lull[0]); // the AIs get restless after 1 to 2 minutes
+    dipSay("Every army left is allied. Only one can win: grab crates and missions, reach the Endgame and you stand alone", "gold"); dxEv("p", ...alive.map(q => q.id)); }
   else if (!all && D.peace != null) { D.peace = null; if (alive.length > 1) dipSay("The truce is over. Fight on!", "bad"); }
   for (const p of G.players) if (p.ai && !p.out) { p.dipT -= dt; if (p.dipT <= 0) { p.dipT = DIP.think; aiDiplo(p); } }
 }
@@ -1267,7 +1268,7 @@ function aiDiplo(p) {
   // betrayal
   for (const q of others) if (D.al[me][q.id]) {
     let brk = false;
-    if (D.peace != null) brk = (p.smart && S[me] > S[q.id] * 1.4 && G.rng() < 0.5) || (T - D.peace > DIP.lull && G.rng() < 0.15); // strong enough to go it alone, or tired of waiting
+    if (D.peace != null) brk = (p.smart && S[me] > S[q.id] * 1.4 && G.rng() < 0.5) || T >= D.lullAt; // strong enough to go it alone, or tired of waiting
     else if (T - D.since[me][q.id] > DIP.stay && lead.id === q.id && S[q.id] > S[me] * 1.5 && others.some(r => r !== q && !D.al[me][r.id])) brk = G.rng() < 0.4;
     if (brk) { dipCmd(me, q.id, "break"); return; }
   }
@@ -5593,8 +5594,7 @@ function renderScore() {
       `<span class="hpb" title="Base health"><i style="width:${(p.base.hp / (p.base.max || CFG.base.hp) * 100).toFixed(0)}%"></i></span></span>${dp ? dp.html : ""}</div>`;
   }
   if (G.dip && G.dip.peace != null && !G.attract) {
-    const left = Math.max(0, Math.floor(G.time - G.dip.peace));
-    html += `<div class="mis peace"><b>🤝 Truce</b><span>Everyone left is allied. Only one wins</span><em>${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}</em></div>`;
+    html += `<div class="mis peace"><b>🤝 Truce</b><span>Everyone left is allied. Only one wins</span></div>`;
   }
   if (G.mis && !G.attract) {
     const m = G.mis, left = Math.max(0, Math.ceil(m.until - G.time)), tx = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
