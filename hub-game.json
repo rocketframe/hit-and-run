@@ -1,0 +1,104 @@
+{
+  "hubApi": 1,
+  "id": "hitrun",
+  "name": "Hit and Run",
+  "url": "./",
+  "pitch": "Army battles in the fog of war. Last army standing wins.",
+  "icon": "hub-icon.svg",
+  "players": {
+    "min": 2,
+    "max": 4
+  },
+  "engine": "lockstep",
+  "engineConfig": {
+    "tickMs": 100,
+    "delay": 2
+  },
+  "reconnectGraceMs": 30000,
+  "options": [
+    {
+      "key": "map",
+      "label": "Map",
+      "type": "choice",
+      "choices": [
+        "plain",
+        "lakes",
+        "marsh",
+        "canyons"
+      ],
+      "names": {
+        "plain": "Plain",
+        "lakes": "Lakes",
+        "marsh": "Marsh",
+        "canyons": "Canyons"
+      }
+    },
+    {
+      "key": "army",
+      "label": "Army size",
+      "type": "choice",
+      "choices": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "names": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      },
+      "default": "medium"
+    },
+    {
+      "key": "bots",
+      "label": "AI armies",
+      "type": "choice",
+      "choices": [
+        0,
+        1,
+        2
+      ],
+      "names": {
+        "0": "None",
+        "1": "One",
+        "2": "Two"
+      }
+    },
+    {
+      "key": "botLevel",
+      "label": "AI level",
+      "type": "choice",
+      "choices": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "names": {
+        "1": "Recruit",
+        "2": "Veteran",
+        "3": "Elite",
+        "4": "Invincible"
+      },
+      "default": 2
+    },
+    {
+      "key": "crates",
+      "label": "Crates",
+      "type": "choice",
+      "choices": [
+        true,
+        false
+      ],
+      "names": {
+        "true": "On",
+        "false": "Off"
+      }
+    }
+  ],
+  "score": {
+    "label": "Most kills",
+    "order": "desc",
+    "format": "int"
+  }
+}

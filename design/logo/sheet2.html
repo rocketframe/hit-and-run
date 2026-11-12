@@ -1,0 +1,48 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:BSS;src:url(bss.woff2);font-weight:900}
+@font-face{font-family:Saira;src:url(saira.woff2);font-weight:800}
+:root{--ink:#e9e5d3;--khaki:#cdb46a;--red:#f0473a;--dim:#a6a28f}
+body{margin:0;background:#0d110c;color:var(--ink);font-family:Saira,sans-serif;width:1600px}
+h2{font:800 30px Saira;letter-spacing:.04em;margin:0 0 4px;text-transform:uppercase}
+.hd{padding:34px 48px 10px;display:flex;align-items:baseline;gap:18px}
+.hd h1{font:900 52px BSS;margin:0;text-transform:uppercase}.hd h1 span{color:var(--khaki)}
+.hd p{color:var(--dim);font-size:22px;margin:0}
+.row{display:flex;align-items:center;gap:34px;padding:22px 48px;border-top:1px solid rgba(233,229,211,.12)}
+.num{font:900 64px BSS;color:var(--khaki);width:46px}
+.big svg{width:220px;height:220px;display:block}
+.sizes{display:flex;align-items:flex-end;gap:18px}
+.sizes div{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--dim);font-size:15px}
+.lock{display:flex;align-items:center;gap:18px;background:#1d241c;border-radius:14px;padding:18px 26px;margin-left:10px}
+.lock svg{width:96px;height:96px}
+.word{font:900 64px/0.86 BSS;text-transform:uppercase}.word span{color:var(--khaki)}
+.txt{width:330px}.txt p{margin:0;color:var(--dim);font-size:20px;line-height:1.3}
+.light{background:#e9e5d3;border-radius:8px;padding:6px}
+</style></head><body>
+<div class="hd"><h1>Hit and <span>Run</span></h1><p>more logo concepts (6 to 10) · app icon, favicon sizes and a name lockup for each</p></div>
+<div id="rows"></div>
+<script>
+const K='#cdb46a',I='#e9e5d3',R='#f0473a';
+const bg=(f1='#262f22',f2='#141a12')=>`<defs><linearGradient id="g${Math.random().toString(36).slice(2)}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${f1}"/><stop offset="1" stop-color="${f2}"/></linearGradient></defs>`;
+function tile(inner,f1,f2){const id='g'+Math.random().toString(36).slice(2);
+ return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${f1||'#2a3325'}"/><stop offset="1" stop-color="${f2||'#141a12'}"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="url(#${id})"/>${inner}</svg>`}
+const isl=(()=>{let d='';for(let k=0;k<=96;k++){const t=k/96*Math.PI*2,p=2.6,b=Math.pow(Math.pow(Math.abs(Math.cos(t)),p)+Math.pow(Math.abs(Math.sin(t)),p),-1/p),r=30*b*(1+.035*Math.cos(12*t)+.02*Math.cos(20*t));d+=(k?'L':'M')+(50+r*Math.cos(t)).toFixed(1)+' '+(50+r*Math.sin(t)).toFixed(1)}return d+'Z'})();
+const C=[
+ {name:'Island strike',desc:'One of the game’s mirrored islands from above, with a red target on it. Says where the game happens, not when.',
+  svg:()=>tile(`<path d="${isl}" fill="none" stroke="#7fb3c4" stroke-width="5" opacity=".35"/><path d="${isl}" fill="#4d5a35" stroke="${K}" stroke-width="3"/><g stroke="${R}" stroke-width="5" stroke-linecap="round" fill="none"><circle cx="50" cy="50" r="11"/><path d="M50 30v8M50 62v8M30 50h8M62 50h8"/></g><circle cx="50" cy="50" r="4" fill="${R}"/>`,'#1a4a5c','#0e2a36')},
+ {name:'Strike and turn',desc:'An arrow that hits the red mark and hooks straight back out. It’s the hit-and-run move itself, drawn as one line.',
+  svg:()=>tile(`<circle cx="80" cy="50" r="17" fill="none" stroke="${R}" stroke-width="2.5" opacity=".5"/><path d="M12 34H60A16 16 0 0 1 60 66H36" fill="none" stroke="${K}" stroke-width="10" stroke-linejoin="round"/><path d="M18 66L38 52V80Z" fill="${K}" stroke="${K}" stroke-width="3" stroke-linejoin="round"/><circle cx="80" cy="50" r="8" fill="${R}"/>`)},
+ {name:'Shield crest',desc:'A shield fits stones, swords and lasers alike. Inside are a rank chevron and a red mark, in the style of a unit badge.',
+  svg:()=>tile(`<path d="M50 12L82 22V47C82 69 67 81 50 89C33 81 18 69 18 47V22Z" fill="#1a2016" stroke="${K}" stroke-width="5" stroke-linejoin="round"/><path d="M30 64L50 46L70 64" fill="none" stroke="${I}" stroke-width="9" stroke-linejoin="miter"/><circle cx="50" cy="31" r="7" fill="${R}"/>`)},
+ {name:'Stencil ampersand',desc:'The “and” of Hit and Run as a big stencil &, with a red dot. It’s simple, typographic and easy to own.',
+  svg:()=>tile(`<text x="50" y="81" text-anchor="middle" font-family="BSS" font-weight="900" font-size="82" fill="${K}">&amp;</text><circle cx="74" cy="76" r="7" fill="${R}"/>`)},
+ {name:'Strike bolt',desc:'A lightning bolt striking from a red impact, for speed and surprise. It works as well for a sling as for a laser.',
+  svg:()=>tile(`<circle cx="30" cy="24" r="11" fill="${R}" opacity=".9"/><circle cx="30" cy="24" r="17" fill="none" stroke="${R}" stroke-width="2.5" opacity=".5"/><path d="M42 18H70L56 44H76L36 90L46 56H28Z" fill="${K}" stroke="#141a12" stroke-width="3" stroke-linejoin="round"/>`)},
+];
+const rows=document.getElementById('rows');
+C.forEach((c,i)=>{const s=c.svg();
+ rows.insertAdjacentHTML('beforeend',`<div class="row"><div class="num">${i+6}</div><div class="big">${s}</div>
+ <div class="txt"><h2>${c.name}</h2><p>${c.desc}</p></div>
+ <div class="sizes">${[64,32,16].map(n=>`<div><div style="width:${n}px;height:${n}px">${c.svg().replace('<svg ',`<svg width="${n}" height="${n}" `)}</div>${n}px</div>`).join('')}<div><div class="light" style="width:32px;height:32px">${c.svg().replace('<svg ','<svg width="32" height="32" ')}</div>tab</div></div>
+ <div class="lock">${c.svg()}<div class="word">Hit and<br><span>Run</span></div></div></div>`)});
+</script></body></html>
