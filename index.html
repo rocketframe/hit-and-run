@@ -7290,7 +7290,7 @@ function mpMap(v) {
   const i = MAPS.findIndex(m => m.n.toLowerCase() === String(v).toLowerCase()); return i < 0 ? 0 : i;
 }
 function mpArmy(v) {
-  if (typeof v === "number" && isFinite(v)) return clamp(Math.round(v), 5, 80);
+  if (typeof v === "number" && isFinite(v)) return clamp(Math.round(v), 1, 100);
   return { small: 20, medium: 30, large: 45 }[v] || CFG.army;
 }
 function mpHumansIn() { return G.players.filter(q => q.human && !q.out && !q.left).length; }
@@ -7302,6 +7302,9 @@ function mpStart(m) {
   const aiN = o.ai != null ? o.ai : o.bots, aiL = o.aiLevel != null ? o.aiLevel : o.botLevel;
   const seat = ids.indexOf(you), bots = clamp(aiN | 0, 0, 4 - ids.length), lvl = DIFF[aiL] ? +aiL : 2;
   const n = Math.max(2, ids.length + bots), army = mpArmy(o.army), map = mpMap(o.map), same = G && G.mp && MP.seed === m.seed;
+  const pace = [25, 50, 100].includes(+o.pace) ? +o.pace : 100;
+  // the AI armies' own size only in solo: with several humans every army is the same size (each browser sees a different "you")
+  const aiArmy = ids.length === 1 && o.aiArmy != null ? mpArmy(o.aiArmy) : army;
   Object.assign(MP, { ids, solo: ids.length === 1, seed: m.seed, q: [], sub: 0, acc: 0, drops: [], reported: false, result: null, desync: false, leaveArm: 0,
     SUB: Math.max(1, Math.round((o.tickMs || 100) / 1000 / CFG.dt)) });
   // players who left before this page (re)joined: when the hub says when, use that; otherwise it's the first frame without their input
@@ -7313,11 +7316,15 @@ function mpStart(m) {
   ["menu", "over", "pause", "board", "about"].forEach(id => { const e = $(id); if (e) e.hidden = true; });
   document.body.classList.remove("attract", "replay", "ended");
   const keep = same ? { x: cam.x, y: cam.y, z: cam.z } : null;
-  initGame(DM.run(() => newGame(n, 100, m.seed >>> 0, lvl, army, army, map)));
+  initGame(DM.run(() => newGame(n, pace, m.seed >>> 0, lvl, aiArmy, army, map)));
   G.mp = true; G.human = seat >= 0 ? seat : 0;
   MP.seat = seat >= 0 && !MP.drops.some(d => d.pid === you) ? seat : -1;
-  G.cratesOn = o.crates !== false && o.crates !== 0; G.missionsOn = false; G.misTypes = []; // missions are written for one human player
-  G.disOn = !!o.disasters; G.disTypes = Array.isArray(o.disTypes) ? o.disTypes.filter(k => DIS.types[k]) : []; // only if the hub lobby sends the switch (off otherwise)
+  G.cratesOn = o.crates !== false && o.crates !== 0;
+  // missions are written for one human player, so only in solo; the types come from the hub's tick boxes, like single player's chips
+  G.misTypes = Array.isArray(o.misTypes) ? o.misTypes.filter(k => MIS.types[k]) : Object.keys(MIS.types);
+  G.missionsOn = ids.length === 1 && o.missions !== false && G.misTypes.length > 0;
+  G.disTypes = Array.isArray(o.disTypes) ? o.disTypes.filter(k => DIS.types[k]) : Object.keys(DIS.types);
+  G.disOn = !!o.disasters && G.disTypes.length > 0; // only if the hub lobby sends the switch (off otherwise)
   G.players.forEach((p, i) => {
     p.human = i < ids.length;
     if (!p.human) return;

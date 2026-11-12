@@ -45,30 +45,48 @@
         "plain",
         "lakes",
         "marsh",
-        "canyons"
+        "canyons",
+        "winter"
       ],
       "names": {
         "plain": "Plain",
         "lakes": "Lakes",
         "marsh": "Marsh",
-        "canyons": "Canyons"
+        "canyons": "Canyons",
+        "winter": "Winter"
       }
+    },
+    {
+      "key": "pace",
+      "label": "Game pace",
+      "type": "choice",
+      "choices": [
+        25,
+        50,
+        100
+      ],
+      "names": {
+        "25": "Quick",
+        "50": "Medium",
+        "100": "Slow"
+      },
+      "default": 100
     },
     {
       "key": "army",
       "label": "Army size",
-      "type": "choice",
-      "choices": [
-        "small",
-        "medium",
-        "large"
-      ],
-      "names": {
-        "small": "Small",
-        "medium": "Medium",
-        "large": "Large"
-      },
-      "default": "medium"
+      "type": "int",
+      "min": 1,
+      "max": 100,
+      "default": 30
+    },
+    {
+      "key": "aiArmy",
+      "label": "AI army size (solo)",
+      "type": "int",
+      "min": 1,
+      "max": 100,
+      "default": 30
     },
     {
       "key": "crates",
@@ -81,6 +99,60 @@
       "names": {
         "true": "On",
         "false": "Off"
+      }
+    },
+    {
+      "key": "missions",
+      "label": "Missions (solo)",
+      "type": "bool",
+      "default": true
+    },
+    {
+      "key": "disasters",
+      "label": "Disasters",
+      "type": "bool",
+      "default": false
+    },
+    {
+      "key": "misTypes",
+      "label": "Missions",
+      "type": "set",
+      "choices": [
+        "cargo",
+        "escort",
+        "hold",
+        "rescue",
+        "kill",
+        "sabo"
+      ],
+      "names": {
+        "cargo": "Cargo",
+        "escort": "Escort",
+        "hold": "Hold the hill",
+        "rescue": "Rescue",
+        "kill": "Assassinate",
+        "sabo": "Sabotage"
+      }
+    },
+    {
+      "key": "disTypes",
+      "label": "Disasters",
+      "type": "set",
+      "choices": [
+        "volcano",
+        "flood",
+        "beasts",
+        "locusts",
+        "quake",
+        "tornado"
+      ],
+      "names": {
+        "volcano": "Volcano",
+        "flood": "Flood",
+        "beasts": "Wild beasts",
+        "locusts": "Locusts",
+        "quake": "Earthquake",
+        "tornado": "Tornado"
       }
     }
   ],
