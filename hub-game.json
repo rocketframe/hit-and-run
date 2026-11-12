@@ -102,6 +102,12 @@
       }
     },
     {
+      "key": "allies",
+      "label": "Alliances",
+      "type": "bool",
+      "default": false
+    },
+    {
       "key": "missions",
       "label": "Missions (solo)",
       "type": "bool",
