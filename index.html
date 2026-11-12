@@ -382,6 +382,10 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
       <div class="seg" id="optMissions"><button data-v="1" class="on">On</button><button data-v="0">Off</button></div>
       <div class="chips" id="misTypes"></div>
       <p class="fine" id="misNote"></p></div>
+    <div class="opt"><label>Disasters</label>
+      <div class="seg" id="optDis"><button data-v="1">On</button><button data-v="0" class="on">Off</button></div>
+      <div class="chips" id="disTypes"></div>
+      <p class="fine" id="disNote"></p></div>
     <div class="opt" hidden><label>Squads at the start</label>
       <div class="seg" id="optSplit"><button data-v="1">1</button><button data-v="2">2</button><button data-v="3" class="on">3</button><button data-v="4">4</button></div></div>
     <div class="opt"><label>Tips and advice on screen</label>
@@ -673,7 +677,7 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy, map) {
   const rng = mulberry32(seed);
   const S = nPlayers === 2 ? 1900 : 2300, inset = 200;
   const corners = [[inset, S - inset], [S - inset, inset], [S - inset, S - inset], [inset, inset]];
-  const g = { rng, S, upEvery, diff, enemyArmy: enemyArmy || CFG.army, myArmy: myArmy || CFG.army, fx: [], tick: 0, time: 0, cmds: [], units: [], players: [], rocks: [], tracers: [], corpses: [], pings: [], over: null, nextId: 1, human: 0 };
+  const g = { rng, seed, S, upEvery, diff, enemyArmy: enemyArmy || CFG.army, myArmy: myArmy || CFG.army, fx: [], tick: 0, time: 0, cmds: [], units: [], players: [], rocks: [], tracers: [], corpses: [], pings: [], over: null, nextId: 1, human: 0 };
 
   // island: the same coastline around every corner (mirrored across both axes and both diagonals),
   // so every base gets the same odds; a separate random stream keeps the rest of the map as it was
@@ -1089,7 +1093,7 @@ function dxPack(outcome) {
   const band = games < 1 ? "0" : games < 3 ? "1-2" : games < 10 ? "3-9" : games < 30 ? "10-29" : "30+"; // a band, not a count, so rows can't be chained
   return {
     v: 1, outcome,
-    set: { map: G.map, players: G.players.length, up: G.upEvery, crates: !!G.cratesOn, missions: !!G.missionsOn, misTypes: G.misTypes || [], split: O.split || 3, advice: !!O.advice },
+    set: { map: G.map, players: G.players.length, up: G.upEvery, crates: !!G.cratesOn, missions: !!G.missionsOn, misTypes: G.misTypes || [], dis: !!G.disOn, disTypes: G.disOn ? G.disTypes || [] : [], split: O.split || 3, advice: !!O.advice },
     dev: { touch: matchMedia("(pointer:coarse)").matches ? 1 : 0, small: Math.min(SW, SH) < 600 ? 1 : 0, q: Q.level, qDrop: Q.dropped ? 1 : 0, ms: Math.round(Q.ema) },
     who: { games: band, tut },
     me: { dealt: Math.round(st.dealt), taken: Math.round(st.taken), genKills: st.genKills, genLost: st.genLost, bases: st.bases, crates: st.crates, misWon: st.misWon, misLost: st.misLost, strikes: st.strikes, low: st.low === Infinity ? null : st.low, walk: Math.round(st.walk / 15.5), spawned: st.spawned, taps: st.taps, ups: st.ups.slice(0, 40), orders: n, contact: D.c, out: G.players[G.human].out ? Math.round(G.players[G.human].base.diedAt || G.time) : null, pauses: D.pause, pausedS: Math.round(D.pausedS), spd: D.spd, slowmo: !!G.slowmo, spect: G.spect ? Math.round(G.time - G.spectAt) : null, review: D.revT ? Math.round(D.revT) : null, doom: G.over && G.over.doom != null ? { w: G.over.doom, by: G.over.by } : null },
@@ -1564,6 +1568,228 @@ function crateRunners(p, inf) {
   return taken.size ? inf.filter(u => !taken.has(u)) : inf;
 }
 
+// ======================================================================
+// DISASTERS: their own Settings switch, off unless the player turns it on (volcano, flood, wild beasts, locusts, earthquake, tornado)
+// Fair: each one lands on a random army's ground (every army still in has the same chance), never near a base,
+// with a 6 s warning everyone sees through the fog. It hurts every army caught in it and nobody scores for its kills.
+// Deterministic: all its randomness comes from its own stream of the battle seed, so online battles and replays stay in step,
+// and with the switch off nothing here touches the battle.
+// ======================================================================
+const DIS = {
+  first: [75, 110], gap: [60, 95], warn: 6,
+  types: {
+    volcano: { name: "Volcano", r: 150, life: 22, brief: "Volcano! Lava bombs and a lava pool. Get out of the circle" },
+    flood:   { name: "Flood", r: 230, life: 26, brief: "Flood! The sea is coming in. The water slows soldiers and drowns some" },
+    beasts:  { name: "Wild beasts", r: 200, life: 40, brief: "Wild beasts! The pack attacks anyone it finds. Keep together and shoot" },
+    locusts: { name: "Locusts", r: 170, life: 28, brief: "Locusts! Soldiers in the swarm can't aim and get bitten" },
+    quake:   { name: "Earthquake", r: 190, life: 5, brief: "Earthquake! Rifts are about to open. Get off the cracks" },
+    tornado: { name: "Tornado", r: 130, life: 24, brief: "Tornado! It throws soldiers through the air. Keep out of its way" }
+  }
+};
+const drr = (a, b) => a + G.drng() * (b - a);
+function disInit() { G.dis = null; G.disLast = null; G.disN = 0; G.beasts = []; G.drng = mulberry32(((G.seed | 0) ^ 0x2545f491) >>> 0); G.disT = drr(DIS.first[0], DIS.first[1]); }
+// a spot on a random army's ground: near one of its soldiers, well away from every base
+function disSpot(r, coast) {
+  const live = G.players.filter(p => !p.out), I = G.island;
+  for (let t = 0; t < 40; t++) {
+    let x, y; const p = live[Math.floor(G.drng() * live.length)];
+    const us = p && t < 25 ? G.units.filter(u => u.alive && u.owner === p.id && !u.mis && !u.free) : [];
+    if (us.length) { const u = us[Math.floor(G.drng() * us.length)], a = G.drng() * TAU2, d = G.drng() * r * 0.5; x = u.x + Math.cos(a) * d; y = u.y + Math.sin(a) * d; }
+    else { x = drr(150, G.S - 150); y = drr(150, G.S - 150); }
+    if (coast && I) { const a = Math.atan2(y - I.c, x - I.c), R = landR(x, y) - r * 0.3; x = I.c + Math.cos(a) * R; y = I.c + Math.sin(a) * R; }
+    if (!onLand(x, y, coast ? 20 : 40)) continue;
+    if (G.players.some(q => Math.hypot(x - q.base.x, y - q.base.y) < r + 260)) continue;
+    if (G.mtn && Math.hypot(x - G.mtn.x, y - G.mtn.y) < G.mtn.r + 30) continue;
+    return { x, y };
+  }
+  return null;
+}
+// two jagged rifts across the middle of the circle, worked out at the warning so the cracks show exactly where they'll open
+function disRifts(d) {
+  const out = [];
+  for (let n = 0; n < 2; n++) {
+    let a = G.drng() * TAU2, x = d.x + Math.cos(a + 1.6) * (n ? 40 : -40), y = d.y + Math.sin(a + 1.6) * (n ? 40 : -40);
+    x -= Math.cos(a) * 70; y -= Math.sin(a) * 70;
+    const L = 9 + Math.floor(G.drng() * 4), seg = [];
+    for (let i = 0; i < L; i++) {
+      const r = 9 + Math.sin(i / (L - 1) * Math.PI) * 7 + G.drng() * 2;
+      if (!onLand(x, y, r + 40) || G.players.some(q => Math.hypot(x - q.base.x, y - q.base.y) < 420) || G.rocks.some(o => Math.hypot(x - o.x, y - o.y) < o.r + r + 6)) break;
+      seg.push({ x, y, r }); a += (G.drng() - 0.5) * 0.7; x += Math.cos(a) * 15; y += Math.sin(a) * 15;
+    }
+    if (seg.length > 4) out.push(seg);
+  }
+  return out;
+}
+function startDisaster() {
+  const pool = G.disTypes && G.disTypes.length ? G.disTypes : Object.keys(DIS.types);
+  const keys = pool.length > 1 ? pool.filter(k => k !== G.disLast) : pool;
+  const type = keys[Math.floor(G.drng() * keys.length)], T = DIS.types[type]; if (!T) return;
+  const s = disSpot(T.r, type === "flood"); if (!s) { G.disT = 10; return; }
+  const d = { type, x: s.x, y: s.y, r: T.r, t0: G.time, go: G.time + DIS.warn, end: G.time + DIS.warn + T.life, id: ++G.disN, on: false };
+  if (type === "volcano") { d.bombs = []; d.bombT = 0; d.pool = 0; }
+  else if (type === "flood") { const I = G.island; d.out = Math.atan2(d.y - I.c, d.x - I.c); d.lvl = 0; }
+  else if (type === "locusts") { d.sx = d.x; d.sy = d.y; d.va = G.drng() * TAU2; }
+  else if (type === "quake") { d.rifts = disRifts(d); if (!d.rifts.length) { G.disT = 10; return; } }
+  else if (type === "tornado") { d.tx = d.x; d.ty = d.y; d.ta = G.drng() * TAU2; d.turnT = 0; }
+  G.dis = d; G.disLast = type;
+  dxEv("d", type);
+  pushFx({ k: "disWarn", dk: type, x: d.x, y: d.y });
+}
+function endDisaster() {
+  const d = G.dis; G.dis = null; G.disT = drr(DIS.gap[0], DIS.gap[1]);
+  for (const b of G.beasts) b.leave = true;
+  if (d) pushFx({ k: "disEnd", dk: d.type, x: d.x, y: d.y });
+}
+// the circle that's dangerous right now (beasts are a fight, not a place)
+function disZone(d) {
+  if (d.type === "beasts" || (d.type === "quake" && d.on)) return null;
+  if (d.type === "locusts") return d.on ? { x: d.sx, y: d.sy, r: d.r } : { x: d.x, y: d.y, r: d.r };
+  if (d.type === "tornado") return { x: d.tx, y: d.ty, r: 170 };
+  return { x: d.x, y: d.y, r: d.r };
+}
+// smart AIs pull their soldiers out of the way (Recruit doesn't)
+function disDodge(d) {
+  const Z = disZone(d); if (!Z) return;
+  const R = Z.r + 40;
+  for (const u of G.units) {
+    if (!u.alive || u.mis || u.free) continue;
+    const p = G.players[u.owner]; if (!p.ai || !p.smart || p.out) continue;
+    const dx = u.x - Z.x, dy = u.y - Z.y; if (dx * dx + dy * dy > R * R) continue;
+    const a = Math.atan2(dy, dx), pt = pushOutOfRocks(clamp(Z.x + Math.cos(a) * (R + 70), 10, G.S - 10), clamp(Z.y + Math.sin(a) * (R + 70), 10, G.S - 10), 9);
+    u.tx = pt.x; u.ty = pt.y; u.path = null; u.focus = null; u.going = G.time + 2.5;
+  }
+}
+// hurt by nature: a share of the unit's health (so it bites at every level); generals and mission units take much less
+function disHurt(u, frac, how) {
+  if (!u.alive || u.free || u.kind === "depot") return;
+  u.hp -= maxHp(u) * frac * (u.kind === "inf" ? 1 : 0.3); u.hitAt = G.time; u.flash = 0.12;
+  if (u.hp <= 0) { if (u.mis) { u.hp = 1; return; } hazDeath(u, how); }
+}
+// slower going in flood water and in the locust swarm
+function disSlow(u) {
+  const d = G.dis; if (!d || !d.on) return 1;
+  if (d.type === "flood") { const r = d.r * d.lvl; return d2(u, d) < r * r ? 0.5 : 1; }
+  if (d.type === "locusts") { const dx = u.x - d.sx, dy = u.y - d.sy; return dx * dx + dy * dy < d.r * d.r ? 0.75 : 1; }
+  return 1;
+}
+// soldiers inside the swarm can hardly see to aim
+function disAim(u) {
+  const d = G.dis; if (!d || !d.on || d.type !== "locusts") return 1;
+  const dx = u.x - d.sx, dy = u.y - d.sy; return dx * dx + dy * dy < d.r * d.r ? 0.4 : 1;
+}
+function disOpenRifts(d) {
+  if (!G.hz) { G.hzW = Math.ceil(G.S / HZ_CELL); G.hz = new Uint8Array(G.hzW * G.hzW); }
+  const w = G.hzW, nw = G.nw;
+  for (const seg of d.rifts) for (const o of seg) {
+    G.haz.push({ k: 3, x: o.x, y: o.y, r: o.r, dis: true });
+    const x0 = Math.max(0, Math.floor((o.x - o.r) / HZ_CELL)), x1 = Math.min(w - 1, Math.floor((o.x + o.r) / HZ_CELL));
+    const y0 = Math.max(0, Math.floor((o.y - o.r) / HZ_CELL)), y1 = Math.min(w - 1, Math.floor((o.y + o.r) / HZ_CELL));
+    for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) if (Math.hypot((cx + 0.5) * HZ_CELL - o.x, (cy + 0.5) * HZ_CELL - o.y) < o.r) G.hz[cy * w + cx] = 3;
+    for (let cy = Math.max(0, Math.floor((o.y - o.r - 8) / NAV)); cy <= Math.min(nw - 1, Math.floor((o.y + o.r + 8) / NAV)); cy++)
+      for (let cx = Math.max(0, Math.floor((o.x - o.r - 8) / NAV)); cx <= Math.min(nw - 1, Math.floor((o.x + o.r + 8) / NAV)); cx++)
+        if (Math.hypot((cx + 0.5) * NAV - o.x, (cy + 0.5) * NAV - o.y) < o.r + 8) G.block[cy * nw + cx] = 1;
+    // generals and mission units step back off the edge; crates on the crack fall in
+    for (const u of G.units) if (u.alive && u.kind !== "inf" && u.kind !== "depot") { const dx = u.x - o.x, dy = u.y - o.y, dd = Math.hypot(dx, dy) || 0.01, m = o.r + CFG[u.kind].r + 2; if (dd < m) { u.x = o.x + dx / dd * m; u.y = o.y + dy / dd * m; u.path = null; } }
+    for (let i = G.crates.length - 1; i >= 0; i--) if (d2(G.crates[i], o) < (o.r + 6) ** 2 && !G.crates[i].mission) { pushFx({ k: "lost", x: G.crates[i].x, y: G.crates[i].y }); G.crates.splice(i, 1); }
+  }
+  G.fields.clear();
+}
+function stepDisasters(dt) {
+  if (G.beasts.length) stepBeasts(dt);
+  const d = G.dis, T = G.time;
+  if (!d) { if (G.disOn && !G.over && !G.doomFire) { G.disT -= dt; if (G.disT <= 0) startDisaster(); } return; }
+  if (T >= d.end) { endDisaster(); return; }
+  if ((G.tick + d.id) % 15 === 0) disDodge(d);
+  if (T < d.go) return;
+  if (!d.on) {
+    d.on = true; pushFx({ k: "disGo", dk: d.type, x: d.x, y: d.y });
+    if (d.type === "quake") { disOpenRifts(d); for (const u of G.units) if (u.alive && d2(u, d) < d.r * d.r) disHurt(u, 0.15, "quake"); }
+    else if (d.type === "beasts") {
+      const n = 3 + G.players.filter(p => !p.out).length * 2, lv = G.players.reduce((s, p) => s + p.level, 0) / G.players.length;
+      for (let i = 0; i < n; i++) { const a = i / n * TAU2 + G.drng() * 0.4, pt = pushOutOfRocks(d.x + Math.cos(a) * 60, d.y + Math.sin(a) * 60, 8);
+        const hp = Math.round(150 * (1 + CFG.upStep * lv)); G.beasts.push({ id: d.id * 100 + i, x: pt.x, y: pt.y, hp, max: hp, a, cd: 0, tgt: null, leave: false, hitAt: -99, walk: 0 }); }
+    }
+  }
+  if (d.type === "volcano") {
+    d.pool = Math.min(55, (T - d.go) * 18);
+    for (const u of G.units) if (u.alive && d2(u, d) < d.pool * d.pool) disHurt(u, 0.3 * dt, "lava");
+    d.bombT -= dt;
+    if (d.bombT <= 0 && T < d.end - 2) { d.bombT = 0.42; const a = G.drng() * TAU2, rr = 40 + G.drng() * (d.r - 40); d.bombs.push({ x: d.x + Math.cos(a) * rr, y: d.y + Math.sin(a) * rr, t: 1.3, tot: 1.3 }); }
+    for (let i = d.bombs.length - 1; i >= 0; i--) { const b = d.bombs[i]; b.t -= dt; if (b.t > 0) continue; d.bombs.splice(i, 1);
+      pushFx({ k: "lavaHit", x: b.x, y: b.y });
+      for (const u of G.units) { if (!u.alive) continue; const dd = Math.sqrt(d2(u, b)); if (dd < 40) disHurt(u, 0.8 * (1 - dd / 70), "lava"); } }
+  } else if (d.type === "flood") {
+    d.lvl = clamp(Math.min((T - d.go) / 4, (d.end - T) / 4), 0, 1);
+    const r = d.r * d.lvl, ox = Math.cos(d.out), oy = Math.sin(d.out);
+    for (const u of G.units) { if (!u.alive || u.free || u.kind === "depot" || d2(u, d) > r * r) continue;
+      u.x += ox * 9 * dt; u.y += oy * 9 * dt; // the backwash drags soldiers toward the sea
+      if (u.kind === "inf" && G.drng() < 0.05 * dt) hazDeath(u, "flood"); }
+  } else if (d.type === "locusts") {
+    const I = G.island;
+    if (!onLand(d.sx, d.sy, 80) || G.players.some(q => Math.hypot(d.sx - q.base.x, d.sy - q.base.y) < 360)) d.va = Math.atan2(I.c - d.sy, I.c - d.sx);
+    d.sx += Math.cos(d.va) * 26 * dt; d.sy += Math.sin(d.va) * 26 * dt;
+    if (G.tick % 30 === 0) d.va += (G.drng() - 0.5) * 0.5;
+    for (const u of G.units) { if (!u.alive) continue; const dx = u.x - d.sx, dy = u.y - d.sy; if (dx * dx + dy * dy < d.r * d.r) disHurt(u, 0.03 * dt, "locust"); }
+  } else if (d.type === "quake") {
+    // the ground keeps shaking for a moment; the rifts stay for the rest of the battle
+  } else if (d.type === "tornado") {
+    d.turnT -= dt; if (d.turnT <= 0) { d.turnT = 1; d.ta += (G.drng() - 0.5) * 1.2; }
+    const I = G.island;
+    if (!onLand(d.tx, d.ty, 90) || G.players.some(q => Math.hypot(d.tx - q.base.x, d.ty - q.base.y) < 420) || (G.mtn && Math.hypot(d.tx - G.mtn.x, d.ty - G.mtn.y) < G.mtn.r + 70)) d.ta = Math.atan2(I.c - d.ty, I.c - d.tx) + (G.mtn ? 1.2 : 0);
+    d.tx += Math.cos(d.ta) * 48 * dt; d.ty += Math.sin(d.ta) * 48 * dt;
+    for (const u of G.units) {
+      if (!u.alive || u.free || u.kind === "depot") continue;
+      const dx = d.tx - u.x, dy = d.ty - u.y, dd = Math.hypot(dx, dy) || 0.01; if (dd > 130) continue;
+      const pull = 34 * (1 - dd / 130) * dt; u.x += dx / dd * pull - dy / dd * pull * 0.8; u.y += dy / dd * pull + dx / dd * pull * 0.8; // sucked in and swung round
+      if (dd < 34 && !(u.twT > G.time)) { // caught: thrown out of the side and dropped
+        const a = Math.atan2(-dy, -dx) + 1.1 + G.drng() * 0.6, far = u.kind === "inf" ? 90 + G.drng() * 70 : 40, x0 = u.x, y0 = u.y;
+        const pt = pushOutOfRocks(clamp(u.x + Math.cos(a) * far, 10, G.S - 10), clamp(u.y + Math.sin(a) * far, 10, G.S - 10), CFG[u.kind].r);
+        u.x = u.px = pt.x; u.y = u.py = pt.y; u.path = null; u.twT = G.time + 2;
+        pushFx({ k: "toss", x: x0, y: y0, x2: pt.x, y2: pt.y, owner: u.owner, c: G.players[u.owner].team.c });
+        disHurt(u, 0.5, "tornado");
+      }
+    }
+  }
+}
+// wild beasts: a pack that runs down the nearest soldier of any army. Soldiers who aren't busy shoot back.
+function stepBeasts(dt) {
+  const T = G.time, I = G.island, d = G.dis;
+  for (let i = G.beasts.length - 1; i >= 0; i--) {
+    const b = G.beasts[i];
+    if (b.hp <= 0) { G.beasts.splice(i, 1); pushFx({ k: "beastDie", x: b.x, y: b.y }); continue; }
+    if (b.leave) { // run back to the sea and swim off
+      const a = Math.atan2(b.y - I.c, b.x - I.c); b.a = a; b.x += Math.cos(a) * 90 * dt; b.y += Math.sin(a) * 90 * dt; b.walk = T;
+      if (!onLand(b.x, b.y, -20)) G.beasts.splice(i, 1);
+      continue;
+    }
+    if ((G.tick + b.id) % 15 === 0) { // pick the nearest prey
+      let best = null, bd = 340 * 340;
+      for (const u of G.units) { if (!u.alive || u.free || u.mis || u.kind === "depot") continue; const dd = d2(u, b); if (dd < bd) { bd = dd; best = u; } }
+      b.tgt = best;
+    }
+    if (b.tgt && !b.tgt.alive) b.tgt = null;
+    const gx = b.tgt ? b.tgt.x : (d ? d.x + Math.cos(T * 0.4 + b.id) * 80 : b.x), gy = b.tgt ? b.tgt.y : (d ? d.y + Math.sin(T * 0.4 + b.id) * 80 : b.y);
+    const dx = gx - b.x, dy = gy - b.y, dist = Math.hypot(dx, dy) || 0.01;
+    b.cd -= dt;
+    if (dist > 13) {
+      const [vx, vy] = navDir(b.x, b.y, gx, gy, 8, dx / dist, dy / dist), sp = Math.min(84 * dt * (hazAt(b.x, b.y) === 4 ? 0.62 : 1), dist - 12);
+      b.x += vx * sp; b.y += vy * sp; b.a = Math.atan2(vy, vx); b.walk = T;
+      const pt = pushOutOfRocks(b.x, b.y, 8); b.x = pt.x; b.y = pt.y;
+      if (hazAt(b.x, b.y) === 3) b.hp = 0; // even beasts fall into rifts
+    } else if (b.tgt && b.cd <= 0) { b.cd = 0.8; b.a = Math.atan2(dy, dx); b.bite = T; disHurt(b.tgt, 0.3, "beast"); }
+    // shot at by soldiers in range who have nothing else to shoot
+    if ((G.tick + b.id) % 18 === 0) {
+      let dmg = 0;
+      for (const u of G.units) {
+        if (!u.alive || u.tgt || u.mis || u.free) continue; const C = CFG[u.kind]; if (!C.dmg) continue;
+        const r = rangeOf(u) * 0.8; if (d2(u, b) > r * r) continue;
+        const p = G.players[u.owner]; dmg += C.dmg * (1 + CFG.upStep * p.level) * p.mult * 0.45; u.face = Math.atan2(b.y - u.y, b.x - u.x); u.shotAt = T;
+      }
+      if (dmg) { b.hp -= dmg; b.hitAt = T; }
+    }
+  }
+}
+
 function step() { if (G.mp) DM.run(stepSim); else stepSim(); }
 function stepSim() {
   const dt = CFG.dt;
@@ -1573,7 +1799,7 @@ function stepSim() {
   // apply orders
   for (const c of G.cmds) applyCmd(c);
   G.cmds.length = 0;
-  stepCrates(dt); stepMissions(dt); stepDoom(dt); stepBottle(dt);
+  stepCrates(dt); stepMissions(dt); stepDoom(dt); stepBottle(dt); stepDisasters(dt);
   // AI thinking
   for (const p of G.players) if (p.ai && !p.out) { p.aiState.t -= dt; if (p.aiState.t <= 0) { p.aiState.t = p.thinkEvery; (p.think || aiThink)(p); } }
 
@@ -1630,7 +1856,7 @@ function stepSim() {
       u.idleT = 0;
       const [vx, vy] = navDir(u.x, u.y, gx, gy, C.r + 2, dx / dist, dy / dist);
       const P = G.players[u.owner], runK = u.run && !P.tired ? 1.8 : 1; if (runK > 1) P.ran = true;
-      const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * runK * (u.form === "wedge" ? FORM_FX.wedge.speed : 1) * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : hz === 4 ? 0.62 : 1), dist - stopAt + 0.5);
+      const hz = G.hz ? hazAt(u.x, u.y) : 0, sp = Math.min(C.speed * dt * runK * (u.form === "wedge" ? FORM_FX.wedge.speed : 1) * (hz === 1 ? 0.5 : hz === 2 ? 0.38 : hz === 4 ? 0.62 : 1) * (G.dis ? disSlow(u) : 1), dist - stopAt + 0.5);
       u.x += vx * sp; u.y += vy * sp; u.moving = true; u.face = u.walk = Math.atan2(vy, vx); if (u.owner === G.human && !G.attract) gStats().walk += sp;
       if (G.island && !onLand(u.x, u.y, C.r + 2)) { const q = toLand(u.x, u.y, C.r + 2); u.x = q.x; u.y = q.y; }
     }
@@ -1683,7 +1909,7 @@ function stepSim() {
     if (u.form === "wedge" && G.time - (u.lastFire || -99) > 5) u.charge = G.time + FORM_FX.wedge.chargeT; // first contact after a lull: the charge
     u.lastFire = G.time;
     if (u.form === "wedge" && u.charge > G.time) dmg *= FORM_FX.wedge.dmg;
-    const hit = t.isBase || G.rng() < (u.moving ? CFG.hitMoving : Math.min(0.97, CFG.hitStill * (u.form === "line" ? FORM_FX.line.aim : 1)));
+    const hit = t.isBase || G.rng() < (u.moving ? CFG.hitMoving : Math.min(0.97, CFG.hitStill * (u.form === "line" ? FORM_FX.line.aim : 1))) * (G.dis ? disAim(u) : 1);
     const ox = hit ? 0 : (G.rng() - 0.5) * 30, oy = hit ? 0 : (G.rng() - 0.5) * 30;
     const era = eraOf(u.owner), st = eraS(era), FL = ERAS[era].fly;
     if (FL) { // stones, javelins, arrows and plasma fly for a moment and the hit lands with them
@@ -3631,13 +3857,21 @@ function consumeFx() {
     if (e.k === "hazIn") { tip("haz" + e.hz, ["", "Water slows your soldiers, and some drown on the way across. They walk around lakes on their own unless you send them in.", "Quicksand slows soldiers to a crawl and sinks them slowly. Get them out fast.", "Rifts are deadly: a soldier who gets pushed in falls. Keep crowds away from the edge.", "Deep snow on the mountain slopes slows your soldiers down. Nobody can climb or shoot over the peak."][e.hz], "bad"); continue; }
     if (e.k === "haz") {
       if (seen && e.how === "drown") addPart({ k: "ring", x: e.x, y: e.y, life: 0.7, max: 0.7, s: 26, c: "170,220,230" });
-      if (e.owner === me && !G.attract && performance.now() - (consumeFx.hzT || 0) > 6000) { consumeFx.hzT = performance.now(); toast({ drown: "Soldiers are drowning in the lake", fall: "A soldier fell into a rift", sink: "Soldiers are sinking in quicksand" }[e.how], "bad"); }
+      if (e.owner === me && !G.attract && performance.now() - (consumeFx.hzT || 0) > 6000) { consumeFx.hzT = performance.now(); const msg = { drown: "Soldiers are drowning in the lake", fall: "A soldier fell into a rift", sink: "Soldiers are sinking in quicksand", lava: "Soldiers are burning in the lava", flood: "Soldiers are drowning in the flood", beast: "The beasts are taking your soldiers", locust: "The locusts are eating your soldiers", quake: "The earthquake took soldiers", tornado: "The tornado threw a soldier to his death" }[e.how]; if (msg) toast(msg, "bad"); }
       continue;
     }
     if (e.k.startsWith("doom")) { if (!G.attract) doomFx(e); continue; }
     if (e.k === "bottle") { if (!G.attract) { SND.ui(); burst(e.x, e.y, "level"); const who = e.kind === "gen" ? "Your general" : "Squad " + "ABCD"[e.sq || 0]; toast(who + " found a message in a bottle!", "gold"); bottleChip(e.i); } continue; }
     if (e.k === "bottleUp") { if (!G.attract) toast("A message in a bottle washed up on the shore. Send a soldier to pick it up", "gold"); continue; }
     if (e.k === "bottleLost") { if (!G.attract && isVis(e.x, e.y)) toast(G.players[e.owner].team.name + " grabbed the bottle first"); continue; }
+    if (e.k === "disWarn" || e.k === "disGo" || e.k === "disEnd") { if (G.attract) continue;
+      if (e.k === "disWarn") { toast(DIS.types[e.dk].brief, "bad"); alerts.beacons.push({ x: e.x, y: e.y, t0: performance.now() }); tip("dis", "Disasters strike a random army's ground. The orange circle shows where, and you have a few seconds to get out."); }
+      if (e.k === "disGo" && e.dk === "quake") shake.a = Math.max(shake.a, 18);
+      if (e.k === "disGo" && e.dk === "volcano") burst(e.x, e.y, "boom");
+      if (e.k !== "disEnd") SND.fx(e); continue; }
+    if (e.k === "lavaHit") { if (!G.attract) { burst(e.x, e.y, "trap"); SND.fx(e); } continue; }
+    if (e.k === "beastDie") { if (!G.attract) burst(e.x, e.y, "death", "#4a3d31"); continue; }
+    if (e.k === "toss") { if (!G.attract) { for (let i = 0; i < 5; i++) { const q = i / 4; addPart({ k: "debris", x: e.x, y: e.y, vx: (e.x2 - e.x) * (0.9 + q * 0.3), vy: (e.y2 - e.y) * (0.9 + q * 0.3), life: 1, max: 1, s: i ? 1.6 : 3, c: i ? "#6b5a44" : e.c, rot: rnd() * 7 }); } } continue; }
     const pub = e.k === "crate" || e.k === "strike" || e.k === "strikeIn" || e.k === "open" || e.k === "trap" || e.k === "lost";
     if (!seen && !pub) continue;
     if (e.k === "strikeIn" && e.owner !== me && !G.attract) toast("Incoming strike!", "bad");
@@ -3673,6 +3907,117 @@ function stepParts(dt) {
 
 // ---------- drawing ----------
 const TAU = Math.PI * 2;
+// disasters on the map, above the fog (everyone sees them). air(x, y, fn) draws things standing up in the 3D view
+function drawDisaster(c, z, now, air, shadow) {
+  const d = G.dis, T = G.time, lw = w => w / Math.max(z, 0.6);
+  // rifts the earthquake opened: carved into the ground for good
+  if (G.haz && G.haz.length !== (G.hazDrawn || 0)) { G.hazDrawn = G.haz.length; const nu = G.haz.filter(o => o.dis && !o.drawn), g = decalCtx;
+    for (const [grow, f, col] of [[8, 1, "rgba(40,34,24,.55)"], [3, 1, "#5c5340"], [0, 1, "#17130e"], [-4, 0.7, "#050403"]]) { g.fillStyle = col; g.beginPath(); for (const o of nu) { const r = Math.max(1, o.r * f + grow); g.moveTo(o.x + r, o.y); g.arc(o.x, o.y, r, 0, TAU); } g.fill(); }
+    for (const o of nu) o.drawn = true; }
+  // wild beasts: dark wolves, a pack on the run
+  for (const b of G.beasts) {
+    shadow(b.x, b.y + 1, 9, 0.3);
+    const run = T - b.walk < 0.2, bite = T - (b.bite || -9) < 0.25, hit = T - b.hitAt < 0.12;
+    air(b.x, b.y, (g, P, s) => {
+      const [px, py] = P(b.x, b.y, 0), [qx, qy] = P(b.x + Math.cos(b.a) * 10, b.y + Math.sin(b.a) * 10, 0), dir = qx >= px ? 1 : -1, ph = run ? now * 16 + b.id : 0;
+      g.save(); g.translate(px, py); g.scale(dir * s * 0.95, s * 0.95);
+      g.strokeStyle = "#2a221b"; g.lineWidth = 1.8; g.lineCap = "round";
+      for (const [lx, o] of [[-5, 0], [-3, Math.PI], [4, Math.PI], [6, 0]]) { const sw = Math.sin(ph + o) * 2.6; g.beginPath(); g.moveTo(lx, -6); g.lineTo(lx + sw, 0); g.stroke(); }
+      g.fillStyle = hit ? "#9a6a52" : "#4a3d31"; g.beginPath(); g.ellipse(0, -8 + Math.sin(ph * 2) * 0.5, 8, 3.8, 0, 0, TAU); g.fill(); // body
+      g.beginPath(); g.moveTo(-7, -9); g.quadraticCurveTo(-13, -11 - Math.sin(ph) * 1.5, -14, -6); g.lineWidth = 2.2; g.strokeStyle = "#4a3d31"; g.stroke(); // tail
+      g.save(); g.translate(8, -10.5 + (bite ? 1.5 : 0)); g.rotate(bite ? 0.35 : 0); g.fillStyle = hit ? "#9a6a52" : "#3d3228"; g.beginPath(); g.ellipse(0, 0, 3.6, 2.8, 0, 0, TAU); g.fill();
+      g.beginPath(); g.moveTo(2, -1); g.lineTo(6.2, 0.4); g.lineTo(2, 1.6); g.fill(); g.beginPath(); g.moveTo(-1.5, -2); g.lineTo(-0.5, -5); g.lineTo(1, -2); g.fill();
+      g.fillStyle = "#ffcc55"; g.beginPath(); g.arc(1.4, -0.6, 0.6, 0, TAU); g.fill(); g.restore();
+      g.restore();
+      if (b.hp < b.max) { const w = 14 * s, f = clamp(b.hp / b.max, 0, 1); g.fillStyle = "rgba(0,0,0,.65)"; g.fillRect(px - w / 2, py + 2 * s, w, 2.6 * s); g.fillStyle = "#d9a441"; g.fillRect(px - w / 2, py + 2 * s, w * f, 2.6 * s); }
+    });
+  }
+  if (!d) return;
+  const warn = T < d.go, left = d.go - T, Z = disZone(d) || { x: d.x, y: d.y, r: d.r };
+  const pulse = 0.5 + Math.sin(now * 7) * 0.3;
+  if (warn) { // the warning: a pulsing circle, the name and a countdown
+    c.strokeStyle = `rgba(255,140,40,${pulse})`; c.lineWidth = lw(2.5); c.setLineDash([12 / z, 8 / z]);
+    c.beginPath(); c.arc(Z.x, Z.y, Z.r, now * 0.4, now * 0.4 + TAU); c.stroke(); c.setLineDash([]);
+    c.fillStyle = `rgba(255,120,30,${0.06 + 0.05 * pulse})`; c.beginPath(); c.arc(Z.x, Z.y, Z.r, 0, TAU); c.fill();
+    if (d.type === "quake") { // hairline cracks grow along where the rifts will open
+      const k = clamp(1 - left / DIS.warn, 0, 1); c.strokeStyle = "rgba(25,18,10,.85)"; c.lineCap = "round";
+      for (const seg of d.rifts) { const n = Math.max(1, Math.ceil(seg.length * Math.min(1, k * 1.6))); c.lineWidth = lw(1 + k * 3); c.beginPath(); for (let i = 0; i < n; i++) i ? c.lineTo(seg[i].x, seg[i].y) : c.moveTo(seg[i].x, seg[i].y); c.stroke(); }
+    }
+  }
+  { const label = DIS.types[d.type].name.toUpperCase() + (warn ? "  " + Math.ceil(left) : ""), ly = Z.y - Z.r - 14 / Math.max(z, 0.6);
+    c.font = `900 ${Math.max(12, 12 / z)}px system-ui,sans-serif`; c.textAlign = "center"; c.textBaseline = "middle";
+    if (warn || d.type !== "beasts") { c.fillStyle = "rgba(0,0,0,.6)"; c.fillText(label, Z.x + 1, ly + 1); c.fillStyle = warn ? "#ffb35a" : "rgba(255,179,90,.7)"; c.fillText(label, Z.x, ly); } }
+  if (d.type === "volcano") {
+    const on = !warn, k = on ? clamp((T - d.go) / 2, 0, 1) : clamp(1 - left / DIS.warn, 0, 1) * 0.45, H = 22 + 58 * k, BR = 40 + 34 * k;
+    if (d.pool > 0) { const gr = c.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.pool + 16); gr.addColorStop(0, "rgba(255,236,150,.95)"); gr.addColorStop(0.35, "rgba(255,130,25,.92)"); gr.addColorStop(0.75, "rgba(140,28,8,.88)"); gr.addColorStop(1, "rgba(30,16,10,0)");
+      c.fillStyle = gr; c.beginPath(); for (let i = 0; i <= 24; i++) { const a = i / 24 * TAU, r = (d.pool + 16) * (0.88 + 0.12 * Math.sin(a * 5 + d.id) + 0.04 * Math.sin(a * 11 + now)); i ? c.lineTo(d.x + Math.cos(a) * r, d.y + Math.sin(a) * r) : c.moveTo(d.x + Math.cos(a) * r, d.y + Math.sin(a) * r); } c.fill();
+      c.strokeStyle = "rgba(20,12,8,.55)"; c.lineWidth = lw(1.4); for (let i = 0; i < 6; i++) { const a = i * 1.05 + d.id, r0 = d.pool * 0.3; c.beginPath(); c.moveTo(d.x + Math.cos(a) * r0, d.y + Math.sin(a) * r0); c.lineTo(d.x + Math.cos(a + 0.3) * d.pool * 0.8, d.y + Math.sin(a + 0.3) * d.pool * 0.8); c.stroke(); } } // the crust cracking on the lava
+    air(d.x, d.y, (g, P, s) => { // the cone: steep near the top, spreading at the foot, ragged dark rock; lava runs down when it's awake
+      const top = 14, rad = (h, j) => (top + (BR - top) * Math.pow(1 - h / H, 2.1)) * (1 + 0.07 * Math.sin(j * 2.7 + d.id) + 0.04 * Math.sin(j * 7.3)), N = 14, pts = [];
+      for (let i = 0; i <= N; i++) { const h = H * i / N; pts.push(P(d.x - rad(h, i), d.y, h)); }
+      for (let i = N; i >= 0; i--) { const h = H * i / N; pts.push(P(d.x + rad(h, i + 20), d.y, h)); }
+      const [, ty] = P(d.x, d.y, H), [, by] = P(d.x, d.y, 0), gr = g.createLinearGradient(0, ty, 0, by); gr.addColorStop(0, "#241c18"); gr.addColorStop(0.5, "#352a23"); gr.addColorStop(1, "#4a3e33");
+      g.fillStyle = gr; g.beginPath(); pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); g.fill();
+      g.save(); g.clip(); // gullies and ridges down the slope, light from the upper left
+      for (let j = 0; j < 9; j++) { const f = (j + 0.5) / 9 * 2 - 1; g.strokeStyle = j % 2 ? "rgba(0,0,0,.28)" : "rgba(255,235,210,.07)"; g.lineWidth = (j % 2 ? 2.2 : 1.6) * s; g.beginPath();
+        for (let i = 0; i <= N; i++) { const h = H * (1 - i / N), [x, y] = P(d.x + f * rad(h, j + i * 0.3) * 0.92, d.y, h); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+      const sh = g.createLinearGradient(pts[0][0], 0, pts[pts.length - 1 - N][0] || pts[0][0] + 1, 0); sh.addColorStop(0, "rgba(255,240,220,.08)"); sh.addColorStop(0.55, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,0,.25)"); g.fillStyle = sh; g.fillRect(pts[0][0] - 5, ty - 10, (BR * 2 + 10) * s + 10, by - ty + 20);
+      if (on) { g.globalCompositeOperation = "lighter"; g.lineCap = "round"; g.lineJoin = "round";
+        for (let i = 0; i < 4; i++) { const f = [-0.55, -0.12, 0.28, 0.66][i], L = clamp((T - d.go - i * 0.7) / 4, 0, 1); if (L <= 0) continue;
+          g.strokeStyle = `rgba(255,${120 + i * 20},35,.85)`; g.lineWidth = (2.8 - i * 0.35) * s; g.beginPath();
+          const M = Math.ceil(N * L); for (let k2 = 0; k2 <= M; k2++) { const h = H * (1 - k2 / N), wig = Math.sin(k2 * 1.3 + i * 2) * 0.08, [x, y] = P(d.x + (f + wig) * rad(h, i + k2 * 0.3) * 0.95, d.y, h); k2 ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+        g.globalCompositeOperation = "source-over"; }
+      g.restore();
+      const [cx, cy] = P(d.x, d.y, H), cw = top * s;
+      if (on) { g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.8; g.drawImage(SPR.glow, cx - 34 * s, cy - 30 * s, 68 * s, 52 * s); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; }
+      g.fillStyle = "#1a1310"; g.beginPath(); g.ellipse(cx, cy, cw * 1.05, 4.2 * s, 0, 0, TAU); g.fill(); // the crater rim
+      g.fillStyle = on ? `rgb(255,${160 + Math.sin(now * 9) * 50 | 0},50)` : "#120d0a"; g.beginPath(); g.ellipse(cx, cy + 0.6 * s, cw * 0.8, 3 * s, 0, 0, TAU); g.fill();
+      if (on) { const ash = Math.min(1, (T - d.go) / 3); for (let i = 0; i < 7; i++) { const f = ((now * 0.22 + i / 7) % 1), [px, py] = P(d.x + Math.sin(i * 2.1 + now * 0.4) * 10 * f + f * 40, d.y, H + f * 190), r = (12 + f * 46) * s; g.globalAlpha = 0.55 * (1 - f) * ash; g.drawImage(SPR.smoke, px - r, py - r, r * 2, r * 2); } g.globalAlpha = 1; } // the ash column
+      else if (k > 0.05) { const f = (now * 0.4) % 1, [px, py] = P(d.x, d.y, H + f * 40), r = (6 + f * 14) * s; g.globalAlpha = 0.4 * (1 - f); g.drawImage(SPR.smoke, px - r, py - r, r * 2, r * 2); g.globalAlpha = 1; } // a wisp before it blows
+    });
+    for (const b of d.bombs) { const q = clamp(1 - b.t / b.tot, 0, 1), bx = d.x + (b.x - d.x) * q, by = d.y + (b.y - d.y) * q, hh = H + Math.sin(Math.PI * q) * 160 - H * q;
+      c.strokeStyle = `rgba(255,70,30,${0.35 + q * 0.5})`; c.lineWidth = lw(1.6); c.beginPath(); c.arc(b.x, b.y, 34 * (1.3 - q * 0.3), 0, TAU); c.stroke();
+      shadow(bx, by, 4 + q * 3, 0.25);
+      air(bx, by, (g, P, s) => { const [px, py] = P(bx, by, hh), [tx, ty] = P(d.x + (b.x - d.x) * Math.max(0, q - 0.06), d.y + (b.y - d.y) * Math.max(0, q - 0.06), H + Math.sin(Math.PI * Math.max(0, q - 0.06)) * 160 - H * Math.max(0, q - 0.06));
+        g.globalAlpha = 0.45; g.drawImage(SPR.smoke, tx - 7 * s, ty - 7 * s, 14 * s, 14 * s); g.globalAlpha = 1;
+        g.globalCompositeOperation = "lighter"; g.drawImage(SPR.glow, px - 12 * s, py - 12 * s, 24 * s, 24 * s); g.globalCompositeOperation = "source-over"; g.fillStyle = "#ff8a2a"; g.beginPath(); g.arc(px, py, 3.4 * s, 0, TAU); g.fill(); g.fillStyle = "#3a2418"; g.beginPath(); g.arc(px - 1 * s, py - 1 * s, 1.6 * s, 0, TAU); g.fill(); }); }
+  } else if (d.type === "flood" && !warn) { // sea water pouring over the land: the real sea photo, a ragged foaming edge
+    const r = d.r * d.lvl;
+    if (r > 2) { const edge = (c2, rr) => { c2.beginPath(); for (let i = 0; i <= 90; i++) { const a = i / 90 * TAU, q = rr * (0.9 + 0.06 * Math.sin(a * 6 + d.id + now * 0.6) + 0.04 * Math.sin(a * 13 - now)); i ? c2.lineTo(d.x + Math.cos(a) * q, d.y + Math.sin(a) * q) : c2.moveTo(d.x + Math.cos(a) * q, d.y + Math.sin(a) * q); } c2.closePath(); };
+      const TS = TEX.sea; if (texOk("sea") && !TS.p1) { TS.p1 = c.createPattern(TS, "repeat"); TS.p1.setTransform(new DOMMatrix().scale(760 / TS.width)); } c.save(); edge(c, r); c.globalAlpha = 0.82; c.fillStyle = texOk("sea") && TS.p1 && qLevel() > 0 ? TS.p1 : "#2a6a7c"; c.fill();
+      const gr = c.createRadialGradient(d.x, d.y, r * 0.2, d.x, d.y, r); gr.addColorStop(0, "rgba(20,60,75,.25)"); gr.addColorStop(0.8, "rgba(60,120,120,.05)"); gr.addColorStop(1, "rgba(150,140,100,.35)"); c.globalAlpha = 1; c.fillStyle = gr; c.fill(); c.restore(); // muddy at the edge
+      c.strokeStyle = "rgba(235,245,240,.6)"; c.lineWidth = lw(2.4); edge(c, r); c.stroke(); c.strokeStyle = "rgba(235,245,240,.25)"; c.lineWidth = lw(5); edge(c, r * 0.97); c.stroke(); // foam
+      c.strokeStyle = "rgba(220,240,240,.25)"; c.lineWidth = lw(1.3);
+      for (let i = 0; i < 9; i++) { const a = i * 2.39 + d.id, q = ((now * 0.25 + i / 9) % 1), rr = r * 0.8 * Math.sqrt((i * 0.618) % 1), x = d.x + Math.cos(a) * rr, y = d.y + Math.sin(a) * rr; c.globalAlpha = 1 - q; c.beginPath(); c.arc(x, y, 6 + q * 22, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); }
+      c.globalAlpha = 1; }
+  } else if (d.type === "locusts" && !warn) { // a dark swarm drifting across the island, its shadow on the ground
+    const sx = d.sx, sy = d.sy, r = d.r, n = [170, 280, 400][qLevel()] || 280;
+    const gr = c.createRadialGradient(sx, sy, 0, sx, sy, r); gr.addColorStop(0, "rgba(20,18,6,.6)"); gr.addColorStop(0.7, "rgba(20,18,6,.35)"); gr.addColorStop(1, "rgba(20,18,6,0)"); c.fillStyle = gr; c.beginPath(); c.arc(sx, sy, r, 0, TAU); c.fill();
+    air(sx, sy + r, (g, P, s) => { // listed at the swarm's near edge so it draws over the rocks and soldiers under it
+      const [hx, hy] = P(sx, sy, 40), hr = g.createRadialGradient(hx, hy, 0, hx, hy, r * s); hr.addColorStop(0, "rgba(60,52,20,.42)"); hr.addColorStop(0.6, "rgba(60,52,20,.22)"); hr.addColorStop(1, "rgba(60,52,20,0)"); g.fillStyle = hr; g.beginPath(); g.ellipse(hx, hy, r * s, r * s * 0.6, 0, 0, TAU); g.fill(); // the haze of wings
+      g.globalCompositeOperation = "multiply"; for (let i = 0, nb = [3, 6, 9][qLevel()] || 6; i < nb; i++) { const a = now * 0.5 * (i % 2 ? 1 : -1) + i * 0.7, q = r * 0.55 * ((i * 0.37) % 1 + 0.2), [px, py] = P(sx + Math.cos(a) * q, sy + Math.sin(a) * q, 30 + (i % 3) * 18), w = r * 0.75 * s; g.globalAlpha = 0.55; g.drawImage(SPR.smoke, px - w, py - w * 0.6, w * 2, w * 1.2); } g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; // dark billows
+      for (let i = 0; i < n; i++) { const a = i * 2.399 + now * (0.5 + (i % 7) * 0.12) * (i % 2 ? 1 : -1), rr = r * Math.sqrt(((i * 0.6180339) % 1)), x = sx + Math.cos(a) * rr + Math.sin(now * 3 + i) * 6, y = sy + Math.sin(a) * rr, h = 8 + (i % 6) * 12 + Math.sin(now * 4 + i) * 5;
+        const [px, py] = P(x, y, h), w = (Math.sin(now * 40 + i) > 0 ? 5.5 : 2.4) * s; g.fillStyle = i % 3 ? "#1e1b0c" : "#6a5a22"; g.fillRect(px - w / 2, py - 1.2 * s, w, 2.4 * s); } });
+  } else if (d.type === "quake" && !warn) {
+    shake.a = Math.max(shake.a, 7 * clamp((d.end - T) / 3, 0, 1));
+    if (rnd() < 0.5) for (const seg of d.rifts) { const o = seg[(rnd() * seg.length) | 0]; addPart({ k: "smoke", x: o.x + (rnd() - 0.5) * 20, y: o.y + (rnd() - 0.5) * 20, vx: 0, vy: -6, life: 2, max: 2, s: 16, g: 18 }); } // dust from the new rifts
+  } else if (d.type === "tornado") {
+    const x = d.tx, y = d.ty, k = warn ? clamp(1 - left / DIS.warn, 0, 1) * 0.35 : Math.min(1, (T - d.go) / 1.5, (d.end - T) / 1.5);
+    const gr = c.createRadialGradient(x, y, 0, x, y, 90); gr.addColorStop(0, `rgba(110,95,75,${0.55 * k})`); gr.addColorStop(1, "rgba(110,95,75,0)"); c.fillStyle = gr; c.beginPath(); c.arc(x, y, 90, 0, TAU); c.fill();
+    if (!warn && rnd() < 0.7) { const a = rnd() * TAU; addPart({ k: "debris", x: x + Math.cos(a) * 30, y: y + Math.sin(a) * 30, vx: -Math.sin(a) * 170, vy: Math.cos(a) * 170, life: 0.5, max: 0.5, s: 1.8, c: "#6b5a44", rot: rnd() * 7 }); }
+    if (k > 0.02) air(x, y, (g, P, s) => { // the funnel: one smooth shape, thin at the ground and spreading into the cloud, bending as it sways
+      const L = 16, lft = [], rgt = [], H = 260 * (0.4 + 0.6 * k);
+      for (let i = 0; i <= L; i++) { const f = i / L, rr = (7 + Math.pow(f, 2.2) * 80) * (0.5 + 0.5 * k), sw = Math.sin(now * 1.3 + f * 2.6) * f * 22 + Math.sin(now * 3.1) * 3, [px, py] = P(x + sw, y, f * H); lft.push([px - rr * s, py]); rgt.push([px + rr * s, py]); }
+      const [, ty] = P(x, y, H), [, by] = P(x, y, 0), fg = g.createLinearGradient(0, ty, 0, by); fg.addColorStop(0, `rgba(70,72,74,${0.75 * k})`); fg.addColorStop(0.55, `rgba(95,92,86,${0.62 * k})`); fg.addColorStop(1, `rgba(120,104,82,${0.8 * k})`);
+      g.fillStyle = fg; g.beginPath(); lft.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); for (let i = rgt.length - 1; i >= 0; i--) g.lineTo(rgt[i][0], rgt[i][1]); g.closePath(); g.fill();
+      g.save(); g.clip(); g.strokeStyle = `rgba(210,205,195,${0.28 * k})`; g.lineWidth = 1.4 * s; // spiralling streaks inside the funnel
+      for (let i = 1; i <= L; i++) { const mx = (lft[i][0] + rgt[i][0]) / 2, hw = (rgt[i][0] - lft[i][0]) / 2, ph = (now * (9 - i * 0.3) + i * 1.7) % TAU; g.beginPath(); g.ellipse(mx, lft[i][1], hw, hw * 0.22, 0, ph, ph + 1.3); g.stroke(); } g.restore();
+      const [ux, uy] = P(x, y, H), cr = 110 * s * (0.5 + 0.5 * k); g.globalAlpha = 0.55 * k; g.drawImage(SPR.smoke, ux - cr, uy - cr * 0.5, cr * 2, cr); // the storm cloud it hangs from
+      for (let i = 0, nd = [3, 4, 6][qLevel()] || 4; i < nd; i++) { const a = now * 2.2 + i * TAU / nd, [px, py] = P(x + Math.cos(a) * 34, y + Math.sin(a) * 18, 6), r = 22 * s; g.globalAlpha = 0.45 * k; g.drawImage(SPR.smoke, px - r, py - r * 0.7, r * 2, r * 1.4); } // dust whirling at the foot
+      g.globalAlpha = 1;
+      for (let i = 0; i < 14; i++) { const a = now * 5 + i * 0.45, f = ((i * 0.37 + now * 0.35) % 1), rr = 12 + f * 70, [px, py] = P(x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.6, f * H * 0.8); g.fillStyle = i % 3 ? "#3c3328" : "#5a4a36"; g.fillRect(px - 1.5 * s, py - 1.5 * s, 3 * s, 3 * s); } });
+  }
+}
 // mission markers on the map, above the fog
 function drawMission(c, z, now) {
   const m = G.mis, lw = 2 / Math.max(z, 0.6), gold = a => `rgba(243,200,90,${a})`;
@@ -4264,6 +4609,7 @@ function render(dtReal) {
     c.beginPath(); c.arc(st.x, st.y, R * f, 0, TAU); c.stroke();
     c.beginPath(); c.moveTo(st.x - R * 1.15, st.y); c.lineTo(st.x - R * 0.3, st.y); c.moveTo(st.x + R * 0.3, st.y); c.lineTo(st.x + R * 1.15, st.y); c.moveTo(st.x, st.y - R * 1.15); c.lineTo(st.x, st.y - R * 0.3); c.moveTo(st.x, st.y + R * 0.3); c.lineTo(st.x, st.y + R * 1.15); c.stroke();
   }
+  if (G.dis || G.beasts.length || (G.haz && G.haz.length !== (G.hazDrawn || 0))) drawDisaster(c, z, now, air, shadow);
   if (G.mis && !seeAll) drawMission(c, z, now);
   drawDoomMarks(c, z, now);
   c.textAlign = "start"; c.textBaseline = "alphabetic";
@@ -4663,6 +5009,8 @@ function renderMini() {
     const pr = (performance.now() / 900) % 1; c.strokeStyle = `rgba(243,200,90,${1 - pr})`; c.lineWidth = 2.5; c.beginPath(); c.arc(q.x * k, q.y * k, 5 + pr * 14, 0, 7); c.stroke();
     c.fillStyle = "#f3c85a"; c.beginPath(); c.arc(q.x * k, q.y * k, 4, 0, 7); c.fill(); }
   for (const st of G.strikes || []) { c.strokeStyle = "#ff5a3c"; c.lineWidth = 2; c.beginPath(); c.arc(st.x * k, st.y * k, 120 * k, 0, 7); c.stroke(); }
+  if (G.dis) { const Z = disZone(G.dis) || G.dis; c.strokeStyle = `rgba(255,140,40,${0.6 + Math.sin(performance.now() / 150) * 0.3})`; c.lineWidth = 2; c.setLineDash([4, 3]); c.beginPath(); c.arc(Z.x * k, Z.y * k, Math.max(5, Z.r * k), 0, 7); c.stroke(); c.setLineDash([]); }
+  for (const b of G.beasts) { c.fillStyle = "#d9a441"; c.fillRect(b.x * k - 2, b.y * k - 2, 4, 4); }
   if (!G.attract) drawBeacons(c, k);
   c.strokeStyle = "rgba(233,229,211,.85)"; c.lineWidth = 2;
   c.strokeRect((cam.x - W / 2 / cam.z) * k, (cam.y - H / 2 / cam.z) * k, W / cam.z * k, H / cam.z * k);
@@ -5168,6 +5516,29 @@ function renderMisTypes() {
   $("misNote").textContent = (UI.opts.missions && !EXP() && loadLog().length < 3 ? "With Basic controls, missions join after your first 3 battles. " : "") + (!UI.opts.missions ? "Missions are off." : !n ? "No mission types picked, so no missions will come." : n === 6 ? "All six mission types are in the mix." : n + " of 6 mission types are in the mix.");
 }
 renderMisTypes();
+// disasters: off unless switched on here (T), and the player picks which kinds can come
+UI.opts.dis = 0; UI.opts.disTypes = Object.keys(DIS.types);
+try { const v = localStorage.getItem("hr-dis"); if (v !== null) UI.opts.dis = +v ? 1 : 0; } catch (e) {}
+try { const v = JSON.parse(localStorage.getItem("hr-distypes") || "null"); if (Array.isArray(v)) UI.opts.disTypes = v.filter(k => DIS.types[k]); } catch (e) {}
+seg("optDis", "dis");
+$("optDis").addEventListener("click", () => { try { localStorage.setItem("hr-dis", String(UI.opts.dis)); } catch (e) {} renderDisTypes(); });
+function renderDisTypes() {
+  const box = $("disTypes");
+  if (!box.children.length) for (const k of Object.keys(DIS.types)) {
+    const b = document.createElement("button"); b.dataset.k = k; b.textContent = DIS.types[k].name; box.appendChild(b);
+    b.addEventListener("click", () => {
+      const on = UI.opts.disTypes.includes(k);
+      UI.opts.disTypes = on ? UI.opts.disTypes.filter(x => x !== k) : [...UI.opts.disTypes, k];
+      try { localStorage.setItem("hr-distypes", JSON.stringify(UI.opts.disTypes)); } catch (e) {}
+      SND.ui(); renderDisTypes();
+    });
+  }
+  for (const b of box.children) b.classList.toggle("on", UI.opts.disTypes.includes(b.dataset.k));
+  box.classList.toggle("off", !UI.opts.dis);
+  const n = UI.opts.disTypes.length;
+  $("disNote").textContent = !UI.opts.dis ? "Disasters are off. Switch them on for a volcano, flood, wild beasts, locusts, an earthquake or a tornado every minute or two. Each one hits a random army's ground, with a warning first." : !n ? "No disaster types picked, so none will come." : (n === 6 ? "All six disasters are in the mix." : n + " of 6 disasters are in the mix.") + " The first comes after a minute or so, then one every minute or two, each with a few seconds' warning.";
+}
+renderDisTypes();
 UI.opts.split = 4; UI.opts.layout = 1; UI.opts.expert = 1; UI.opts.tel = 1; UI.opts.advice = 1;
 try { const v = localStorage.getItem("hr-advice"); if (v !== null) UI.opts.advice = +v ? 1 : 0; } catch (e) {}
 seg("optAdvice", "advice");
@@ -5189,7 +5560,7 @@ layoutBar(!!UI.opts.layout); applyExpert();
 $("expOn").addEventListener("click", () => { UI.opts.expert = 1; try { localStorage.setItem("hr-expert", "1"); } catch (e) {} $("optExpert").querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.v === "1")); applyExpert(); $("expOffer").hidden = true; toast("Expert controls on. The extra orders live behind ⋯", "gold"); });
 try { if (localStorage.getItem("hr-custom") === "1") $("custom").open = true; } catch (e) {}
 $("custom").addEventListener("toggle", () => { try { localStorage.setItem("hr-custom", $("custom").open ? "1" : "0"); } catch (e) {} });
-$("setBtn").addEventListener("click", () => { $("menu").hidden = true; $("settings").hidden = false; renderMisTypes(); });
+$("setBtn").addEventListener("click", () => { $("menu").hidden = true; $("settings").hidden = false; renderMisTypes(); renderDisTypes(); });
 $("setBack").addEventListener("click", () => { $("settings").hidden = true; $("menu").hidden = false; });
 $("optCrates").addEventListener("click", () => { try { localStorage.setItem("hr-crates", String(UI.opts.crates)); } catch (e) {} });
 function setArmy(k, v) {
@@ -5223,7 +5594,7 @@ function initGame(g) {
   G = g; G.pend = [];
   G.unitById = new Map(G.units.map(u => [u.id, u]));
   G.gens = G.players.map(p => G.units.find(u => u.owner === p.id && u.kind === "gen"));
-  cratesInit(); missionsInit(); G.cratesOn = true; G.missionsOn = false; UI.strikeMode = false;
+  cratesInit(); missionsInit(); disInit(); G.cratesOn = true; G.missionsOn = false; G.disOn = false; G.disTypes = []; UI.strikeMode = false;
   buildWorld();
 }
 // a live AI battle plays behind the menu
@@ -5270,10 +5641,12 @@ function start() {
   const seed = (Date.now() & 0xffffffff) >>> 0, O = UI.opts;
   initGame(newGame(O.players, O.up, seed, O.diff, O.army, O.me, O.map));
   G.cratesOn = !!O.crates; G.missionsOn = !!O.missions && O.misTypes.length > 0 && (EXP() || loadLog().length >= 3); G.misTypes = O.misTypes.slice();
+  G.disOn = !!O.dis && O.disTypes.length > 0; G.disTypes = O.disTypes.slice();
+  { const q = (location.search.match(/[?&]disaster=(\w+)/) || [])[1]; if (q && DIS.types[q] && !HUB_LAUNCH) { G.disOn = true; G.disTypes = [q]; G.disT = 12; } } // test link: ?disaster=volcano brings that one after 12 s
   G.players[G.human].autoSpread = !EXP(); G.players[G.human].autoEngage = !EXP(); UI.use = {};
   { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = O.split || 3; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
   G.dx = URL_ERA == null ? dxNew(G.players.length) : null; // diagnostics for the game log (test links stay out)
-  G.rec = { seed, players: O.players, up: O.up, diff: O.diff, army: O.army, me: O.me, map: O.map, crates: G.cratesOn, missions: G.missionsOn, misTypes: G.misTypes.slice(), spread: !EXP(), engage: !EXP(), split: O.split || 3, cmds: [] };
+  G.rec = { seed, players: O.players, up: O.up, diff: O.diff, army: O.army, me: O.me, map: O.map, crates: G.cratesOn, missions: G.missionsOn, misTypes: G.misTypes.slice(), dis: G.disOn, disTypes: G.disTypes.slice(), spread: !EXP(), engage: !EXP(), split: O.split || 3, cmds: [] };
   document.body.classList.remove("replay"); $("replayBar").hidden = true;
   UI.forms = {}; UI.combo = null; UI.rallyMode = false; closeTray(); disarmKill();
   const b = G.players[G.human].base, p = G.players[G.human];
@@ -5465,6 +5838,18 @@ const SND = (() => {
       heat += e.k === "strike" ? 8 : 4; const big = e.k === "strike";
       nz(t, big ? 2.4 : 1.2, "lowpass", 1300, 0.6, big ? 0.85 : 0.6, 0.006, P.pan, 0.5, sfxBus, 60);
       tone(t, "sine", 80, 26, big ? 1.8 : 0.9, big ? 0.85 : 0.6, 0.006, P.pan, 0.3);
+    } else if (e.k === "disWarn") { // a deep rumble and a warning horn
+      nz(t, 2.6, "lowpass", 220, 0.7, 0.5, 0.6, 0, 0.4, sfxBus, 90);
+      [0, 0.6].forEach(q => tone(t + q, "sawtooth", 311, 233, 0.5, 0.08, 0.04, 0, 0.4, sfxBus, 1200));
+    } else if (e.k === "disGo") {
+      heat += 6; const k = e.dk;
+      if (k === "volcano" || k === "quake") { nz(t, 3.5, "lowpass", 900, 0.6, 0.9 * Math.max(0.5, v), 0.02, P.pan, 0.6, sfxBus, 50); tone(t, "sine", 55, 22, 3, 0.8, 0.02, P.pan, 0.3); }
+      else if (k === "flood") nz(t, 5, "lowpass", 500, 0.5, 0.45, 1.5, P.pan, 0.6, sfxBus, 1600);
+      else if (k === "beasts") [0, 0.7, 1.1].forEach((q, i) => tone(t + q, "sawtooth", 330 + i * 40, 520 + i * 30, 1.2, 0.05, 0.25, P.pan + (i - 1) * 0.4, 0.7, sfxBus, 1400));
+      else if (k === "locusts") { nz(t, 4, "bandpass", 2400, 4, 0.18, 1, P.pan, 0.3, sfxBus, 2600); tone(t, "sawtooth", 180, 190, 4, 0.03, 1, P.pan, 0.2, sfxBus, 900); }
+      else if (k === "tornado") nz(t, 6, "bandpass", 300, 1.2, 0.5, 1.2, P.pan, 0.5, sfxBus, 900);
+    } else if (e.k === "lavaHit") {
+      if (budget()) { nz(t, 0.5, "lowpass", 900, 0.7, 0.4 * v, 0.004, P.pan, 0.3, sfxBus, 120); }
     } else if (e.k === "level" && (G.attract || e.owner === G.human)) {
       [0, 4, 7, 12].forEach((s, i) => tone(t + i * 0.08, "triangle", 587 * Math.pow(2, s / 12), 587 * Math.pow(2, s / 12), 0.5, 0.18, 0.006, 0, 0.5));
     }
@@ -6708,7 +7093,7 @@ function startReplay() {
   const rec = lastRec; if (!rec) return;
   TUT.stop(); leaveReview(); document.body.classList.remove("attract"); setTimeout(resize, 0);
   initGame(newGame(rec.players, rec.up, rec.seed, rec.diff, rec.army, rec.me, rec.map));
-  G.cratesOn = rec.crates; G.missionsOn = rec.missions; G.misTypes = rec.misTypes.slice();
+  G.cratesOn = rec.crates; G.missionsOn = rec.missions; G.misTypes = rec.misTypes.slice(); G.disOn = !!rec.dis; G.disTypes = (rec.disTypes || []).slice();
   G.players[G.human].autoSpread = rec.spread; G.players[G.human].autoEngage = rec.engage; UI.use = {};
   { const inf = G.units.filter(u => u.owner === G.human && u.kind === "inf"), n = rec.split; inf.forEach((u, i) => { u.squad = Math.min(n - 1, Math.floor(i * n / inf.length)); }); }
   G.replay = { rec, i: 0 }; $("replayBar").querySelector("b").textContent = "▶ REPLAY"; $("rpPause").hidden = false;
@@ -6930,6 +7315,7 @@ function mpStart(m) {
   G.mp = true; G.human = seat >= 0 ? seat : 0;
   MP.seat = seat >= 0 && !MP.drops.some(d => d.pid === you) ? seat : -1;
   G.cratesOn = o.crates !== false && o.crates !== 0; G.missionsOn = false; G.misTypes = []; // missions are written for one human player
+  G.disOn = !!o.disasters; G.disTypes = Array.isArray(o.disTypes) ? o.disTypes.filter(k => DIS.types[k]) : []; // only if the hub lobby sends the switch (off otherwise)
   G.players.forEach((p, i) => {
     p.human = i < ids.length;
     if (!p.human) return;
@@ -7098,7 +7484,7 @@ function mpLoop(dtReal) {
   }
 }
 
-window.__hr = { MP, DM, get G() { return G; }, replay: r => { lastRec = r; startReplay(); }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
+window.__hr = { MP, DM, DIS, disZone, get G() { return G; }, replay: r => { lastRec = r; startReplay(); }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate };
 })();
 </script>
 
