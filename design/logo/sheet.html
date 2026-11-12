@@ -1,0 +1,47 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:BSS;src:url(bss.woff2);font-weight:900}
+@font-face{font-family:Saira;src:url(saira.woff2);font-weight:800}
+:root{--ink:#e9e5d3;--khaki:#cdb46a;--red:#f0473a;--dim:#a6a28f}
+body{margin:0;background:#0d110c;color:var(--ink);font-family:Saira,sans-serif;width:1600px}
+h2{font:800 30px Saira;letter-spacing:.04em;margin:0 0 4px;text-transform:uppercase}
+.hd{padding:34px 48px 10px;display:flex;align-items:baseline;gap:18px}
+.hd h1{font:900 52px BSS;margin:0;text-transform:uppercase}.hd h1 span{color:var(--khaki)}
+.hd p{color:var(--dim);font-size:22px;margin:0}
+.row{display:flex;align-items:center;gap:34px;padding:22px 48px;border-top:1px solid rgba(233,229,211,.12)}
+.num{font:900 64px BSS;color:var(--khaki);width:46px}
+.big svg{width:220px;height:220px;display:block}
+.sizes{display:flex;align-items:flex-end;gap:18px}
+.sizes div{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--dim);font-size:15px}
+.lock{display:flex;align-items:center;gap:18px;background:#1d241c;border-radius:14px;padding:18px 26px;margin-left:10px}
+.lock svg{width:96px;height:96px}
+.word{font:900 64px/0.86 BSS;text-transform:uppercase}.word span{color:var(--khaki)}
+.txt{width:330px}.txt p{margin:0;color:var(--dim);font-size:20px;line-height:1.3}
+.light{background:#e9e5d3;border-radius:8px;padding:6px}
+</style></head><body>
+<div class="hd"><h1>Hit and <span>Run</span></h1><p>logo concepts · app icon, favicon sizes and a name lockup for each</p></div>
+<div id="rows"></div>
+<script>
+const K='#cdb46a',I='#e9e5d3',R='#f0473a';
+const bg=(f1='#262f22',f2='#141a12')=>`<defs><linearGradient id="g${Math.random().toString(36).slice(2)}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${f1}"/><stop offset="1" stop-color="${f2}"/></linearGradient></defs>`;
+function tile(inner,f1,f2){const id='g'+Math.random().toString(36).slice(2);
+ return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${f1||'#2a3325'}"/><stop offset="1" stop-color="${f2||'#141a12'}"/></linearGradient></defs><rect width="100" height="100" rx="22" fill="url(#${id})"/>${inner}</svg>`}
+const C=[
+ {name:'Moving reticle',desc:'A crosshair with speed lines: the hit and the run in one mark. No weapon, so it fits stones and lasers alike.',
+  svg:()=>tile(`<g stroke="${K}" stroke-linecap="round" fill="none"><circle cx="58" cy="50" r="25" stroke-width="7"/><path d="M58 17v12M58 71v12M91 50H79" stroke-width="7"/></g><g stroke="${I}" stroke-width="6" stroke-linecap="round" opacity=".85"><path d="M10 38h14M5 50h20M10 62h14"/></g><circle cx="58" cy="50" r="8" fill="${R}"/>`)},
+ {name:'Stencil monogram',desc:'HR cut in the title’s stencil font, H in ink and R in khaki like the title, with a red stamp bar.',
+  svg:()=>tile(`<text x="50" y="74" text-anchor="middle" font-family="BSS" font-weight="900" font-size="70" letter-spacing="-1"><tspan fill="${I}">H</tspan><tspan fill="${K}">R</tspan></text><rect x="18" y="80" width="64" height="6" rx="1" fill="${R}"/>`)},
+ {name:'Fog reveal',desc:'A pool of sight in the fog, a red hit marker, and footsteps heading out. The fog-of-war idea, era-free.',
+  svg:()=>{const id='f'+Math.random().toString(36).slice(2);return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="${id}" cx=".42" cy=".58" r=".42"><stop offset="0" stop-color="#5d6b43"/><stop offset=".7" stop-color="#2f3a26"/><stop offset="1" stop-color="#0b0f0a"/></radialGradient></defs><rect width="100" height="100" rx="22" fill="#0b0f0a"/><rect width="100" height="100" rx="22" fill="url(#${id})"/><circle cx="42" cy="58" r="30" fill="none" stroke="${K}" stroke-width="2.5" stroke-dasharray="5 5" opacity=".8"/><g stroke="${R}" stroke-width="8" stroke-linecap="round"><path d="M32 48l20 20M52 48L32 68"/></g><g fill="${K}"><circle cx="66" cy="34" r="4.5"/><circle cx="76" cy="25" r="4"/><circle cx="85" cy="16" r="3.5"/></g></svg>`}},
+ {name:'Red stamp',desc:'The rubber stamp from the title screen as a roundel, with a crosshair in the middle. Strong on LinkedIn, busy at 16 px.',
+  svg:()=>tile(`<g fill="none" stroke="${R}"><circle cx="50" cy="50" r="40" stroke-width="3.5"/><circle cx="50" cy="50" r="27" stroke-width="2"/></g><path id="arc" d="M20 50A30 30 0 0 1 80 50" fill="none"/><text font-family="Saira" font-weight="800" font-size="10" fill="${R}" letter-spacing="1.8" text-anchor="middle"><textPath href="#arc" startOffset="50%">HIT AND RUN</textPath></text><g fill="${R}" font-size="9" text-anchor="middle" font-family="Saira"><text x="27" y="77">★</text><text x="50" y="87">★</text><text x="73" y="77">★</text></g><g stroke="${K}" stroke-width="4" stroke-linecap="round"><circle cx="50" cy="50" r="12" fill="none"/><path d="M50 30v9M50 61v9M30 50h9M61 50h9"/></g><circle cx="50" cy="50" r="3.5" fill="${R}"/>`,'#231a15','#120d0b')},
+ {name:'Forward chevrons',desc:'Two rank chevrons charging at a red target. Military feel without any one era’s weapon, and the clearest at tiny sizes.',
+  svg:()=>tile(`<g fill="none" stroke-linejoin="miter" stroke-linecap="butt" stroke-width="11"><path d="M16 26l22 24-22 24" stroke="${I}" opacity=".8"/><path d="M38 26l22 24-22 24" stroke="${K}"/></g><circle cx="78" cy="50" r="10" fill="${R}"/><circle cx="78" cy="50" r="16" fill="none" stroke="${R}" stroke-width="3" opacity=".6"/>`)},
+];
+const rows=document.getElementById('rows');
+C.forEach((c,i)=>{const s=c.svg();
+ rows.insertAdjacentHTML('beforeend',`<div class="row"><div class="num">${i+1}</div><div class="big">${s}</div>
+ <div class="txt"><h2>${c.name}</h2><p>${c.desc}</p></div>
+ <div class="sizes">${[64,32,16].map(n=>`<div><div style="width:${n}px;height:${n}px">${c.svg().replace('<svg ',`<svg width="${n}" height="${n}" `)}</div>${n}px</div>`).join('')}<div><div class="light" style="width:32px;height:32px">${c.svg().replace('<svg ','<svg width="32" height="32" ')}</div>tab</div></div>
+ <div class="lock">${c.svg()}<div class="word">Hit and<br><span>Run</span></div></div></div>`)});
+</script></body></html>
