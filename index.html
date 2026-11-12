@@ -477,7 +477,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
     <section><h3>The ⋯ button</h3><p>The squad row has what you need most: squads, GEN, ARMY, ALL. Tap <b>⋯</b> for everything else: SELECT, IDLE, formations, SPREAD, REGROUP, GUARD, RALLY, the order modes and KILL. Tap <b>▾</b> to fold them away again.</p></section>
     <section><h3>Picking exactly who you want</h3><ul><li>Tap <b>SELECT</b>, then drag a box or tap soldiers one by one.</li><li><b>Hold A, B, C or D</b> to save the selection as that group.</li><li><b>IDLE</b> picks everyone standing around.</li></ul></section>
     <section><h3>Supply crates</h3><p>Crates parachute onto the map every minute or so, and everyone can see where they land. Walk any soldier over one to open it. Most are good (an army upgrade, mercenaries for 60 seconds, healing, rapid fire, sharpshooters with longer range, scouts that lift the fog, spies that show every army and base through the fog for 20 seconds, camouflage, or a strike you aim with <b>STRIKE</b>: a boulder, a cannonball or an airstrike, depending on your era). Some are bad (plague that spreads between soldiers standing close, a trap, lost orders, a signal fire that shows your squad to the enemy, or deserters). Recruits ignore crates. Tougher enemies hunt them.</p></section>
-    <section><h3>Alliances</h3><p>Turn on Alliances under Custom game (with 2 or 3 enemy armies). In battle, tap 🤝 next to an army on the scoreboard to ask for an alliance; when someone asks you, answer Yes or No right there. Allies can't hurt each other and share what they see. Either side can break it at any time, no warning needed (tap Break twice). The AI teams up against whoever is pulling ahead and drops an ally who gets too strong. An army that reaches the Endgame (level 9) stands alone: its alliances break at once and nobody can ally with it until it drops back, while everyone else's alliances stay. When every army left is allied, a 30 second peace countdown runs: if nobody breaks an alliance, you share the win.</p></section>
+    <section><h3>Alliances</h3><p>Turn on Alliances under Custom game (with 2 or 3 enemy armies). In battle, tap 🤝 next to an army on the scoreboard to ask for an alliance; when someone asks you, answer Yes or No right there. Allies can't hurt each other and share what they see. Either side can break it at any time, no warning needed (tap Break twice). The AI teams up against whoever is pulling ahead and drops an ally who gets too strong. An army that reaches the Endgame (level 9) stands alone: its alliances break at once and nobody can ally with it until it drops back, while everyone else's alliances stay. There are no shared wins: when every army left is allied, it's a truce until someone breaks a deal or reaches the Endgame. Crates and missions keep levelling everyone up meanwhile, so it never lasts.</p></section>
     <section><h3>Missions</h3><p>Every couple of minutes new orders bring a side mission with a countdown, shown under the scores and as a gold marker on the map and minimap. Pull it off and your army gets an upgrade, mercenaries for 60 seconds and a round of healing.</p><ul><li><b>Supplies:</b> grab the ★ crate before the enemy does.</li><li><b>Escort:</b> the supply cart (a sled, wagon, truck or drone, by era) cannot be destroyed. It rolls toward the base of whoever has the most soldiers around it, so fight for it.</li><li><b>Hold the hill:</b> keep soldiers inside the circle, with no enemies in it. The first army to hold it for 30 seconds in total wins.</li><li><b>Rescue:</b> find the missing scout in the marked area, then walk him home. Like the cart, he follows whoever controls the area around him.</li><li><b>Assassinate:</b> an enemy captain with bodyguards is in the marked area. Kill him.</li><li><b>Sabotage:</b> destroy the supply camp near an enemy base.</li></ul><p>Recruits leave missions alone. Veterans fight over the hill and the cargo. Elite and Invincible fight you for every mission.</p><p>In <b>Settings</b> you can turn crates and missions on or off, and pick which mission types you want.</p></section>
     <section><h3>Squads</h3><ul><li>Each squad button shows its <b>health</b> and a dot for what it's doing: grey idle, gold moving, orange fighting, blinking red under fire.</li><li>Tap two buttons quickly (<b>A then B</b>, or a squad then <b>GEN</b>) to command them together.</li><li><b>Drag from a squad button</b> onto the map to draw a route for it to follow. Drag it onto another letter to merge the squads.</li><li><b>Long-press</b> your selected soldiers, then drag them onto a letter to move them into that squad.</li><li><b>FORM</b> switches the formation. <b>Box</b> is plain. <b>Line</b> holds the line: 15% better aim while standing still. <b>Wedge</b> is the charge: 10% faster, and 25% harder hits for the first 3 seconds of a fight. Each squad remembers its own.</li><li><b>REGROUP</b> pulls a scattered squad together where most of it stands. <b>GUARD</b> puts the selected soldiers in a ring round the general. They follow him and take 15% less damage while they stay close.</li><li><b>RALLY</b> sets where fallen soldiers gather when they come back. Without one, they walk back to their own squad.</li><li>Pick how many squads you start with in <b>Settings</b>. During a battle, tap <b>⋯</b> to show every order and <b>▾</b> to fold them away.</li><li>Mercenaries wear a gold ring, and the arc around them shows how long they stay. They join the squad that found them.</li></ul></section>
     <section><h3>Spread out</h3><p>Tap <b>SPREAD</b> to open up the selected soldiers with wide gaps. Do it against plague, strikes and traps. The general always gets right of way through his own soldiers.</p></section>
@@ -1103,7 +1103,7 @@ function dxPack(outcome) {
   const band = games < 1 ? "0" : games < 3 ? "1-2" : games < 10 ? "3-9" : games < 30 ? "10-29" : "30+"; // a band, not a count, so rows can't be chained
   return {
     v: 1, outcome,
-    set: { map: G.map, allies: G.dip ? 1 : 0, peace: G.over && G.over.peace ? 1 : 0, players: G.players.length, up: G.upEvery, crates: !!G.cratesOn, missions: !!G.missionsOn, misTypes: G.misTypes || [], dis: !!G.disOn, disTypes: G.disOn ? G.disTypes || [] : [], split: O.split || 3, advice: !!O.advice },
+    set: { map: G.map, allies: G.dip ? 1 : 0, players: G.players.length, up: G.upEvery, crates: !!G.cratesOn, missions: !!G.missionsOn, misTypes: G.misTypes || [], dis: !!G.disOn, disTypes: G.disOn ? G.disTypes || [] : [], split: O.split || 3, advice: !!O.advice },
     dev: { touch: matchMedia("(pointer:coarse)").matches ? 1 : 0, small: Math.min(SW, SH) < 600 ? 1 : 0, q: Q.level, qDrop: Q.dropped ? 1 : 0, ms: Math.round(Q.ema) },
     who: { games: band, tut },
     me: { dealt: Math.round(st.dealt), taken: Math.round(st.taken), genKills: st.genKills, genLost: st.genLost, bases: st.bases, crates: st.crates, misWon: st.misWon, misLost: st.misLost, strikes: st.strikes, low: st.low === Infinity ? null : st.low, walk: Math.round(st.walk / 15.5), spawned: st.spawned, taps: st.taps, ups: st.ups.slice(0, 40), orders: n, contact: D.c, out: G.players[G.human].out ? Math.round(G.players[G.human].base.diedAt || G.time) : null, pauses: D.pause, pausedS: Math.round(D.pausedS), spd: D.spd, slowmo: !!G.slowmo, spect: G.spect ? Math.round(G.time - G.spectAt) : null, review: D.revT ? Math.round(D.revT) : null, doom: G.over && G.over.doom != null ? { w: G.over.doom, by: G.over.by } : null },
@@ -1172,11 +1172,11 @@ function startSpectate() {
 // ======================================================================
 // ALLIANCES (Custom game option, 3 or more armies). During the battle any army can ask another for an alliance;
 // the other side accepts or says no, and either side can break it at any moment, without warning.
-// Allies don't shoot each other and share what they see. When every army left is allied, a peace countdown
-// runs; if nobody breaks an alliance before it ends, the allies share the win.
+// Allies don't shoot each other and share what they see. There are no shared wins (T): when every army left is
+// allied the battle goes on, crates and missions keep levelling armies up, and whoever reaches the Endgame stands alone.
 // Everything goes through orders ({t:"ally", tb, a}) and the sim, so it replays and runs in online lockstep.
 // ======================================================================
-const DIP = { ask: 20, again: 30, broke: 60, peace: 30, think: 3, stay: 45 }; // seconds: an offer stands, after a no, after a break, peace countdown, AI rethinks, AI keeps a fresh deal at least
+const DIP = { ask: 20, again: 30, broke: 60, lull: 60, think: 3, stay: 45 }; // seconds: an offer stands, after a no, after a break, an all-allied lull before AIs get restless, AI rethinks, AI keeps a fresh deal at least
 const allied = (a, b) => !!(G.dip && a !== b && G.dip.al[a][b]);
 const hostile = (a, b) => a !== b && !(G.dip && G.dip.al[a][b]);
 const mineOrAlly = o => o === G.human || allied(G.human, o);
@@ -1242,9 +1242,9 @@ function stepDip(dt) {
     if (a === me && !G.players[b].out) dipSay(dipNm(b) + " didn't answer your alliance offer");
   }
   const alive = G.players.filter(q => !q.out), all = alive.length > 1 && alive.every(q => alive.every(r => q === r || D.al[q.id][r.id]));
-  if (all && D.peace == null) { D.peace = T + DIP.peace; dipSay("Every army left is allied. Peace in " + DIP.peace + " s, and a shared win, unless someone breaks an alliance", "gold"); }
-  else if (!all && D.peace != null) { D.peace = null; if (alive.length > 1) dipSay("The peace is off. Fight on!", "bad"); }
-  if (D.peace != null && T >= D.peace && !G.over && !G.doomFire) { G.over = { win: !G.players[me].out, peace: true }; dxEv("p", ...alive.map(q => q.id)); return; }
+  // everyone left is allied: no shared win, only a truce until someone breaks a deal or reaches the Endgame
+  if (all && D.peace == null) { D.peace = T; dipSay("Every army left is allied. Only one can win: grab crates and missions, reach the Endgame and you stand alone", "gold"); dxEv("p", ...alive.map(q => q.id)); }
+  else if (!all && D.peace != null) { D.peace = null; if (alive.length > 1) dipSay("The truce is over. Fight on!", "bad"); }
   for (const p of G.players) if (p.ai && !p.out) { p.dipT -= dt; if (p.dipT <= 0) { p.dipT = DIP.think; aiDiplo(p); } }
 }
 // how the AI plays it: gang up on whoever is ahead, keep away from the leader, switch sides when an ally runs away
@@ -1267,7 +1267,7 @@ function aiDiplo(p) {
   // betrayal
   for (const q of others) if (D.al[me][q.id]) {
     let brk = false;
-    if (D.peace != null) brk = p.smart && S[me] > S[q.id] * 1.4 && G.rng() < 0.5;
+    if (D.peace != null) brk = (p.smart && S[me] > S[q.id] * 1.4 && G.rng() < 0.5) || (T - D.peace > DIP.lull && G.rng() < 0.15); // strong enough to go it alone, or tired of waiting
     else if (T - D.since[me][q.id] > DIP.stay && lead.id === q.id && S[q.id] > S[me] * 1.5 && others.some(r => r !== q && !D.al[me][r.id])) brk = G.rng() < 0.4;
     if (brk) { dipCmd(me, q.id, "break"); return; }
   }
@@ -1565,12 +1565,13 @@ function misUnit(owner, kind, x, y) {
 function missionsInit() { G.mis = null; G.misT = rr(MIS.first[0], MIS.first[1]); G.misLast = null; G.misN = 0; }
 function startMission() {
   const me = G.players[G.human], foes = G.players.filter(q => hostile(G.human, q.id) && !q.out);
-  if (me.out || !foes.length) return;
-  const pool = (G.misTypes && G.misTypes.length ? G.misTypes : Object.keys(MIS.types));
+  if (me.out) return;
+  let pool = (G.misTypes && G.misTypes.length ? G.misTypes : Object.keys(MIS.types));
+  if (!foes.length) { pool = pool.filter(k => k !== "kill" && k !== "sabo"); if (!pool.length) return; } // everyone left is your ally: only the races, no enemy officer or camp
   const keys = pool.length > 1 ? pool.filter(k => k !== G.misLast) : pool;
   const type = keys[Math.floor(G.rng() * keys.length)], T = MIS.types[type];
   const spot = crateSpot(true) || { x: G.S / 2, y: G.S / 2 };
-  const m = { type, t0: G.time, until: G.time + T.life, x: spot.x, y: spot.y, prog: 0, foe: foes[Math.floor(G.rng() * foes.length)].id, id: ++G.misN };
+  const m = { type, t0: G.time, until: G.time + T.life, x: spot.x, y: spot.y, prog: 0, foe: foes.length ? foes[Math.floor(G.rng() * foes.length)].id : null, id: ++G.misN };
   if (type === "cargo") { const c = { id: G.crateId++, x: spot.x, y: spot.y, kind: "upgrade", mission: true, land: G.time + CRATE.land, until: m.until }; G.crates.push(c); m.crate = c; pushFx({ k: "crate", x: c.x, y: c.y, mission: true }); }
   else if (type === "escort") { m.unit = misUnit(G.human, "truck", spot.x, spot.y); m.unit.free = true; }
   else if (type === "hold") { m.r = 110; m.progBy = {}; }
@@ -5592,8 +5593,8 @@ function renderScore() {
       `<span class="hpb" title="Base health"><i style="width:${(p.base.hp / (p.base.max || CFG.base.hp) * 100).toFixed(0)}%"></i></span></span>${dp ? dp.html : ""}</div>`;
   }
   if (G.dip && G.dip.peace != null && !G.attract) {
-    const left = Math.max(0, Math.ceil(G.dip.peace - G.time));
-    html += `<div class="mis peace"><b>☮ Peace</b><span>Shared win unless an alliance breaks</span><em>0:${String(left).padStart(2, "0")}</em></div>`;
+    const left = Math.max(0, Math.floor(G.time - G.dip.peace));
+    html += `<div class="mis peace"><b>🤝 Truce</b><span>Everyone left is allied. Only one wins</span><em>${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}</em></div>`;
   }
   if (G.mis && !G.attract) {
     const m = G.mis, left = Math.max(0, Math.ceil(m.until - G.time)), tx = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
@@ -5621,7 +5622,7 @@ function customSummary() {
   const el = $("customSum"); if (!el) return;
   const e = UI.opts.players - 1, pace = { 25: "Quick", 50: "Medium", 100: "Slow" }[UI.opts.up] || "";
   el.textContent = `${UI.opts.map ? MAPS[UI.opts.map].n + " · " : ""}${e} ${e > 1 ? "enemies" : "enemy"}${UI.opts.allies && e > 1 ? " · alliances" : ""} · ${pace} · ${UI.opts.me} vs ${UI.opts.army}`;
-  const al = $("alliesLine"); if (al) al.textContent = !UI.opts.allies ? "Every army for itself." : e < 2 ? "Needs 2 or 3 enemy armies: with just one there's nobody to team up with." : "Ask other armies to team up during the battle, tap 🤝 on the scoreboard. Allies share what they see and can't hurt each other, and anyone can break a deal at any time. An army that reaches the Endgame stands alone. If every army left is allied for 30 s, they share the win.";
+  const al = $("alliesLine"); if (al) al.textContent = !UI.opts.allies ? "Every army for itself." : e < 2 ? "Needs 2 or 3 enemy armies: with just one there's nobody to team up with." : "Ask other armies to team up during the battle, tap 🤝 on the scoreboard. Allies share what they see and can't hurt each other, and anyone can break a deal at any time. An army that reaches the Endgame stands alone. There are no shared wins: only one army can win.";
 }
 // one-time hints the first time something happens (saved on this device)
 function tip(key, text, kind) {
@@ -7180,12 +7181,11 @@ function statLines(me) {
   if (st.strikes) L.push(["Air strikes", st.strikes]); L.push(["Orders given", n]);
   return L;
 }
-function peaceLine() { const w = G.players.filter(q => !q.out && q.id !== G.human).map(q => q.team.name); return G.players[G.human].out ? "Peace between " + w.join(" and ") : "Peace with " + (w.join(" and ") || "your allies"); }
 function enterReview() {
   G.review = true; G.reviewAt = performance.now(); UI.sel.clear(); UI.rallyMode = UI.strikeMode = UI.boxMode = false; closeTray(); disarmKill();
   const me = G.players[G.human];
-  $("epTitle").firstChild.textContent = G.over.win ? (G.over.peace ? "Shared victory" : "Victory") : "Defeated";
-  $("epSub").textContent = (G.over.peace ? peaceLine() : G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen") + " · map revealed";
+  $("epTitle").firstChild.textContent = G.over.win ? "Victory" : "Defeated";
+  $("epSub").textContent = (G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen") + " · map revealed";
   $("epStats").innerHTML = statTable(statLines(me).slice(0, 10)) + `<div class="ep-hint">Drag to look around the battlefield.</div>`;
   document.body.classList.add("ended"); $("endPanel").hidden = false;
 }
@@ -7197,8 +7197,8 @@ function showOver() {
   document.body.classList.add("ended"); // keep the battle controls hidden behind the score screens
   UI.paused = true;
   const me = G.players[G.human];
-  $("overTitle").textContent = G.over.win ? (G.over.peace ? "Shared victory" : "Victory") : "Defeated";
-  $("overEyebrow").textContent = G.over.peace ? peaceLine() : G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen";
+  $("overTitle").textContent = G.over.win ? "Victory" : "Defeated";
+  $("overEyebrow").textContent = G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen";
   const t = Math.floor(G.time);
   $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your ${G.myArmy}<br>` + statTable(statLines(me));
   const enemies = G.players.length - 1, secs = t, win = !!G.over.win;
