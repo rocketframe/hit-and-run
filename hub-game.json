@@ -82,6 +82,12 @@
         "true": "On",
         "false": "Off"
       }
+    },
+    {
+      "key": "allies",
+      "label": "Alliances",
+      "type": "bool",
+      "default": false
     }
   ],
   "score": {
