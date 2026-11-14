@@ -781,6 +781,7 @@ function newGame(nPlayers, upEvery, seed, diff, enemyArmy, myArmy, map) {
       base: { isBase: true, owner: i, x: bx, y: by, r: CFG.base.r, hp: CFG.base.hp, alive: true, cd: 0, flash: 0 },
       aiState: { state: "gather", t: 1 + i * 0.37, threshold: 15 + Math.floor(rng() * 8), target: null }
     };
+    p.pers = i && DIFF[diff].smart ? persFor(seed, i) : null;
     g.players.push(p);
     const cx = S / 2 - bx, cy = S / 2 - by, cl = Math.hypot(cx, cy);
     p.fwd = { x: cx / cl, y: cy / cl };
@@ -1257,6 +1258,7 @@ function aiDiplo(p) {
   let lead = alive[0]; for (const q of alive) if (S[q.id] > S[lead.id]) lead = q;
   let second = 0; for (const q of alive) if (q !== lead) second = Math.max(second, S[q.id]);
   const nAllies = others.filter(q => D.al[me][q.id]).length;
+  const sch = !!(p.pers && p.pers.diplo); // Schemers deal sooner and betray sooner
   // an AI never makes the deal that would leave nobody to fight: peace has to be won, not handed out
   const closes = q => alive.every(x => alive.every(y => x === y || D.al[x.id][y.id] || (x.id === me && y.id === q.id) || (x.id === q.id && y.id === me)));
   // answer offers (after a moment's thought): one ally at a time, never the runaway leader, and not when it's ahead itself
@@ -1270,11 +1272,12 @@ function aiDiplo(p) {
     let brk = false;
     if (D.peace != null) brk = (p.smart && S[me] > S[q.id] * 1.4 && G.rng() < 0.5) || T >= D.lullAt; // strong enough to go it alone, or tired of waiting
     else if (T - D.since[me][q.id] > DIP.stay && lead.id === q.id && S[q.id] > S[me] * 1.5 && others.some(r => r !== q && !D.al[me][r.id])) brk = G.rng() < 0.4;
+    else if (sch && T - D.since[me][q.id] > DIP.stay * 0.6 && S[me] > S[q.id] * 1.15 && others.some(r => r !== q && !D.al[me][r.id])) brk = G.rng() < 0.5; // a Schemer turns on an ally as soon as it's the stronger one
     if (brk) { if (!p.plot) p.plot = { tgt: q.id, until: T + 30 }; return; } // never just walk away: sneak up first (aiThink), then strike
   }
   // offers: someone else is pulling ahead, so team up with the strongest of the rest
   // (not in the opening minutes, and only when the leader is clearly ahead on points too, not just after one bad skirmish)
-  if (T > 90 && !nAllies && lead.id !== me && S[lead.id] > S[me] * 1.3 && lead.points - p.points >= G.upEvery * 0.5) {
+  if (T > (sch ? 60 : 90) && !nAllies && lead.id !== me && S[lead.id] > S[me] * (sch ? 1.15 : 1.3) && lead.points - p.points >= G.upEvery * (sch ? 0.3 : 0.5)) {
     const c = others.filter(q => q.id !== lead.id && !dipLoner(q.id) && !closes(q) && !(D.req[me][q.id] > T) && !(D.cool[me][q.id] > T)).sort((x, y) => S[y.id] - S[x.id] || x.id - y.id)[0];
     if (c && (p.smart || G.rng() < 0.3)) dipCmd(me, c.id, "ask");
   }
@@ -2111,12 +2114,9 @@ function power(list) {
 }
 function centroid(list) { let x = 0, y = 0; for (const u of list) { x += u.x; y += u.y; } return { x: x / list.length, y: y / list.length }; }
 
-function aiThink(p) {
+// a planned betrayal or the mystery weapon override everything else an AI army is doing (true when they did)
+function aiOverride(p, inf, gen, order) {
   const A = p.aiState, b = p.base, me = p.id;
-  const inf = missionRunners(p, crateRunners(p, G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive && !u.guard)));
-  const gen = G.gens[me];
-  const order = (list, x, y, mode) => { if (list.length) issue({ p: me, ids: list.map(u => u.id), x: clamp(x, 30, G.S - 30), y: clamp(y, 30, G.S - 30), mode }); };
-  const rally = { x: b.x + p.fwd.x * 300, y: b.y + p.fwd.y * 300 };
   // a planned betrayal (alliances): still smiling, march the army up to the ally, then break the deal and open fire at point-blank range
   if (p.plot) {
     const P = p.plot, v = G.players[P.tgt];
@@ -2130,16 +2130,26 @@ function aiThink(p) {
         A.target = v.base; A.retarget = G.time + 20; A.siege = 0; A.state = "push";
         order(army, at.x, at.y, "attack"); if (gen && gen.alive) order([gen], at.x, at.y, "attack");
       } else { order(army, at.x, at.y, "move"); if (gen && gen.alive) order([gen], (at.x + b.x) / 2, (at.y + b.y) / 2, "move"); }
-      return;
+      return true;
     }
   }
   // the mystery weapon overrides everything: hunt a charging general, or guard our own
   if (!G.doomFire) {
     const all = G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive && !u.mis);
     let hunt = null; for (const q of G.players) if (hostile(me, q.id) && !q.out && q.doom && q.doom.on && G.gens[q.id].alive && (!hunt || d2(G.gens[q.id], b) < d2(hunt, b))) hunt = G.gens[q.id];
-    if (hunt && !(p.doom && p.doom.on)) { order(all, hunt.x, hunt.y, "attack"); if (gen.alive && gen.hp > maxHp(gen) * 0.5) order([gen], hunt.x, hunt.y, "attack"); return; }
-    if (p.doom && p.doom.on && gen.alive) { const hx = b.x + p.fwd.x * 40, hy = b.y + p.fwd.y * 40; order([gen], hx, hy, "move"); order(all, (gen.x + hx) / 2, (gen.y + hy) / 2, "attack"); return; }
+    if (hunt && !(p.doom && p.doom.on)) { order(all, hunt.x, hunt.y, "attack"); if (gen.alive && gen.hp > maxHp(gen) * 0.5) order([gen], hunt.x, hunt.y, "attack"); return true; }
+    if (p.doom && p.doom.on && gen.alive) { const hx = b.x + p.fwd.x * 40, hy = b.y + p.fwd.y * 40; order([gen], hx, hy, "move"); order(all, (gen.x + hx) / 2, (gen.y + hy) / 2, "attack"); return true; }
   }
+  return false;
+}
+function aiThink(p) {
+  if (p.pers && p.smart) return aiThink2(p); // Veteran and up: the personality brain
+  const A = p.aiState, b = p.base, me = p.id;
+  const inf = missionRunners(p, crateRunners(p, G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive && !u.guard)));
+  const gen = G.gens[me];
+  const order = (list, x, y, mode) => { if (list.length) issue({ p: me, ids: list.map(u => u.id), x: clamp(x, 30, G.S - 30), y: clamp(y, 30, G.S - 30), mode }); };
+  const rally = { x: b.x + p.fwd.x * 300, y: b.y + p.fwd.y * 300 };
+  if (aiOverride(p, inf, gen, order)) return;
 
   // target the strongest player (most points), nudged by distance: everyone hunts the leader
   if (!A.retarget || G.time > A.retarget || !A.target || !A.target.alive || !hostile(me, A.target.owner)) {
@@ -2263,6 +2273,249 @@ function aiThink(p) {
       const back = p.smart ? 120 : 110;
       order([gen], anchor.x + ax / al * back, anchor.y + ay / al * back, p.smart ? "move" : "attack");
     }
+  }
+}
+
+// ---- AI personalities (Veteran and up): every AI army gets a style for the whole battle, dealt from the battle seed ----
+// gather: how much of the army it waits for before it marches; retreat / storm: how outgunned before it falls back, how much
+// stronger before it storms a fort; guard: soldiers in a GUARD ring round the general; home: share kept at home;
+// raid: share sent round the side to hit an unguarded base; flank: share that swings round the side in a fight
+const PERS = [
+  { k: "rusher", n: "Rusher", line: "attacks early and often, charging in a wedge", gather: 0.6, retreat: 1.5, storm: 1.1, tgt: "near", guard: 0, home: 0, raid: 0, flank: 0.25 },
+  { k: "turtle", n: "Turtle", line: "guards its base, then strikes back at whoever came knocking", gather: 1.1, retreat: 1.15, storm: 1.4, tgt: "grudge", guard: 5, home: 0.2, raid: 0, flank: 0 },
+  { k: "raider", n: "Raider", line: "sends a squad round the side to hit bases left unguarded", gather: 0.9, retreat: 1.2, storm: 1.3, tgt: "leader", guard: 0, home: 0, raid: 0.35, flank: 0 },
+  { k: "vulture", n: "Vulture", line: "waits for others to fight, then pounces", gather: 1, retreat: 1.2, storm: 1.3, tgt: "hurt", guard: 4, home: 0, raid: 0, flank: 0.3, wait: true },
+  { k: "schemer", n: "Schemer", line: "makes deals, breaks them, and hunts the leader", gather: 1, retreat: 1.2, storm: 1.3, tgt: "leader", guard: 4, home: 0, raid: 0, flank: 0.35, diplo: true }
+];
+// one style per army, all different, shuffled by the seed (its own random stream, so the battle itself plays out as before)
+function persFor(seed, id) { const r = mulberry32((seed ^ 0x2c1b3c6d) >>> 0), o = PERS.slice(); for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; } return o[id % o.length]; }
+const persByKey = k => PERS.find(q => q.k === k) || null;
+
+// the personality brain: the classic one below plus squads with jobs, formations, GUARD, focus fire, flanks and a memory
+function aiThink2(p) {
+  const A = p.aiState, P = p.pers, off = p.aiOff || {}, b = p.base, me = p.id, gen = G.gens[me], T = G.time;
+  const order = (list, x, y, mode, form) => { if (list.length) issue({ p: me, ids: list.map(u => u.id), x: clamp(x, 30, G.S - 30), y: clamp(y, 30, G.S - 30), mode, form: off.form ? undefined : form }); };
+  const rally = { x: b.x + p.fwd.x * 300, y: b.y + p.fwd.y * 300 };
+  let all = G.units.filter(u => u.owner === me && u.kind === "inf" && u.alive && !u.guard);
+
+  // GUARD: a ring of soldiers round the general (15% less damage there). Let them go when he's down or limping home.
+  const genOk = gen && gen.alive && gen.hp > maxHp(gen) * 0.35;
+  const wantG = !off.guard && P.guard && genOk && all.length >= 12 && !G.doomFire ? P.guard : 0;
+  let guards = all.filter(u => u.escort);
+  if (guards.length > wantG) guards = guards.slice(0, wantG); // the rest get ordinary orders below, which ends their guard duty
+  if (guards.length < wantG) {
+    const pick = all.filter(u => !u.escort && !u.mis && !(u.jam > T) && d2(u, gen) < 400 * 400).sort((u, v) => d2(u, gen) - d2(v, gen)).slice(0, wantG - guards.length);
+    if (pick.length) { issue({ p: me, t: "escort", ids: pick.map(u => u.id) }); guards = guards.concat(pick); }
+  }
+  const gset = new Set(guards);
+  const inf = missionRunners(p, crateRunners(p, all.filter(u => !gset.has(u))));
+  if (aiOverride(p, inf, gen, order)) return;
+
+  // what my army can see, plus the sound of gunfire: anyone shooting is heard across the island (only where, not how many)
+  const known = new Set();
+  for (const u of G.units) if (u.alive && u.owner === me && u.seen && !u.seen.isBase) known.add(u.seen);
+  for (const v of G.units) if (v.alive && hostile(me, v.owner) && (d2(v, b) < 520 * 520 || v.flare > T || p.recon > T)) known.add(v);
+  const knownArr = [...known];
+  const basePow = q => 8 + power(G.units.filter(v => v.alive && v.owner === q.id && d2(v, q.base) < 800 * 800));
+  // memory: where each army's soldiers were last seen, and how strong they looked
+  const mem = A.mem = A.mem || {};
+  { const by = {}; for (const v of knownArr) if (v.kind === "inf" || v.kind === "gen") (by[v.owner] = by[v.owner] || []).push(v);
+    for (const o in by) { const c = centroid(by[o]); mem[o] = { x: c.x, y: c.y, t: T, pow: power(by[o]), n: by[o].length }; } }
+  const seenAt = (o, age) => mem[o] && T - mem[o].t < age ? mem[o] : null;
+
+  // pick the army to beat, in this personality's own way
+  if (!A.retarget || T > A.retarget || !A.target || !A.target.alive || !hostile(me, A.target.owner)) {
+    let best = null, bs = -1e18;
+    for (const q of G.players) if (hostile(me, q.id) && !q.out) {
+      const dist = Math.sqrt(d2(b, q.base)); let sc;
+      if (P.tgt === "near") sc = -dist;
+      else if (P.tgt === "grudge") sc = (A.grudge && A.grudge.o === q.id && T - A.grudge.t < 90 ? 1e6 : 0) - dist;
+      else if (P.tgt === "hurt") sc = -power(G.units.filter(v => v.alive && v.owner === q.id)) * 4 - dist / 25;
+      else sc = q.points - dist / 25;
+      if (sc > bs) { bs = sc; best = q.base; }
+    }
+    if (!A.target || best !== A.target) A.siege = 0;
+    A.target = best; A.retarget = T + 20;
+  }
+  if (!A.target) return;
+
+  const used = new Set(); // soldiers that already have a job this turn
+  // ---- base defence: send just enough of the closest troops (Turtles send double); everyone else keeps playing ----
+  const threats = knownArr.filter(v => d2(v, b) < 520 * 520);
+  let freeHand = true;
+  if (threats.length) {
+    const cnt = {}; for (const v of threats) cnt[v.owner] = (cnt[v.owner] || 0) + 1;
+    let o = null; for (const k in cnt) if (o == null || cnt[k] > cnt[o]) o = k; A.grudge = { o: +o, t: T };
+    const tc = centroid(threats), need = power(threats) * (P.home ? 2.2 : 1.6) + 2;
+    const byDist = inf.slice().sort((u, v) => d2(u, tc) - d2(v, tc));
+    const def = []; let gp = 8;
+    for (const u of byDist) { if (gp >= need) break; def.push(u); gp += power([u]); }
+    order(def, tc.x, tc.y, "attack"); for (const u of def) used.add(u);
+    if (gp < need) { order(inf, tc.x, tc.y, "attack"); A.state = "gather"; freeHand = false; }
+    aiFocus(p, def, threats, off);
+  }
+
+  // ---- a home guard (Turtles): the soldiers nearest the base hold a line in front of it ----
+  if (freeHand && P.home) {
+    const n = Math.round(inf.length * P.home), hold = inf.filter(u => !used.has(u)).sort((u, v) => d2(u, b) - d2(v, b)).slice(0, n);
+    const hx = b.x + p.fwd.x * 200, hy = b.y + p.fwd.y * 200;
+    order(hold.filter(u => d2(u, { x: hx, y: hy }) > 60 * 60), hx, hy, "attack", "line"); for (const u of hold) used.add(u);
+  }
+
+  // ---- a raiding squad (Raiders): round the side to a fort whose army is away, then back home ----
+  if (freeHand && P.raid && !off.raid) aiRaid(p, inf, used, knownArr, basePow, seenAt, order);
+
+  const rest = inf.filter(u => !used.has(u));
+  const thr = Math.max(1, Math.round(A.threshold * P.gather * (P.raid ? 1 - P.raid : 1) * (P.home ? 1 - P.home : 1)));
+  let home = rest.filter(u => d2(u, b) < 460 * 460), away = rest.filter(u => d2(u, b) >= 460 * 460);
+  let center = away.length ? centroid(away) : null;
+
+  if (freeHand) {
+    if (A.state === "gather") {
+      order(rest.filter(u => d2(u, rally) > 150 * 150), rally.x, rally.y, "attack", "wedge");
+      const atRally = rest.filter(u => d2(u, rally) < 230 * 230).length;
+      if (atRally >= thr && genOk && gen.hp > maxHp(gen) * 0.6) A.state = "push";
+      // a Vulture also leaves early when it hears a fight it can get to
+      else if (P.wait && atRally >= thr * 0.6 && aiHeardFight(p, rally)) A.state = "push";
+    } else if (A.state === "retreat") {
+      const caught = away.filter(u => u.seen && !u.seen.isBase && d2(u, u.seen) < 150 * 150 && d2(u, rally) > 500 * 500 && u.hp < maxHp(u) * 0.6);
+      if (caught.length) issue({ p: me, t: "kill", ids: caught.map(u => u.id) });
+      order(away, rally.x, rally.y, "move", "wedge");
+      if (!away.length || power(away.filter(u => d2(u, rally) > 260 * 260)) < 2) A.state = "gather";
+    } else {
+      const army = away.length ? away : home;
+      const mid = center || centroid(army);
+      const myPow = power(army) + (gen && gen.alive && d2(gen, mid) < 400 * 400 ? power([gen]) + power(guards) : 0);
+      const local = knownArr.filter(v => d2(v, mid) < 420 * 420);
+      let enemyPow = power(local), nearBase = null;
+      for (const q of G.players) if (hostile(me, q.id) && !q.out && d2(q.base, mid) < 700 * 700) { enemyPow = Math.max(enemyPow, basePow(q)); nearBase = q.base; }
+      if (army.length < thr * 0.35) A.state = "retreat";
+      else if (local.length && enemyPow > myPow * P.retreat) {
+        const hopeless = enemyPow > myPow * 1.6;
+        const doomed = army.filter(u => (u.tgt || (u.seen && d2(u, u.seen) < 200 * 200)) && d2(u, rally) > 500 * 500 && (hopeless || u.hp < maxHp(u) * 0.5));
+        if (doomed.length) issue({ p: me, t: "kill", ids: doomed.map(u => u.id) });
+        A.state = "retreat"; order(army.filter(u => !doomed.includes(u)), rally.x, rally.y, "move", "wedge");
+      } else if (nearBase && myPow > enemyPow * P.storm) {
+        order(army, nearBase.x, nearBase.y, "attack", "wedge");
+      } else if (local.length && !(myPow > enemyPow * 2.5 && !local.some(v => d2(v, mid) < 250 * 250))) {
+        // engage: the main body goes straight in; a flank squad swings round the side; part of it focuses fire
+        const ec = centroid(local), dx = ec.x - mid.x, dy = ec.y - mid.y, dl = Math.hypot(dx, dy) || 1;
+        let main = army;
+        if (!off.flank && P.flank && army.length >= 10 && dl > 200 && myPow > enemyPow * 0.8) {
+          const px = -dy / dl, py = dx / dl, side = A.side || (A.side = G.rng() < 0.5 ? 1 : -1);
+          const fl = army.slice().sort((u, v) => side * (((v.x - mid.x) * px + (v.y - mid.y) * py) - ((u.x - mid.x) * px + (u.y - mid.y) * py))).slice(0, Math.round(army.length * P.flank));
+          const fs = new Set(fl); main = army.filter(u => !fs.has(u));
+          order(fl, ec.x + px * side * 220, ec.y + py * side * 220, "attack", "wedge");
+        }
+        order(main, ec.x, ec.y, "attack", dl > 160 ? "wedge" : "line");
+        aiFocus(p, army, local, off);
+      } else {
+        // march on: to where the target army was last seen if that's on the way, otherwise to its fort
+        const t = A.target, last = seenAt(t.owner, 30);
+        const goal = last && d2(mid, last) < d2(mid, t) ? last : t;
+        // a Vulture waits at a lookout for the first couple of minutes, unless it hears a fight
+        const fight = P.wait ? aiHeardFight(p, mid) : null;
+        if (fight) order(army, fight.x, fight.y, "attack", "wedge");
+        else if (P.wait && T < (A.waitTo || (A.waitTo = 60 + G.rng() * 40))) {
+          const lx = b.x + (G.S / 2 - b.x) * 0.45, ly = b.y + (G.S / 2 - b.y) * 0.45;
+          order(army.filter(u => d2(u, { x: lx, y: ly }) > 70 * 70), lx, ly, "attack", "line");
+        } else {
+          const dx = goal.x - mid.x, dy = goal.y - mid.y, dl = Math.hypot(dx, dy) || 1;
+          if (goal === t && dl < 650) {
+            const defPow = basePow(G.players[t.owner]);
+            A.siege = (A.siege || 0) + 1;
+            if (myPow > defPow * P.storm || A.siege > 12) order(army, t.x, t.y, "attack", "wedge");
+            else order(army, t.x - dx / dl * 560, t.y - dy / dl * 560, "attack", "line"); // hold outside turret range, pick off what comes out
+          } else {
+            if (!A.flank || G.rng() < 0.03) A.flank = (G.rng() - 0.5) * 600;
+            const stepLen = Math.min(dl, 380), fl = dl > 700 ? A.flank : 0;
+            order(army, mid.x + dx / dl * stepLen + (-dy / dl) * fl, mid.y + dy / dl * stepLen + (dx / dl) * fl, "attack", "wedge");
+          }
+        }
+      }
+      if (away.length && home.length >= 6) order(home, mid.x, mid.y, "attack", "wedge");
+      else if (away.length) order(home, rally.x, rally.y, "attack", "wedge");
+    }
+  }
+
+  // ---- general: behind the army inside aura range; home when badly hurt ----
+  if (gen && gen.alive) {
+    if (!genOk) order([gen], b.x + p.fwd.x * 70, b.y + p.fwd.y * 70, "move");
+    else {
+      const anchor = center || rally;
+      let ax = b.x - anchor.x, ay = b.y - anchor.y; const al = Math.hypot(ax, ay) || 1;
+      order([gen], anchor.x + ax / al * 120, anchor.y + ay / al * 120, "move");
+    }
+  }
+}
+// focus fire: the soldiers nearest the target gang up on the enemy general if he's close, otherwise on the most wounded soldier
+function aiFocus(p, army, foes, off) {
+  if (off.focus || army.length < 4) return;
+  const c = centroid(army); let best = null, bs = -1e9;
+  for (const v of foes) { if (v.isBase || !v.alive || v.free) continue; const dd = d2(v, c); if (dd > 300 * 300) continue;
+    const s = (v.kind === "gen" ? 2 : 0) + (1 - v.hp / maxHp(v)) - Math.sqrt(dd) / 300; if (s > bs) { bs = s; best = v; } }
+  if (!best) return;
+  const n = Math.max(3, Math.round(army.length * 0.5)), who = army.slice().sort((u, v) => d2(u, best) - d2(v, best)).slice(0, n);
+  issue({ p: p.id, t: "focus", ids: who.map(u => u.id), tid: best.id });
+}
+// gunfire: where two other armies (both hostile to me) are shooting at each other, within reach
+function aiHeardFight(p, from) {
+  let best = null, bd = 1300 * 1300;
+  for (const u of G.units) if (u.alive && u.tgt && !u.tgt.isBase && hostile(p.id, u.owner) && hostile(p.id, u.tgt.owner) && u.tgt.owner !== u.owner) {
+    const dd = d2(u, from); if (dd < bd) { bd = dd; best = u; }
+  }
+  return best ? { x: best.x, y: best.y } : null;
+}
+// Raiders: a squad that swings wide round the side to a fort whose army is out in the field, hits it, and comes home if it's caught
+function aiRaid(p, inf, used, knownArr, basePow, seenAt, order) {
+  const A = p.aiState, P = p.pers, b = p.base, me = p.id, T = G.time;
+  const R = A.raid = A.raid || { ids: [], phase: "home", t: 0 };
+  let sq = R.ids.map(id => G.unitById.get(id)).filter(u => u && u.alive && u.owner === me && inf.includes(u));
+  const want = Math.round(inf.length * P.raid);
+  if (R.phase === "home" && sq.length < want) {
+    const have = new Set(sq);
+    sq = sq.concat(inf.filter(u => !have.has(u) && !used.has(u)).sort((u, v) => d2(u, b) - d2(v, b)).slice(0, want - sq.length));
+  }
+  R.ids = sq.map(u => u.id); for (const u of sq) used.add(u);
+  if (!sq.length) return;
+  const c = centroid(sq), myPow = power(sq);
+  const back = () => { R.phase = "back"; R.t = T; order(sq, b.x + p.fwd.x * 260, b.y + p.fwd.y * 260, "move", "wedge"); };
+  // caught on the way: run for it
+  const near = knownArr.filter(v => !v.isBase && d2(v, c) < 380 * 380);
+  if (R.phase !== "home" && R.phase !== "back" && power(near) > myPow * 1.2) return back();
+  if (R.phase === "home") {
+    // pick the softest fort: the fewest defenders, best of all one whose army was just seen far from home
+    let tq = null, ts = -1e18;
+    for (const q of G.players) if (hostile(me, q.id) && !q.out) {
+      const away = seenAt(q.id, 25), s = -basePow(q) + (away && d2(away, q.base) > 900 * 900 ? 40 : 0) - Math.sqrt(d2(b, q.base)) / 60;
+      if (s > ts) { ts = s; tq = q; }
+    }
+    if (tq && sq.length >= Math.max(3, want * 0.8) && T > (R.t || 0) + 25 && basePow(tq) < myPow * 2.5) {
+      R.tgt = tq.id; R.phase = "go";
+      // a waypoint off to the side of the straight line, near the coast, so the squad isn't met head on
+      const dx = b.x - tq.base.x, dy = b.y - tq.base.y, dl = Math.hypot(dx, dy) || 1, s = G.rng() < 0.5 ? 1 : -1, a = s * 0.9;
+      R.wx = tq.base.x + (dx * Math.cos(a) - dy * Math.sin(a)) / dl * 620; R.wy = tq.base.y + (dx * Math.sin(a) + dy * Math.cos(a)) / dl * 620;
+      const pt = G.island ? toLand(R.wx, R.wy, 40) : { x: R.wx, y: R.wy }; R.wx = pt.x; R.wy = pt.y;
+    } else { const hx = b.x + p.fwd.x * 230 - p.fwd.y * 120, hy = b.y + p.fwd.y * 230 + p.fwd.x * 120; order(sq.filter(u => d2(u, { x: hx, y: hy }) > 90 * 90), hx, hy, "attack", "wedge"); return; }
+  }
+  const q = G.players[R.tgt];
+  if (R.phase !== "back" && (!q || q.out || !hostile(me, q.id))) return back();
+  if (R.phase === "go") {
+    if (d2(c, { x: R.wx, y: R.wy }) < 200 * 200) { R.phase = "wait"; R.t = T; }
+    else return order(sq, R.wx, R.wy, "move", "wedge");
+  }
+  if (R.phase === "wait") {
+    if (basePow(q) < myPow * 1.15) { R.phase = "hit"; R.t = T; }
+    else if (T - R.t > 25) return back();
+    else return order(sq.filter(u => d2(u, { x: R.wx, y: R.wy }) > 80 * 80), R.wx, R.wy, "attack", "line");
+  }
+  if (R.phase === "hit") {
+    if (T - R.t > 40 || sq.length < want * 0.35) return back();
+    return order(sq, q.base.x, q.base.y, "attack", "wedge");
+  }
+  if (R.phase === "back") {
+    order(sq.filter(u => d2(u, b) > 320 * 320), b.x + p.fwd.x * 260, b.y + p.fwd.y * 260, "move", "wedge");
+    if (sq.every(u => d2(u, b) < 420 * 420) || T - R.t > 40) { R.phase = "home"; R.t = T; }
   }
 }
 
@@ -5776,7 +6029,7 @@ function startAttract() {
   AC.vx = AC.vy = 0; AC.pickT = 0; leaveReview();
   setTimeout(resize, 0);
   initGame(newGame(4, 50, (Math.random() * 1e9) >>> 0, 3, 30, 30, (Math.random() * MAPS.length) | 0));
-  G.attract = true; G.players[0].ai = true; G.players[0].smart = true; G.players[0].mult = 1.3;
+  G.attract = true; G.players[0].ai = true; G.players[0].smart = true; G.players[0].mult = 1.3; G.players[0].pers = persFor(G.seed, 0);
   document.body.classList.add("attract");
   cam.z = Math.min(SW, SH) < 600 ? 0.75 : 0.95; cam.x = G.S / 2; cam.y = G.S / 2; AC.tx = cam.x; AC.ty = cam.y;
   // skip the opening walk so armies are already meeting
@@ -7216,7 +7469,9 @@ function showOver() {
   $("overTitle").textContent = G.over.win ? "Victory" : "Defeated";
   $("overEyebrow").textContent = G.over.doom != null ? (G.over.win ? "Endgame: every enemy base is gone" : "Wiped out in " + G.players[G.over.by].team.name + "'s endgame") : G.over.win ? "All enemy bases destroyed" : "Your base has fallen";
   const t = Math.floor(G.time);
-  $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your ${G.myArmy}<br>` + statTable(statLines(me));
+  // who was who: each AI army's personality, revealed once the battle is over
+  const styles = G.players.filter(p => p.ai && p.pers && p.id !== G.human).map(p => `<span title="${p.pers.line}"><b style="color:${p.team.c}">${p.team.name}</b> ${p.pers.n}</span>`).join(" · ");
+  $("overStats").innerHTML = `${DIFF_NAME[G.diff]} · ${G.players.length - 1} ${G.players.length > 2 ? "enemies" : "enemy"} of ${G.enemyArmy} vs your ${G.myArmy}<br>` + (styles ? `<span class="styles">${styles}</span><br>` : "") + statTable(statLines(me));
   const enemies = G.players.length - 1, secs = t, win = !!G.over.win;
   const score = gameScore(win, me.kills, secs, G.diff, enemies, G.enemyArmy, G.myArmy);
   const log = loadLog(), prevHi = log.reduce((m, g) => Math.max(m, g.score), 0);
@@ -7672,7 +7927,7 @@ function mpLoop(dtReal) {
   }
 }
 
-window.__hr = { MP, DM, DIS, disZone, get G() { return G; }, replay: r => { lastRec = r; startReplay(); }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate, dipInit, dipCmd };
+window.__hr = { DIFF, PERS, persFor, persByKey, MP, DM, DIS, disZone, get G() { return G; }, replay: r => { lastRec = r; startReplay(); }, get ground() { return groundCvs; }, GKf: () => GK, start, step, UI, cam, SND, newGame, initGame, d2, CFG, maxHp, holdEnemy, isVis: (x, y) => isVis(x, y), s2w: (x, y) => s2w(x, y), SPR, levelUp, DOOM, issue, enterReview, eliminate, dipInit, dipCmd };
 })();
 </script>
 
