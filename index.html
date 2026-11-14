@@ -1162,7 +1162,7 @@ function eliminate(owner, by) {
   if (owner === G.human) toast("Your base has fallen", "bad");
   else toast(p.team.name + " base destroyed" + (by === G.human ? " by you" : ""), by === G.human ? "gold" : "");
   p.outT = G.tick; dxEv("b", owner, by == null ? -1 : by);
-  const alive = G.players.filter(q => !q.out), over = alive.length <= 1 || (G.mp && mpHumansIn() <= (MP.solo ? 0 : 1)) ? { win: !G.players[G.human].out } : null; // solo (one human): ends when your base falls
+  const alive = G.players.filter(q => !q.out), over = alive.length <= 1 || (G.mp && mpHumansIn() === 0) ? { win: !G.players[G.human].out } : null; // online it runs until one army is left or every human is out, so a knocked-out player can watch to the end
   if (over) { if (G.doomFire) G.pendOver = over; else G.over = over; } // during the finale, wait for it to finish
   else if (owner === G.human && !G.attract && !G.replay && !G.tutorial) startSpectate();
 }
@@ -1175,7 +1175,7 @@ function endBanner(win) {
 function startSpectate() {
   if (G.spect) return; endBanner(false); G.spect = true; G.spectAt = G.time; document.body.classList.add("replay");
   $("replayBar").hidden = false; $("replayBar").querySelector("b").textContent = "👁 WATCHING"; $("rpPause").hidden = true;
-  toast("You're out. Watch who wins, or tap Exit", "bad");
+  toast(G.mp ? "You're out. Watch the battle to the end, or tap Exit for the lobby" : "You're out. Watch who wins, or tap Exit for your score", "bad");
 }
 // ======================================================================
 // ALLIANCES (Custom game option, 3 or more armies). During the battle any army can ask another for an alliance;
@@ -7325,7 +7325,7 @@ function exitReplay() { document.body.classList.remove("replay"); $("replayBar")
 $("replayBtn").addEventListener("click", () => { SND.ui(); startReplay(); });
 $("boardReplay").addEventListener("click", () => { SND.ui(); boardHome(); startReplay(); });
 $("rpPause").addEventListener("click", () => { UI.paused = !UI.paused; $("rpPause").textContent = UI.paused ? "▶" : "II"; });
-$("rpExit").addEventListener("click", () => { SND.ui(); if (G && G.mp) { mpLeave(); return; } if (G && G.spect && !G.over && !G.replay) { G.over = { win: false }; $("replayBar").hidden = true; document.body.classList.remove("replay"); return; } exitReplay(); });
+$("rpExit").addEventListener("click", () => { SND.ui(); if (G && G.mp) { mpLeave(); return; } if (G && G.spect && !G.over && !G.replay) { G.over = { win: false, quit: true }; G.pendOver = null; $("replayBar").hidden = true; document.body.classList.remove("replay"); return; } exitReplay(); });
 $("pauseBtn").addEventListener("click", togglePause);
 // ---- time lapse: ¼× to 8× ----
 UI.speed = 1;
@@ -7418,7 +7418,7 @@ function frame(now) {
     hudT -= dtReal; if (hudT <= 0) { hudT = 0.2; renderScore(); refreshBar(); }
     if (G.over && !G.review && G.replay) { G.review = true; $("replayBar").querySelector("b").textContent = "REPLAY OVER"; $("rpPause").hidden = true; }
     else if (G.over && !G.review) { if (!G.spect && !G.attract) endBanner(G.over.win); if (G.spect) { $("replayBar").hidden = true; document.body.classList.remove("replay"); } SND.sting(G.over.win); updateFog(); renderScore(); if (!G.tutorial && G.rec) lastRec = G.rec;
-      if (G.tutorial) { setTimeout(showOver, 1400); UI.paused = true; } else enterReview(); }
+      if (G.tutorial) { setTimeout(showOver, 1400); UI.paused = true; } else if (G.over.quit) { G.review = true; showOver(); } else enterReview(); } // Exit while watching: you've seen the whole map already, straight to the score
   }
   // the menu backdrop draws at a steady ~30fps so the menu itself stays smooth
   if (G) {
@@ -7640,9 +7640,10 @@ function mpPump(dtReal) {
 // a player left (or stayed away 30 s): the AI takes over their army, on the same tick in every browser
 function mpDropNow(pid) {
   const i = MP.ids.indexOf(pid), p = G.players[i]; if (!p || p.left) return;
+  const wasIn = !p.out; // a knocked-out player who leaves changes nothing for the others
   p.left = true; p.leftT = G.tick; p.ai = true; p.smart = true; p.aiState.t = 0.5;
   if (!G.over && !p.out) toast(p.team.name + " left the battle. The AI takes over their army", "bad");
-  if (!G.over && mpHumansIn() <= 1) { const me = G.players[G.human], over = { win: !me.out && !me.left, forfeit: true }; if (G.doomFire) G.pendOver = over; else G.over = over; }
+  if (!G.over && wasIn && mpHumansIn() <= 1) { const me = G.players[G.human], over = { win: !me.out && !me.left, forfeit: true }; if (G.doomFire) G.pendOver = over; else G.over = over; }
 }
 
 // a short checksum of the battle; every browser must get the same one
@@ -7713,8 +7714,8 @@ function mpShowOver() {
 }
 $("lobbyBtn").addEventListener("click", () => { SND.ui(); mpLeave(); });
 function mpLeave() {
-  const leaving = G && !G.over && MP.seat >= 0;
-  if (leaving && !(MP.leaveArm > performance.now())) { MP.leaveArm = performance.now() + 3000; toast("Tap again to leave. Leaving counts as a loss", "bad"); return; }
+  const leaving = G && !G.over && MP.seat >= 0, out = leaving && G.players[G.human].out; // knocked out and watching: leave at once, no loss warning
+  if (leaving && !out && !(MP.leaveArm > performance.now())) { MP.leaveArm = performance.now() + 3000; toast("Tap again to leave. Leaving counts as a loss", "bad"); return; }
   try { if (leaving) MP.room.leave(); } catch (e) {}
   setTimeout(() => { location.href = MP.lobby || location.pathname; }, leaving ? 300 : 0);
 }
