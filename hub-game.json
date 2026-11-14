@@ -109,20 +109,8 @@
       "default": false
     },
     {
-      "key": "missions",
-      "label": "Missions (solo)",
-      "type": "bool",
-      "default": true
-    },
-    {
-      "key": "disasters",
-      "label": "Disasters",
-      "type": "bool",
-      "default": false
-    },
-    {
       "key": "misTypes",
-      "label": "Missions",
+      "label": "Missions (none = off)",
       "type": "set",
       "choices": [
         "cargo",
@@ -143,7 +131,7 @@
     },
     {
       "key": "disTypes",
-      "label": "Disasters",
+      "label": "Disasters (none = off)",
       "type": "set",
       "choices": [
         "volcano",
@@ -160,7 +148,8 @@
         "locusts": "Locusts",
         "quake": "Earthquake",
         "tornado": "Tornado"
-      }
+      },
+      "default": []
     }
   ],
   "score": {

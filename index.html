@@ -172,7 +172,12 @@ h1 span{color:var(--khaki)}
 h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:800}
 .lede{font-size:17px;line-height:1.35;color:var(--ink-dim);margin:0;font-weight:500;max-width:38ch}
 .opt{display:flex;flex-direction:column;gap:6px}
-.chips{display:grid;grid-template-columns:1fr 1fr;gap:6px}.chips button{height:40px;border:1px solid var(--line);border-radius:4px;background:rgba(6,8,6,.45);font-size:14px;font-weight:700;text-align:left;padding:0 10px;display:flex;align-items:center;gap:8px}.chips button::before{content:"";width:14px;height:14px;border:1.5px solid var(--ink-dim);border-radius:3px;flex:none}.chips button.on{border-color:var(--khaki);color:#fff}.chips button.on::before{background:var(--khaki);border-color:var(--khaki);box-shadow:inset 0 0 0 2px #1a1a12}.chips.off{opacity:.4;pointer-events:none}
+.fine.nudge{color:var(--khaki);animation:nudge .35s}@keyframes nudge{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.chips[hidden]{display:none}.mpstand{display:grid;gap:4px;font-family:var(--mono);font-size:14px;text-align:left}.mpstand[hidden]{display:none}
+.mpstand div{display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid rgba(233,229,211,.1);border-radius:4px;background:rgba(6,8,6,.35)}
+.mpstand div.me{border-color:var(--khaki);background:rgba(200,190,140,.08)}.mpstand b{width:2.2em;color:var(--khaki);font-family:var(--display);font-size:18px}
+.mpstand i{width:12px;height:12px;border-radius:2px;flex:none}.mpstand span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mpstand em{font-style:normal;opacity:.7}
+.mpstand small{font-size:10px;letter-spacing:.1em;opacity:.6;margin-left:6px}.chips{display:grid;grid-template-columns:1fr 1fr;gap:6px}.chips button{height:40px;border:1px solid var(--line);border-radius:4px;background:rgba(6,8,6,.45);font-size:14px;font-weight:700;text-align:left;padding:0 10px;display:flex;align-items:center;gap:8px}.chips button::before{content:"";width:14px;height:14px;border:1.5px solid var(--ink-dim);border-radius:3px;flex:none}.chips button.on{border-color:var(--khaki);color:#fff}.chips button.on::before{background:var(--khaki);border-color:var(--khaki);box-shadow:inset 0 0 0 2px #1a1a12}.chips.off{opacity:.4;pointer-events:none}
 .opt label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:4px;overflow:hidden}
 .seg button{background:rgba(6,8,6,.45);border:0;border-right:1px solid var(--line);height:44px;font-size:17px;font-weight:700}
@@ -514,6 +519,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
   <div class="card">
     <div class="eyebrow" id="overEyebrow">After action report</div>
     <h2 id="overTitle">Victory</h2>
+    <div class="mpstand" id="overStand" hidden></div>
     <div class="stats" id="overStats"></div>
     <div class="score" id="overScore"></div>
     <div class="record" id="overRecord" hidden></div>
@@ -546,6 +552,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
       <textarea id="shareText" readonly hidden aria-label="Score to share"></textarea>
       <div class="arcade-msg" id="shareMsg"></div>
     </div>
+    <button class="go" id="lobbyBtn" hidden>Back to lobby</button>
     <button class="go ghost" id="replayBtn" hidden>Watch replay</button>
     <button class="go ghost" id="againBtn">Play again</button>
     <button class="go ghost" id="menuBtn">Back to menu</button>
@@ -1061,6 +1068,7 @@ function damage(t, amount, by) {
   if (t.owner === G.human && by !== G.human && !G.attract) alertHit(t.x, t.y);
   if (t.hp > 0) return;
   if (t.isBase) { eliminate(t.owner, by); return; }
+  if (t.mis) t.killedBy = by;
   t.alive = false; t.respawn = (t.kind === "gen" ? CFG.genRespawn : CFG.respawn) * G.players[t.owner].respawnMult; t.seen = t.tgt = null;
   pushFx({ k: "death", x: t.x, y: t.y, a: t.face, owner: t.owner, c: G.players[t.owner].team.c, big: t.kind === "gen" });
   G.players[t.owner].losses++; dxDeath(t, by);
@@ -1141,7 +1149,7 @@ function eliminate(owner, by) {
   // the winner of the base takes over its surviving soldiers as mercenaries (they stay until killed, no respawn)
   const take = by != null && by !== owner && G.players[by] && !G.players[by].out && !G.doomFire && !G.attract ? G.units.filter(u => u.alive && u.owner === owner && u.kind !== "gen" && !u.free && !u.mis && CFG[u.kind] && CFG[u.kind].sight && u.kind !== "depot").map(u => ({ x: u.x, y: u.y })) : [];
   for (const u of G.units) if (u.owner === owner) {
-    if (u.free && u.alive) { u.owner = G.human; continue; } // the cart and the scout belong to nobody: they stay
+    if (u.free && u.alive) { u.owner = G.mp ? (by != null && G.players[by] && !G.players[by].out ? by : misNear(u)) : G.human; continue; } // the cart and the scout belong to nobody: they stay
     if (u.alive) pushFx({ k: "death", x: u.x, y: u.y, a: u.face, owner, c: p.team.c, big: u.kind === "gen" });
     u.alive = false; u.respawn = Infinity;
   }
@@ -1559,14 +1567,26 @@ const MIS = {
     sabo:   { name: "Sabotage", life: 180, brief: "Destroy the enemy supply camp" }
   }
 };
+// the mission's opening line on this screen; online, the army being hunted hears it the other way round
+function misBrief(type) {
+  const m = G.mis, hunted = G.mp && m && m.foe === G.human && (type === "kill" || type === "sabo");
+  if (hunted) return type === "kill" ? "Your captain is out in the field and the other armies are after him. Keep him alive" : "The other armies are after your supply camp. Defend it";
+  if (G.mp && m && m.foe != null && (type === "kill" || type === "sabo")) return type === "kill" ? G.players[m.foe].team.name + "'s captain is in the marked area. Take him out" : "Destroy " + G.players[m.foe].team.name + "'s supply camp";
+  return MIS.types[type].brief;
+}
 function misUnit(owner, kind, x, y) {
   const u = mkUnit(G, owner, kind, x, y, -2); u.mis = true; u.respawn = Infinity; u.hp = maxHp(u); u.mode = "move";
   G.units.push(u); G.unitById.set(u.id, u); return u;
 }
 function missionsInit() { G.mis = null; G.misT = rr(MIS.first[0], MIS.first[1]); G.misLast = null; G.misN = 0; }
+// Online (lockstep) every screen must pick and judge missions the same way, so there nothing may depend on whose screen it is (G.human):
+// every mission is open to every army, and an Assassinate / Sabotage target is any army that someone is at war with.
+// Single player keeps the original rules: missions are the human's, against one of their foes.
+const misFoes = () => G.players.filter(q => !q.out && G.players.some(o => o !== q && !o.out && hostile(o.id, q.id)));
+const misNear = pt => { let b = null; for (const q of G.players) if (!q.out && (!b || d2(q.base, pt) < d2(b.base, pt))) b = q; return b ? b.id : 0; };
 function startMission() {
-  const me = G.players[G.human], foes = G.players.filter(q => hostile(G.human, q.id) && !q.out);
-  if (me.out) return;
+  const me = G.players[G.human], foes = G.mp ? misFoes() : G.players.filter(q => hostile(G.human, q.id) && !q.out);
+  if (G.mp ? G.players.filter(q => !q.out).length < 2 : me.out) return;
   let pool = (G.misTypes && G.misTypes.length ? G.misTypes : Object.keys(MIS.types));
   if (!foes.length) { pool = pool.filter(k => k !== "kill" && k !== "sabo"); if (!pool.length) return; } // everyone left is your ally: only the races, no enemy officer or camp
   const keys = pool.length > 1 ? pool.filter(k => k !== G.misLast) : pool;
@@ -1574,9 +1594,9 @@ function startMission() {
   const spot = crateSpot(true) || { x: G.S / 2, y: G.S / 2 };
   const m = { type, t0: G.time, until: G.time + T.life, x: spot.x, y: spot.y, prog: 0, foe: foes.length ? foes[Math.floor(G.rng() * foes.length)].id : null, id: ++G.misN };
   if (type === "cargo") { const c = { id: G.crateId++, x: spot.x, y: spot.y, kind: "upgrade", mission: true, land: G.time + CRATE.land, until: m.until }; G.crates.push(c); m.crate = c; pushFx({ k: "crate", x: c.x, y: c.y, mission: true }); }
-  else if (type === "escort") { m.unit = misUnit(G.human, "truck", spot.x, spot.y); m.unit.free = true; }
+  else if (type === "escort") { m.unit = misUnit(G.mp ? misNear(spot) : G.human, "truck", spot.x, spot.y); m.unit.free = true; }
   else if (type === "hold") { m.r = 110; m.progBy = {}; }
-  else if (type === "rescue") { m.unit = misUnit(G.human, "pilot", spot.x, spot.y); m.unit.free = true; const a = G.rng() * TAU2, d = G.rng() * 140; m.ax = spot.x + Math.cos(a) * d; m.ay = spot.y + Math.sin(a) * d; m.r = 220; }
+  else if (type === "rescue") { m.unit = misUnit(G.mp ? misNear(spot) : G.human, "pilot", spot.x, spot.y); m.unit.free = true; const a = G.rng() * TAU2, d = G.rng() * 140; m.ax = spot.x + Math.cos(a) * d; m.ay = spot.y + Math.sin(a) * d; m.r = 220; }
   else if (type === "kill") {
     m.unit = misUnit(m.foe, "officer", spot.x, spot.y); m.guards = [];
     for (let i = 0; i < 5; i++) { const a = i / 5 * TAU2, g = tempUnit(m.foe, spot.x + Math.cos(a) * 30, spot.y + Math.sin(a) * 30, 0, T.life + 5); g.guard = true; m.guards.push(g); }
@@ -1600,24 +1620,35 @@ function missionReward(x, y, pid = G.human) {
 }
 function endMission(win, why, by) {
   const m = G.mis; if (!m) return;
-  if (by != null && by !== G.human && G.players[by] && !G.players[by].out) { const pos0 = m.unit && m.unit.alive ? m.unit : m; missionReward(pos0.x, pos0.y, by); }
+  // online the reward must come at the same moment on every screen (before the next mission's timer draws from the shared dice), whoever's screen it is
+  const early = G.mp && win && !why, pos0 = m.unit && m.unit.alive ? m.unit : m;
+  if (early) missionReward(pos0.x, pos0.y);
+  if (by != null && by !== G.human && G.players[by] && !G.players[by].out) missionReward(pos0.x, pos0.y, by);
   if (!G.attract) gStats()[win ? "misWon" : "misLost"]++;
   if (G.dx && G.dx.mis.length < 60) G.dx.mis.push([Math.round(G.time), m.type, win ? 1 : 0, by == null ? -1 : by, why || ""]);
   G.mis = null; G.misLast = m.type; G.misT = rr(MIS.gap[0], MIS.gap[1]);
   if (m.crate) { const i = G.crates.indexOf(m.crate); if (i >= 0) G.crates.splice(i, 1); }
   const pos = m.unit && m.unit.alive ? m.unit : m;
-  if (win && !why) missionReward(pos.x, pos.y);
+  if (win && !why && !early) missionReward(pos.x, pos.y);
   const quiet = m.type === "cargo" && win;
   for (const u of [m.unit, ...(m.guards || [])]) if (u && u.alive && (u.mis || u.guard)) { u.alive = false; u.respawn = Infinity; pushFx({ k: "recall", x: u.x, y: u.y, owner: u.owner, c: G.players[u.owner].team.c }); }
   pushFx({ k: win ? "misWin" : "misFail", x: pos.x, y: pos.y, owner: G.human });
-  if (!G.attract && !quiet) toast(win ? "Mission complete! Army upgraded, mercenaries and healers on the way" : "Mission failed" + (why ? ": " + why : ""), win ? "gold" : "bad");
+  if (!G.attract && !quiet) toast(win && why ? "Mission complete: " + why : win ? "Mission complete! Army upgraded, mercenaries and healers on the way" : "Mission failed" + (why ? ": " + why : ""), win ? "gold" : "bad");
+}
+// online: the captain or the camp is gone. Whoever finished it off wins the mission (same reward on every screen); nobody does if it was its own side or no one
+function misWonBy(w, what) {
+  const m = G.mis, ok = w != null && w !== m.foe && G.players[w] && !G.players[w].out, mine = G.human === m.foe;
+  if (ok && w === G.human) return endMission(true);
+  const who = ok ? G.players[w].team.name : null;
+  return endMission(false, (who ? who + " took out " : "lost ") + (mine ? "your " : "the ") + what, ok ? w : undefined);
 }
 // everyone in a circle, by owner
 function inZone(x, y, r) { const by = {}; for (const u of G.units) if (u.alive && d2(u, { x, y }) < r * r && u.kind !== "depot") by[u.owner] = (by[u.owner] || 0) + 1; return by; }
 function stepMissions(dt) {
   if (!G.mis) { if (G.missionsOn && !G.over) { G.misT -= dt; if (G.misT <= 0) startMission(); } return; }
   const m = G.mis, T = G.time, me = G.human, home = G.players[me].base;
-  if (G.players[me].out) { G.mis = null; return; }
+  if (!G.mp && G.players[me].out) { G.mis = null; return; }
+  if (G.mp && (m.type === "kill" || m.type === "sabo") && G.players[m.foe].out) return endMission(false, "that army is gone");
   if (m.type === "cargo") {
     if (!G.crates.includes(m.crate)) { // someone opened it, or it expired
       if (m.crate.by === me) endMission(true, "taken"); // reward already given by the crate
@@ -1648,19 +1679,19 @@ function stepMissions(dt) {
     if (m.taker != null && m.progBy[m.taker] >= 1) return endMission(false, G.players[m.taker].team.name + " held the hill", m.taker);
   } else if (m.type === "kill") {
     const u = m.unit;
-    if (!u.alive) return endMission(true);
+    if (!u.alive) return G.mp ? misWonBy(u.killedBy, "captain") : endMission(true);
     if (isVis(u.x, u.y)) m.seen = true;
     // the officer strolls around his spot with the guards close by
     if ((G.tick + u.id) % 120 === 0) { const a = G.rng() * TAU2; u.tx = m.x + Math.cos(a) * 90; u.ty = m.y + Math.sin(a) * 90; u.mode = "move"; }
     for (const g of m.guards) if (g.alive && !g.seen) { g.tx = u.x + (g.id % 5 - 2) * 18; g.ty = u.y + ((g.id >> 2) % 3 - 1) * 18; g.mode = "attack"; }
   } else if (m.type === "sabo") {
-    if (!m.unit.alive) return endMission(true);
+    if (!m.unit.alive) return G.mp ? misWonBy(m.unit.killedBy, "supply camp") : endMission(true);
   }
-  if (T > m.until) endMission(false, "out of time");
+  if (T > m.until) { if (G.mp && (m.type === "kill" || m.type === "sabo") && me === m.foe) return endMission(true, "your " + (m.type === "kill" ? "captain" : "supply camp") + " held out"); endMission(false, "out of time"); }
 }
 // AI pushback: Recruits leave missions alone, Veterans contest the easy ones, Elite and Invincible fight for every one
 function missionRunners(p, inf) {
-  const m = G.mis; if (!m || G.diff <= 1 || p.id === G.human) return inf;
+  const m = G.mis; if (!m || G.diff <= 1 || (!G.mp && p.id === G.human)) return inf;
   const lvl = G.diff, n = lvl >= 3 ? 6 : 3;
   let goal = null;
   if (m.type === "hold") goal = m;
@@ -4021,7 +4052,7 @@ function consumeFx() {
     if (e.k === "crate" && !e.mission) tip("crate", "A supply crate is coming down. Walk any soldier over it to open it. Most help, some bite.");
     if (e.k === "open" && e.owner === me && e.bad && EXP()) tip("bad", "Bad crates hurt bunched-up soldiers. Tap ALL then SPREAD to open up the ranks.", "bad");
     if (e.k === "mission" && !G.attract) tip("mission", "Missions pay off big: an army upgrade, mercenaries and healers. Follow the gold beacon.");
-    if (e.k === "mission" && !G.attract) { toast("Mission: " + MIS.types[e.mt].brief, "gold"); SND.say("mission"); alerts.beacons.push({ x: e.x, y: e.y, t0: performance.now(), gold: true }); SND.fx(e); continue; }
+    if (e.k === "mission" && !G.attract) { toast("Mission: " + misBrief(e.mt), "gold"); SND.say("mission"); alerts.beacons.push({ x: e.x, y: e.y, t0: performance.now(), gold: true }); SND.fx(e); continue; }
     if ((e.k === "misWin" || e.k === "misFail" || e.k === "found") && !G.attract) { SND.fx(e); if (e.k === "misWin") burst(e.x, e.y, "open"); continue; }
     burst(e.x, e.y, e.k, e.c, e.big, e.era); SND.fx(e);
     if (e.k === "death" && e.big && e.owner === me) shake.a = Math.max(shake.a, 8);
@@ -5614,7 +5645,7 @@ function renderScore() {
   }
   if (G.mis && !G.attract) {
     const m = G.mis, left = Math.max(0, Math.ceil(m.until - G.time)), tx = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
-    const goal = { cargo: "Grab the supplies", escort: m.contested ? "Cart contested!" : m.ctl === G.human ? "Push the cart home" : m.ctl != null ? G.players[m.ctl].team.name + " has the cart!" : "Win the supply cart", hold: m.contested ? "Contested! Clear the hill" : "Hold the hill " + Math.round(m.prog * 100) + "%" + (m.foeProg > 0.05 ? " · rival " + Math.round(m.foeProg * 100) + "%" : ""), rescue: m.unit && m.unit.found ? "Bring the scout home" : "Find the scout", kill: "Kill the captain", sabo: "Destroy the supply camp" }[m.type];
+    const goal = { cargo: "Grab the supplies", escort: m.contested ? "Cart contested!" : m.ctl === G.human ? "Push the cart home" : m.ctl != null ? G.players[m.ctl].team.name + " has the cart!" : "Win the supply cart", hold: m.contested ? "Contested! Clear the hill" : "Hold the hill " + Math.round(m.prog * 100) + "%" + (m.foeProg > 0.05 ? " · rival " + Math.round(m.foeProg * 100) + "%" : ""), rescue: m.unit && m.unit.found ? "Bring the scout home" : "Find the scout", kill: G.mp && m.foe === G.human ? "Keep your captain alive" : G.mp ? "Kill " + G.players[m.foe].team.name + "'s captain" : "Kill the captain", sabo: G.mp && m.foe === G.human ? "Defend your supply camp" : G.mp ? "Destroy " + G.players[m.foe].team.name + "'s camp" : "Destroy the supply camp" }[m.type];
     html += `<div class="mis"><b>★ ${MIS.types[m.type].name}</b><span>${goal}</span><em>${tx}</em></div>`;
   }
   if (el._h !== html) { el.innerHTML = html; el._h = html; }
@@ -5659,6 +5690,7 @@ UI.opts.army = 30; UI.opts.me = 30; UI.opts.crates = 1; UI.opts.missions = 1;
 try { const v = localStorage.getItem("hr-missions"); if (v !== null) UI.opts.missions = +v ? 1 : 0; } catch (e) {}
 UI.opts.misTypes = Object.keys(MIS.types);
 try { const v = JSON.parse(localStorage.getItem("hr-mistypes") || "null"); if (Array.isArray(v)) UI.opts.misTypes = v.filter(k => MIS.types[k]); } catch (e) {}
+if (!UI.opts.misTypes.length) { UI.opts.misTypes = Object.keys(MIS.types); UI.opts.missions = 0; } // an old save with none picked meant no missions: that's Off now (T: On always has at least one)
 try { const v = localStorage.getItem("hr-crates"); if (v !== null) UI.opts.crates = +v ? 1 : 0; } catch (e) {}
 try { const a = JSON.parse(localStorage.getItem("hr-army") || "{}"); if (a.me) UI.opts.me = clamp(a.me | 0, 1, 100); if (a.army) UI.opts.army = clamp(a.army | 0, 1, 100); } catch (e) {}
 UI.opts.map = 0; try { UI.opts.map = clamp(+localStorage.getItem("hr-map") | 0, 0, MAPS.length - 1); } catch (e) {}
@@ -5673,27 +5705,34 @@ $("optPlayers").addEventListener("click", () => customSummary());
 seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optCrates", "crates"); seg("optMissions", "missions");
 for (const [id, k] of [["optPlayers", "players"], ["optUp", "up"], ["optDiff", "diff"]]) $(id).addEventListener("click", () => { try { localStorage.setItem("hr-" + k, String(UI.opts[k])); } catch (e) {} });
 $("optMissions").addEventListener("click", () => { try { localStorage.setItem("hr-missions", String(UI.opts.missions)); } catch (e) {} renderMisTypes(); });
+// On always keeps at least one type ticked: unticking the last one says how to switch it off instead
+function lastPick(noteId, what) {
+  const el = $(noteId); el.textContent = "Keep at least one ticked. For none, switch " + what + " off."; el.classList.remove("nudge"); void el.offsetWidth; el.classList.add("nudge"); SND.ui();
+}
 function renderMisTypes() {
   const box = $("misTypes");
   if (!box.children.length) for (const k of Object.keys(MIS.types)) {
     const b = document.createElement("button"); b.dataset.k = k; b.textContent = MIS.types[k].name; box.appendChild(b);
     b.addEventListener("click", () => {
       const on = UI.opts.misTypes.includes(k);
+      if (on && UI.opts.misTypes.length === 1) { lastPick("misNote", "Missions"); return; }
       UI.opts.misTypes = on ? UI.opts.misTypes.filter(x => x !== k) : [...UI.opts.misTypes, k];
       try { localStorage.setItem("hr-mistypes", JSON.stringify(UI.opts.misTypes)); } catch (e) {}
       SND.ui(); renderMisTypes();
     });
   }
   for (const b of box.children) b.classList.toggle("on", UI.opts.misTypes.includes(b.dataset.k));
-  box.classList.toggle("off", !UI.opts.missions);
+  $("misNote").classList.remove("nudge");
+  box.hidden = !UI.opts.missions; // T: with Missions off, the types are hidden
   const n = UI.opts.misTypes.length;
-  $("misNote").textContent = (UI.opts.missions && !EXP() && loadLog().length < 3 ? "With Basic controls, missions join after your first 3 battles. " : "") + (!UI.opts.missions ? "Missions are off." : !n ? "No mission types picked, so no missions will come." : n === 6 ? "All six mission types are in the mix." : n + " of 6 mission types are in the mix.");
+  $("misNote").textContent = (UI.opts.missions && !EXP() && loadLog().length < 3 ? "With Basic controls, missions join after your first 3 battles. " : "") + (!UI.opts.missions ? "Missions are off." : n === 6 ? "All six mission types are in the mix." : n + " of 6 mission types are in the mix.");
 }
 renderMisTypes();
 // disasters: off unless switched on here (T), and the player picks which kinds can come
 UI.opts.dis = 0; UI.opts.disTypes = Object.keys(DIS.types);
 try { const v = localStorage.getItem("hr-dis"); if (v !== null) UI.opts.dis = +v ? 1 : 0; } catch (e) {}
 try { const v = JSON.parse(localStorage.getItem("hr-distypes") || "null"); if (Array.isArray(v)) UI.opts.disTypes = v.filter(k => DIS.types[k]); } catch (e) {}
+if (!UI.opts.disTypes.length) { UI.opts.disTypes = Object.keys(DIS.types); UI.opts.dis = 0; }
 seg("optDis", "dis");
 $("optDis").addEventListener("click", () => { try { localStorage.setItem("hr-dis", String(UI.opts.dis)); } catch (e) {} renderDisTypes(); });
 function renderDisTypes() {
@@ -5702,15 +5741,17 @@ function renderDisTypes() {
     const b = document.createElement("button"); b.dataset.k = k; b.textContent = DIS.types[k].name; box.appendChild(b);
     b.addEventListener("click", () => {
       const on = UI.opts.disTypes.includes(k);
+      if (on && UI.opts.disTypes.length === 1) { lastPick("disNote", "Disasters"); return; }
       UI.opts.disTypes = on ? UI.opts.disTypes.filter(x => x !== k) : [...UI.opts.disTypes, k];
       try { localStorage.setItem("hr-distypes", JSON.stringify(UI.opts.disTypes)); } catch (e) {}
       SND.ui(); renderDisTypes();
     });
   }
   for (const b of box.children) b.classList.toggle("on", UI.opts.disTypes.includes(b.dataset.k));
-  box.classList.toggle("off", !UI.opts.dis);
+  $("disNote").classList.remove("nudge");
+  box.hidden = !UI.opts.dis;
   const n = UI.opts.disTypes.length;
-  $("disNote").textContent = !UI.opts.dis ? "Disasters are off. Switch them on for a volcano, flood, wild beasts, locusts, an earthquake or a tornado every minute or two. Each one hits a random army's ground, with a warning first." : !n ? "No disaster types picked, so none will come." : (n === 6 ? "All six disasters are in the mix." : n + " of 6 disasters are in the mix.") + " The first comes after a minute or so, then one every minute or two, each with a few seconds' warning.";
+  $("disNote").textContent = !UI.opts.dis ? "Disasters are off. Switch them on for a volcano, flood, wild beasts, locusts, an earthquake or a tornado every minute or two. Each one hits a random army's ground, with a warning first." : (n === 6 ? "All six disasters are in the mix." : n + " of 6 disasters are in the mix.") + " The first comes after a minute or so, then one every minute or two, each with a few seconds' warning.";
 }
 renderDisTypes();
 UI.opts.split = 4; UI.opts.layout = 1; UI.opts.expert = 1; UI.opts.tel = 1; UI.opts.advice = 1;
@@ -7206,7 +7247,7 @@ function enterReview() {
   document.body.classList.add("ended"); $("endPanel").hidden = false;
 }
 function leaveReview() { cvs.style.transform = ""; document.body.classList.remove("ended"); $("endPanel").hidden = true; }
-$("epScore").addEventListener("click", () => { SND.ui(); if (G && G.mp) { mpLeave(); return; } if (G && G.dx && G.reviewAt) G.dx.revT = (performance.now() - G.reviewAt) / 1000; leaveReview(); showOver(); });
+$("epScore").addEventListener("click", () => { SND.ui(); if (G && G.mp) { leaveReview(); mpShowOver(); return; } if (G && G.dx && G.reviewAt) G.dx.revT = (performance.now() - G.reviewAt) / 1000; leaveReview(); showOver(); });
 function showOver() {
   leaveReview();
   if (G.tutorial) { toMenu(); return; }
@@ -7495,11 +7536,12 @@ function mpStart(m) {
   G.mp = true; G.human = seat >= 0 ? seat : 0;
   MP.seat = seat >= 0 && !MP.drops.some(d => d.pid === you) ? seat : -1;
   G.cratesOn = o.crates !== false && o.crates !== 0;
-  // missions are written for one human player, so only in solo; the types come from the hub's tick boxes, like single player's chips
+  // missions are open to every army online (see startMission); the types come from the hub's tick boxes, none ticked = off
   G.misTypes = Array.isArray(o.misTypes) ? o.misTypes.filter(k => MIS.types[k]) : Object.keys(MIS.types);
-  G.missionsOn = ids.length === 1 && o.missions !== false && G.misTypes.length > 0;
-  G.disTypes = Array.isArray(o.disTypes) ? o.disTypes.filter(k => DIS.types[k]) : Object.keys(DIS.types);
-  G.disOn = !!o.disasters && G.disTypes.length > 0; // only if the hub lobby sends the switch (off otherwise)
+  G.missionsOn = o.missions !== false && G.misTypes.length > 0;
+  // the lobby has just the tick boxes now (none ticked = off); an older lobby's On/Off switch still counts if it's sent
+  G.disTypes = Array.isArray(o.disTypes) ? o.disTypes.filter(k => DIS.types[k]) : o.disasters ? Object.keys(DIS.types) : [];
+  G.disOn = (o.disasters === undefined || !!o.disasters) && G.disTypes.length > 0;
   if ((o.allies === true || o.allies === 1 || o.allies === "on") && n >= 3) dipInit(); // the lobby's Alliances option
   G.players.forEach((p, i) => {
     p.human = i < ids.length;
@@ -7633,7 +7675,7 @@ function mpResult(m) {
   const r = MP.result = m && m.result || m; if (!r || !G || !G.mp) return;
   if (!MP.places || !G.over) { MP.places = {}; for (const q of r.players || []) MP.places[q.id] = q.place; }
   if (!G.over) { MP.reported = true; G.pendOver = null; G.over = { win: MP.places[MP.ids[G.human]] === 1 && MP.seat >= 0, forfeit: true }; }
-  mpEndText();
+  mpEndText(); if (!$("over").hidden) mpShowOver();
 }
 function mpEndText() {
   if (!G || !G.mp || !G.over || $("endPanel").hidden) return;
@@ -7641,8 +7683,36 @@ function mpEndText() {
   const order = MP.ids.map((id, i) => ({ n: G.players[i].team.name, k: pl[id] || 9 })).sort((a, b) => a.k - b.k).map(x => x.k + ". " + x.n).join("  ·  ");
   $("epTitle").firstChild.textContent = MP.seat < 0 ? "Battle over" : mine === 1 ? "Victory" : "Defeated";
   $("epSub").textContent = order + (r ? (r.valid ? "  ·  Result recorded" : "  ·  Not counted" + (r.reason ? ": " + r.reason : "")) : MP.desync ? "  ·  Not counted: out of step" : "");
-  $("epScore").textContent = "Back to lobby";
+  $("epScore").textContent = "See results";
 }
+// online: the same After action report card as single player, with the standings and the hub's verdict instead of the arcade name entry
+// (the hub keeps online results on its own leaderboard, under each player's hub name)
+const escH = v => String(v).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ORD = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+function mpShowOver() {
+  document.body.classList.add("ended"); UI.paused = true;
+  const r = MP.result, pl = MP.places || {}, me = G.players[G.human], seated = MP.seat >= 0, mine = pl[MP.ids[G.human]];
+  const end = q => Math.min(q.out ? q.outT : Infinity, q.left ? q.leftT : Infinity);
+  // every army in the battle, AI ones too: humans by the hub's places, the rest by who lasted longer
+  const rows = G.players.map((q, i) => ({ q, i, k: 1 + G.players.filter(o => end(o) > end(q)).length, h: q.human && pl[MP.ids[i]] || 9 }))
+    .sort((a, b) => a.k - b.k || a.h - b.h || b.q.kills - a.q.kills);
+  $("overEyebrow").textContent = !seated ? "Online battle · you watched" : "Online battle · " + (mine ? ORD(mine) + " of " + G.players.length : "after action report");
+  $("overTitle").textContent = !seated ? "Battle over" : mine === 1 ? "Victory" : "Defeated";
+  $("overStand").innerHTML = rows.map(({ q, i, k }) => `<div class="${seated && i === G.human ? "me" : ""}"><b>${ORD(k)}</b><i style="background:${q.team.c}"></i><span>${escH(q.team.name)}${q.human ? (q.left ? "<small>LEFT</small>" : "") : "<small>AI</small>"}</span><em>${q.kills} kills</em></div>`).join("");
+  $("overStand").hidden = false;
+  $("overStats").innerHTML = seated ? statTable(statLines(me)) : "";
+  const verdict = r ? (r.valid ? "Result recorded on the hub leaderboard" : "Not counted" + (r.reason ? ": " + r.reason : "")) : MP.desync ? "Not counted: out of step" : "Sending the result to the hub…";
+  $("overScore").innerHTML = seated ? `<small>Kills · ${escH(verdict)}</small>${fmtN(me.kills)}` : `<small>${escH(verdict)}</small>`;
+  for (const id of ["nameEntry", "telAsk", "expOffer", "overRecord", "replayBtn", "againBtn", "menuBtn"]) $(id).hidden = true;
+  $("lobbyBtn").hidden = false; $("sharebox").style.display = seated ? "" : "none";
+  if (seated) {
+    lastShareShort = mine === 1 ? `I won an online battle in Hit and Run with ${me.kills} kills. Beat that!` : `I came ${ORD(mine || G.players.length)} in an online battle in Hit and Run. Your turn!`;
+    lastShare = `${mine === 1 ? "I just won" : "I came " + ORD(mine || G.players.length) + " in"} an online battle in Hit and Run: ${G.players.length} armies, ${me.kills} kills in ${fmtT(Math.floor(G.time))}. Join me 👉 ${SHARE_URL}`;
+    setShareLinks();
+  }
+  $("over").hidden = false;
+}
+$("lobbyBtn").addEventListener("click", () => { SND.ui(); mpLeave(); });
 function mpLeave() {
   const leaving = G && !G.over && MP.seat >= 0, out = leaving && G.players[G.human].out; // knocked out and watching: leave at once, no loss warning
   if (leaving && !out && !(MP.leaveArm > performance.now())) { MP.leaveArm = performance.now() + 3000; toast("Tap again to leave. Leaving counts as a loss", "bad"); return; }
