@@ -61,7 +61,8 @@ T said "not yet" (2026-11-03). If it starts: split the single file into modules,
 - **Seasons:** one per map (spring, summer, autumn, winter look and feel), or changing during play, for example snow slowing soldiers, mud in autumn, bare trees giving less cover.
 - **Watching after elimination:** Exit should lead to the score screen, not the main menu.
 - **Player report** from the game log after about 400 games, to see which expert tools real players use and whether they win more. Needs `sql/supabase-update-5-game-log.sql` run first.
-- **Stronger test bot** to re-check the expert tools where the first results were too close to call (formations, GUARD, RALLY), then decide whether Line formation and REGROUP stay.
+- ~~**Stronger test bot**~~ Done with the bot bench (`tools/botbench.js`, 2026-11-14): AI armies using formations won 58% vs 41% without (120 battles), GUARD 57% vs 43%. Focus fire and flanking made no measurable difference. RALLY and REGROUP aren't tested yet (the AI doesn't use them).
+- **Fair difficulty:** now that the AI has personalities and tactics, shrink the Elite and Invincible stat boosts so their difficulty comes from smarter play. Tune with the bot bench.
 - **More diagnostics:** richer anonymous game data for an AI to analyse when shaping future games: a timeline of each battle (levels, losses, crates, missions, where fights happened), frame rate and loading times by device type, how players control the game (keyboard, mouse, taps, long presses, swipes, pinch zoom, which buttons), device and screen size, and where players hesitate or quit. Still no names and no IP address.
 - **Custom domain** for the live site (T owns a domain).
 
