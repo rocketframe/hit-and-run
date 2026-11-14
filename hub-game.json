@@ -12,7 +12,8 @@
   "engine": "lockstep",
   "engineConfig": {
     "tickMs": 100,
-    "delay": 2
+    "delay": 2,
+    "forfeit": false
   },
   "reconnectGraceMs": 30000,
   "minMatchMs": 30000,
