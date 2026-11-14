@@ -172,7 +172,12 @@ h1 span{color:var(--khaki)}
 h2{font-size:44px;margin:0;line-height:.9;text-transform:uppercase;font-weight:800}
 .lede{font-size:17px;line-height:1.35;color:var(--ink-dim);margin:0;font-weight:500;max-width:38ch}
 .opt{display:flex;flex-direction:column;gap:6px}
-.chips{display:grid;grid-template-columns:1fr 1fr;gap:6px}.chips button{height:40px;border:1px solid var(--line);border-radius:4px;background:rgba(6,8,6,.45);font-size:14px;font-weight:700;text-align:left;padding:0 10px;display:flex;align-items:center;gap:8px}.chips button::before{content:"";width:14px;height:14px;border:1.5px solid var(--ink-dim);border-radius:3px;flex:none}.chips button.on{border-color:var(--khaki);color:#fff}.chips button.on::before{background:var(--khaki);border-color:var(--khaki);box-shadow:inset 0 0 0 2px #1a1a12}.chips.off{opacity:.4;pointer-events:none}
+.fine.nudge{color:var(--khaki);animation:nudge .35s}@keyframes nudge{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.chips[hidden]{display:none}.mpstand{display:grid;gap:4px;font-family:var(--mono);font-size:14px;text-align:left}.mpstand[hidden]{display:none}
+.mpstand div{display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid rgba(233,229,211,.1);border-radius:4px;background:rgba(6,8,6,.35)}
+.mpstand div.me{border-color:var(--khaki);background:rgba(200,190,140,.08)}.mpstand b{width:2.2em;color:var(--khaki);font-family:var(--display);font-size:18px}
+.mpstand i{width:12px;height:12px;border-radius:2px;flex:none}.mpstand span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mpstand em{font-style:normal;opacity:.7}
+.mpstand small{font-size:10px;letter-spacing:.1em;opacity:.6;margin-left:6px}.chips{display:grid;grid-template-columns:1fr 1fr;gap:6px}.chips button{height:40px;border:1px solid var(--line);border-radius:4px;background:rgba(6,8,6,.45);font-size:14px;font-weight:700;text-align:left;padding:0 10px;display:flex;align-items:center;gap:8px}.chips button::before{content:"";width:14px;height:14px;border:1.5px solid var(--ink-dim);border-radius:3px;flex:none}.chips button.on{border-color:var(--khaki);color:#fff}.chips button.on::before{background:var(--khaki);border-color:var(--khaki);box-shadow:inset 0 0 0 2px #1a1a12}.chips.off{opacity:.4;pointer-events:none}
 .opt label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase}
 .seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:4px;overflow:hidden}
 .seg button{background:rgba(6,8,6,.45);border:0;border-right:1px solid var(--line);height:44px;font-size:17px;font-weight:700}
@@ -514,6 +519,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
   <div class="card">
     <div class="eyebrow" id="overEyebrow">After action report</div>
     <h2 id="overTitle">Victory</h2>
+    <div class="mpstand" id="overStand" hidden></div>
     <div class="stats" id="overStats"></div>
     <div class="score" id="overScore"></div>
     <div class="record" id="overRecord" hidden></div>
@@ -546,6 +552,7 @@ body.ended #bar,body.ended #side,body.ended #hint,body.ended #toast,body.ended #
       <textarea id="shareText" readonly hidden aria-label="Score to share"></textarea>
       <div class="arcade-msg" id="shareMsg"></div>
     </div>
+    <button class="go" id="lobbyBtn" hidden>Back to lobby</button>
     <button class="go ghost" id="replayBtn" hidden>Watch replay</button>
     <button class="go ghost" id="againBtn">Play again</button>
     <button class="go ghost" id="menuBtn">Back to menu</button>
@@ -5659,6 +5666,7 @@ UI.opts.army = 30; UI.opts.me = 30; UI.opts.crates = 1; UI.opts.missions = 1;
 try { const v = localStorage.getItem("hr-missions"); if (v !== null) UI.opts.missions = +v ? 1 : 0; } catch (e) {}
 UI.opts.misTypes = Object.keys(MIS.types);
 try { const v = JSON.parse(localStorage.getItem("hr-mistypes") || "null"); if (Array.isArray(v)) UI.opts.misTypes = v.filter(k => MIS.types[k]); } catch (e) {}
+if (!UI.opts.misTypes.length) { UI.opts.misTypes = Object.keys(MIS.types); UI.opts.missions = 0; } // an old save with none picked meant no missions: that's Off now (T: On always has at least one)
 try { const v = localStorage.getItem("hr-crates"); if (v !== null) UI.opts.crates = +v ? 1 : 0; } catch (e) {}
 try { const a = JSON.parse(localStorage.getItem("hr-army") || "{}"); if (a.me) UI.opts.me = clamp(a.me | 0, 1, 100); if (a.army) UI.opts.army = clamp(a.army | 0, 1, 100); } catch (e) {}
 UI.opts.map = 0; try { UI.opts.map = clamp(+localStorage.getItem("hr-map") | 0, 0, MAPS.length - 1); } catch (e) {}
@@ -5673,27 +5681,34 @@ $("optPlayers").addEventListener("click", () => customSummary());
 seg("optPlayers", "players"); seg("optUp", "up"); seg("optDiff", "diff"); seg("optCrates", "crates"); seg("optMissions", "missions");
 for (const [id, k] of [["optPlayers", "players"], ["optUp", "up"], ["optDiff", "diff"]]) $(id).addEventListener("click", () => { try { localStorage.setItem("hr-" + k, String(UI.opts[k])); } catch (e) {} });
 $("optMissions").addEventListener("click", () => { try { localStorage.setItem("hr-missions", String(UI.opts.missions)); } catch (e) {} renderMisTypes(); });
+// On always keeps at least one type ticked: unticking the last one says how to switch it off instead
+function lastPick(noteId, what) {
+  const el = $(noteId); el.textContent = "Keep at least one ticked. For none, switch " + what + " off."; el.classList.remove("nudge"); void el.offsetWidth; el.classList.add("nudge"); SND.ui();
+}
 function renderMisTypes() {
   const box = $("misTypes");
   if (!box.children.length) for (const k of Object.keys(MIS.types)) {
     const b = document.createElement("button"); b.dataset.k = k; b.textContent = MIS.types[k].name; box.appendChild(b);
     b.addEventListener("click", () => {
       const on = UI.opts.misTypes.includes(k);
+      if (on && UI.opts.misTypes.length === 1) { lastPick("misNote", "Missions"); return; }
       UI.opts.misTypes = on ? UI.opts.misTypes.filter(x => x !== k) : [...UI.opts.misTypes, k];
       try { localStorage.setItem("hr-mistypes", JSON.stringify(UI.opts.misTypes)); } catch (e) {}
       SND.ui(); renderMisTypes();
     });
   }
   for (const b of box.children) b.classList.toggle("on", UI.opts.misTypes.includes(b.dataset.k));
-  box.classList.toggle("off", !UI.opts.missions);
+  $("misNote").classList.remove("nudge");
+  box.hidden = !UI.opts.missions; // T: with Missions off, the types are hidden
   const n = UI.opts.misTypes.length;
-  $("misNote").textContent = (UI.opts.missions && !EXP() && loadLog().length < 3 ? "With Basic controls, missions join after your first 3 battles. " : "") + (!UI.opts.missions ? "Missions are off." : !n ? "No mission types picked, so no missions will come." : n === 6 ? "All six mission types are in the mix." : n + " of 6 mission types are in the mix.");
+  $("misNote").textContent = (UI.opts.missions && !EXP() && loadLog().length < 3 ? "With Basic controls, missions join after your first 3 battles. " : "") + (!UI.opts.missions ? "Missions are off." : n === 6 ? "All six mission types are in the mix." : n + " of 6 mission types are in the mix.");
 }
 renderMisTypes();
 // disasters: off unless switched on here (T), and the player picks which kinds can come
 UI.opts.dis = 0; UI.opts.disTypes = Object.keys(DIS.types);
 try { const v = localStorage.getItem("hr-dis"); if (v !== null) UI.opts.dis = +v ? 1 : 0; } catch (e) {}
 try { const v = JSON.parse(localStorage.getItem("hr-distypes") || "null"); if (Array.isArray(v)) UI.opts.disTypes = v.filter(k => DIS.types[k]); } catch (e) {}
+if (!UI.opts.disTypes.length) { UI.opts.disTypes = Object.keys(DIS.types); UI.opts.dis = 0; }
 seg("optDis", "dis");
 $("optDis").addEventListener("click", () => { try { localStorage.setItem("hr-dis", String(UI.opts.dis)); } catch (e) {} renderDisTypes(); });
 function renderDisTypes() {
@@ -5702,15 +5717,17 @@ function renderDisTypes() {
     const b = document.createElement("button"); b.dataset.k = k; b.textContent = DIS.types[k].name; box.appendChild(b);
     b.addEventListener("click", () => {
       const on = UI.opts.disTypes.includes(k);
+      if (on && UI.opts.disTypes.length === 1) { lastPick("disNote", "Disasters"); return; }
       UI.opts.disTypes = on ? UI.opts.disTypes.filter(x => x !== k) : [...UI.opts.disTypes, k];
       try { localStorage.setItem("hr-distypes", JSON.stringify(UI.opts.disTypes)); } catch (e) {}
       SND.ui(); renderDisTypes();
     });
   }
   for (const b of box.children) b.classList.toggle("on", UI.opts.disTypes.includes(b.dataset.k));
-  box.classList.toggle("off", !UI.opts.dis);
+  $("disNote").classList.remove("nudge");
+  box.hidden = !UI.opts.dis;
   const n = UI.opts.disTypes.length;
-  $("disNote").textContent = !UI.opts.dis ? "Disasters are off. Switch them on for a volcano, flood, wild beasts, locusts, an earthquake or a tornado every minute or two. Each one hits a random army's ground, with a warning first." : !n ? "No disaster types picked, so none will come." : (n === 6 ? "All six disasters are in the mix." : n + " of 6 disasters are in the mix.") + " The first comes after a minute or so, then one every minute or two, each with a few seconds' warning.";
+  $("disNote").textContent = !UI.opts.dis ? "Disasters are off. Switch them on for a volcano, flood, wild beasts, locusts, an earthquake or a tornado every minute or two. Each one hits a random army's ground, with a warning first." : (n === 6 ? "All six disasters are in the mix." : n + " of 6 disasters are in the mix.") + " The first comes after a minute or so, then one every minute or two, each with a few seconds' warning.";
 }
 renderDisTypes();
 UI.opts.split = 4; UI.opts.layout = 1; UI.opts.expert = 1; UI.opts.tel = 1; UI.opts.advice = 1;
@@ -7206,7 +7223,7 @@ function enterReview() {
   document.body.classList.add("ended"); $("endPanel").hidden = false;
 }
 function leaveReview() { cvs.style.transform = ""; document.body.classList.remove("ended"); $("endPanel").hidden = true; }
-$("epScore").addEventListener("click", () => { SND.ui(); if (G && G.mp) { mpLeave(); return; } if (G && G.dx && G.reviewAt) G.dx.revT = (performance.now() - G.reviewAt) / 1000; leaveReview(); showOver(); });
+$("epScore").addEventListener("click", () => { SND.ui(); if (G && G.mp) { leaveReview(); mpShowOver(); return; } if (G && G.dx && G.reviewAt) G.dx.revT = (performance.now() - G.reviewAt) / 1000; leaveReview(); showOver(); });
 function showOver() {
   leaveReview();
   if (G.tutorial) { toMenu(); return; }
@@ -7498,8 +7515,9 @@ function mpStart(m) {
   // missions are written for one human player, so only in solo; the types come from the hub's tick boxes, like single player's chips
   G.misTypes = Array.isArray(o.misTypes) ? o.misTypes.filter(k => MIS.types[k]) : Object.keys(MIS.types);
   G.missionsOn = ids.length === 1 && o.missions !== false && G.misTypes.length > 0;
-  G.disTypes = Array.isArray(o.disTypes) ? o.disTypes.filter(k => DIS.types[k]) : Object.keys(DIS.types);
-  G.disOn = !!o.disasters && G.disTypes.length > 0; // only if the hub lobby sends the switch (off otherwise)
+  // the lobby has just the tick boxes now (none ticked = off); an older lobby's On/Off switch still counts if it's sent
+  G.disTypes = Array.isArray(o.disTypes) ? o.disTypes.filter(k => DIS.types[k]) : o.disasters ? Object.keys(DIS.types) : [];
+  G.disOn = (o.disasters === undefined || !!o.disasters) && G.disTypes.length > 0;
   if ((o.allies === true || o.allies === 1 || o.allies === "on") && n >= 3) dipInit(); // the lobby's Alliances option
   G.players.forEach((p, i) => {
     p.human = i < ids.length;
@@ -7632,7 +7650,7 @@ function mpResult(m) {
   const r = MP.result = m && m.result || m; if (!r || !G || !G.mp) return;
   if (!MP.places || !G.over) { MP.places = {}; for (const q of r.players || []) MP.places[q.id] = q.place; }
   if (!G.over) { MP.reported = true; G.pendOver = null; G.over = { win: MP.places[MP.ids[G.human]] === 1 && MP.seat >= 0, forfeit: true }; }
-  mpEndText();
+  mpEndText(); if (!$("over").hidden) mpShowOver();
 }
 function mpEndText() {
   if (!G || !G.mp || !G.over || $("endPanel").hidden) return;
@@ -7640,8 +7658,36 @@ function mpEndText() {
   const order = MP.ids.map((id, i) => ({ n: G.players[i].team.name, k: pl[id] || 9 })).sort((a, b) => a.k - b.k).map(x => x.k + ". " + x.n).join("  ·  ");
   $("epTitle").firstChild.textContent = MP.seat < 0 ? "Battle over" : mine === 1 ? "Victory" : "Defeated";
   $("epSub").textContent = order + (r ? (r.valid ? "  ·  Result recorded" : "  ·  Not counted" + (r.reason ? ": " + r.reason : "")) : MP.desync ? "  ·  Not counted: out of step" : "");
-  $("epScore").textContent = "Back to lobby";
+  $("epScore").textContent = "See results";
 }
+// online: the same After action report card as single player, with the standings and the hub's verdict instead of the arcade name entry
+// (the hub keeps online results on its own leaderboard, under each player's hub name)
+const escH = v => String(v).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ORD = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
+function mpShowOver() {
+  document.body.classList.add("ended"); UI.paused = true;
+  const r = MP.result, pl = MP.places || {}, me = G.players[G.human], seated = MP.seat >= 0, mine = pl[MP.ids[G.human]];
+  const end = q => Math.min(q.out ? q.outT : Infinity, q.left ? q.leftT : Infinity);
+  // every army in the battle, AI ones too: humans by the hub's places, the rest by who lasted longer
+  const rows = G.players.map((q, i) => ({ q, i, k: 1 + G.players.filter(o => end(o) > end(q)).length, h: q.human && pl[MP.ids[i]] || 9 }))
+    .sort((a, b) => a.k - b.k || a.h - b.h || b.q.kills - a.q.kills);
+  $("overEyebrow").textContent = !seated ? "Online battle · you watched" : "Online battle · " + (mine ? ORD(mine) + " of " + G.players.length : "after action report");
+  $("overTitle").textContent = !seated ? "Battle over" : mine === 1 ? "Victory" : "Defeated";
+  $("overStand").innerHTML = rows.map(({ q, i, k }) => `<div class="${seated && i === G.human ? "me" : ""}"><b>${ORD(k)}</b><i style="background:${q.team.c}"></i><span>${escH(q.team.name)}${q.human ? (q.left ? "<small>LEFT</small>" : "") : "<small>AI</small>"}</span><em>${q.kills} kills</em></div>`).join("");
+  $("overStand").hidden = false;
+  $("overStats").innerHTML = seated ? statTable(statLines(me)) : "";
+  const verdict = r ? (r.valid ? "Result recorded on the hub leaderboard" : "Not counted" + (r.reason ? ": " + r.reason : "")) : MP.desync ? "Not counted: out of step" : "Sending the result to the hub…";
+  $("overScore").innerHTML = seated ? `<small>Kills · ${escH(verdict)}</small>${fmtN(me.kills)}` : `<small>${escH(verdict)}</small>`;
+  for (const id of ["nameEntry", "telAsk", "expOffer", "overRecord", "replayBtn", "againBtn", "menuBtn"]) $(id).hidden = true;
+  $("lobbyBtn").hidden = false; $("sharebox").style.display = seated ? "" : "none";
+  if (seated) {
+    lastShareShort = mine === 1 ? `I won an online battle in Hit and Run with ${me.kills} kills. Beat that!` : `I came ${ORD(mine || G.players.length)} in an online battle in Hit and Run. Your turn!`;
+    lastShare = `${mine === 1 ? "I just won" : "I came " + ORD(mine || G.players.length) + " in"} an online battle in Hit and Run: ${G.players.length} armies, ${me.kills} kills in ${fmtT(Math.floor(G.time))}. Join me 👉 ${SHARE_URL}`;
+    setShareLinks();
+  }
+  $("over").hidden = false;
+}
+$("lobbyBtn").addEventListener("click", () => { SND.ui(); mpLeave(); });
 function mpLeave() {
   const leaving = G && !G.over && MP.seat >= 0;
   if (leaving && !(MP.leaveArm > performance.now())) { MP.leaveArm = performance.now() + 3000; toast("Tap again to leave. Leaving counts as a loss", "bad"); return; }
