@@ -109,7 +109,7 @@
     },
     {
       "key": "misTypes",
-      "label": "Missions (solo, none = off)",
+      "label": "Missions (none = off)",
       "type": "set",
       "choices": [
         "cargo",
