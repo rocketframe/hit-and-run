@@ -7791,10 +7791,10 @@ function mpStart(m) {
   G.mp = true; G.human = seat >= 0 ? seat : 0;
   MP.seat = seat >= 0 && !MP.drops.some(d => d.pid === you) ? seat : -1;
   G.cratesOn = o.crates !== false && o.crates !== 0;
-  // missions are open to every army online (see startMission); the types come from the hub's tick boxes, none ticked = off
+  // missions are open to every army online (see startMission). The lobby has a Missions On/Off switch and its types (at least one); the hub still sends the types while it's Off
   G.misTypes = Array.isArray(o.misTypes) ? o.misTypes.filter(k => MIS.types[k]) : Object.keys(MIS.types);
   G.missionsOn = o.missions !== false && G.misTypes.length > 0;
-  // the lobby has just the tick boxes now (none ticked = off); an older lobby's On/Off switch still counts if it's sent
+  // same for Disasters: an On/Off switch plus types; the types are still sent while it's Off, so the switch decides (an older lobby sent only the types, none ticked = off)
   G.disTypes = Array.isArray(o.disTypes) ? o.disTypes.filter(k => DIS.types[k]) : o.disasters ? Object.keys(DIS.types) : [];
   G.disOn = (o.disasters === undefined || !!o.disasters) && G.disTypes.length > 0;
   if ((o.allies === true || o.allies === 1 || o.allies === "on") && n >= 3) dipInit(); // the lobby's Alliances option

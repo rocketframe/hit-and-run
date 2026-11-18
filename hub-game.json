@@ -109,8 +109,14 @@
       "default": false
     },
     {
+      "key": "missions",
+      "label": "Missions",
+      "type": "bool",
+      "default": true
+    },
+    {
       "key": "misTypes",
-      "label": "Missions (none = off)",
+      "label": "Mission types",
       "type": "set",
       "choices": [
         "cargo",
@@ -127,11 +133,29 @@
         "rescue": "Rescue",
         "kill": "Assassinate",
         "sabo": "Sabotage"
+      },
+      "default": [
+        "cargo",
+        "escort",
+        "hold",
+        "rescue",
+        "kill",
+        "sabo"
+      ],
+      "minPicks": 1,
+      "showIf": {
+        "missions": true
       }
     },
     {
+      "key": "disasters",
+      "label": "Disasters",
+      "type": "bool",
+      "default": false
+    },
+    {
       "key": "disTypes",
-      "label": "Disasters (none = off)",
+      "label": "Disaster types",
       "type": "set",
       "choices": [
         "volcano",
@@ -149,7 +173,18 @@
         "quake": "Earthquake",
         "tornado": "Tornado"
       },
-      "default": []
+      "default": [
+        "volcano",
+        "flood",
+        "beasts",
+        "locusts",
+        "quake",
+        "tornado"
+      ],
+      "minPicks": 1,
+      "showIf": {
+        "disasters": true
+      }
     }
   ],
   "score": {
