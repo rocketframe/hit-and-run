@@ -2,7 +2,7 @@
 
 A fog-of-war army battle game for phone and desktop. Find the enemy, keep your general alive, and destroy their bases.
 
-**Play:** https://rocketframe-hit-and-run.pages.dev/
+**Play:** https://hnr.games.peters.co.nz/
 
 Project notes: [NOTES.md](NOTES.md) · Ideas for later: [IDEAS.md](IDEAS.md) · Database: [sql/](sql/README.md) · Design sources: [design/](design/README.md)
 

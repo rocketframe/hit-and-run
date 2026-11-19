@@ -4,7 +4,7 @@ Key facts that aren't obvious from the code. Last updated 2026-11-09.
 
 ## Where things are
 
-- **Live:** https://rocketframe.github.io/hit-and-run/ (GitHub Pages, `main` branch root).
+- **Public address:** https://hnr.games.peters.co.nz/ (share links and link previews point here; changed 2026-11-19). The site is published by the Cloudflare Pages workflow to https://rocketframe-hit-and-run.pages.dev.
 - **Build:** the game is written as a single-file page body; `./build.sh <file>` wraps it into `index.html`. Always rebuild with it.
 - **Leaderboard:** Supabase project `lyvibvqhrszwchuyclpf`, free tier. The game only uses the publishable key that is already in `index.html`; no other keys belong in this repo. Database scripts and the fresh-install order are in [`sql/`](sql/README.md).
 - **Media and tools:** `media/` (trailer, clips, scripts), `media/scripts/sprites3d/` (3D sprite bake pipeline), `design/` (logo and title sources, model wish list).
